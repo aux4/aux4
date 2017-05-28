@@ -1,0 +1,39 @@
+{
+  "profiles": [
+    {
+      "name": "git",
+      "commands": [
+        {
+          "value": "rebase",
+          "execute": ["git pull -r"],
+          "help": {
+            "description": "rebases the current branch"
+          }
+        },
+        {
+          "value": "commit",
+          "execute": ["git commit -m ${message}"],
+          "help": {
+            "description": "save the files in the repository",
+            "variables": [
+              {
+                "name": "message",
+                "text": "Enter the message",
+                "default": "saving file"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "git",
+          "execute": ["profile:git"]
+        }
+      ]
+    }
+  ]
+}

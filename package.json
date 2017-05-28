@@ -1,0 +1,30 @@
+{
+  "name": "aux4",
+  "version": "0.0.1",
+  "description": "Auxiliary for task execution",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "author": "Definity Labs",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/DefinityLabs/aux4.git"
+  },
+  "keywords": [
+    "project",
+    "automation"
+  ],
+  "bugs": {
+    "url": "https://github.com/DefinityLabs/aux4/issues"
+  },
+  "homepage": "https://github.com/DefinityLabs/aux4#readme",
+  "devDependencies": {
+    "coveralls": "^2.13.1",
+    "jest": "^20.0.4"
+  },
+  "dependencies": {
+    "colors": "^1.1.2"
+  }
+}
