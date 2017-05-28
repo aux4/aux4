@@ -42,9 +42,9 @@ describe('config', () => {
           expect(out.println).not.toHaveBeenCalledWith('.aux4 file not found'.red);
         });
 
-        it('prints "error reading .aux file, check the permissions"', () => {
+        it('prints "error reading .aux4 file, check the permissions"', () => {
           expect(out.println).toHaveBeenCalledWith(
-            'error reading .aux file, check the permissions'.red
+            'error reading .aux4 file, check the permissions'.red
           );
         });
       });
@@ -66,7 +66,7 @@ describe('config', () => {
             expect(out.println).not.toHaveBeenCalledWith('.aux4 file not found'.red);
           });
 
-          it('does not print "error reading .aux file, check the permissions"', () => {
+          it('does not print "error reading .aux4 file, check the permissions"', () => {
             expect(out.println).not.toHaveBeenCalledWith(
               'error reading .aux file, check the permissions'.red
             );
@@ -95,9 +95,9 @@ describe('config', () => {
             expect(out.println).not.toHaveBeenCalledWith('.aux4 file not found'.red);
           });
 
-          it('does not print "error reading .aux file, check the permissions"', () => {
+          it('does not print "error reading .aux4 file, check the permissions"', () => {
             expect(out.println).not.toHaveBeenCalledWith(
-              'error reading .aux file, check the permissions'.red
+              'error reading .aux4 file, check the permissions'.red
             );
           });
 
