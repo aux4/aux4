@@ -21,7 +21,7 @@ describe('profile', () => {
           commands: [
             {
               value: 'cmd',
-              execute: ['mkdir first', 'cd first']
+              execute: ['mkdir second', 'cd second']
             }
           ]
         }
@@ -52,7 +52,7 @@ describe('profile', () => {
 
     describe('get "cmd" command', () => {
       it('returns cmd command', () => {
-        expect(firstProfile.command('cmd')).toBe(firstProfile.commands[0]);
+        expect(firstProfile.command('cmd')).toBe(configProfiles.profiles[0].commands[0]);
       });
     });
 

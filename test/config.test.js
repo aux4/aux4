@@ -18,24 +18,36 @@ describe('config', () => {
 
   describe('load config file', () => {
     describe('when there is no config file', () => {
+      let callback;
+
       beforeEach(() => {
         fs.access = jest.fn((name, cb) => cb('error'));
 
-        config.load();
+        callback = jest.fn();
+
+        config.load(callback);
       });
 
       it('prints ".aux4 file not found"', () => {
         expect(out.println).toHaveBeenCalledWith('.aux4 file not found'.red);
       });
+
+      it('calls the callback with error', () => {
+        expect(callback).toHaveBeenCalledWith(new Error('.aux4 file not found'));
+      });
     });
 
     describe('when there is config file', () => {
       describe('with error to read', () => {
+        let callback;
+
         beforeEach(() => {
           fs.access = jest.fn((name, cb) => cb());
           fs.readFile = jest.fn((name, cb) => cb('error'));
 
-          config.load();
+          callback = jest.fn();
+
+          config.load(callback);
         });
 
         it('does not print ".aux4 file not found"', () => {
@@ -47,11 +59,15 @@ describe('config', () => {
             'error reading .aux4 file, check the permissions'.red
           );
         });
+
+        it('calls the callback with error', () => {
+          expect(callback).toHaveBeenCalledWith(new Error('error reading .aux4 file, check the permissions'));
+        });
       });
 
       describe('without error to read', () => {
         describe('with error to parse', () => {
-          let configFile;
+          let configFile, callback;
 
           beforeEach(() => {
             configFile = 'wrong json format';
@@ -59,7 +75,9 @@ describe('config', () => {
             fs.access = jest.fn((name, cb) => cb());
             fs.readFile = jest.fn((name, cb) => cb(undefined, configFile));
 
-            config.load();
+            callback = jest.fn();
+
+            config.load(callback);
           });
 
           it('does not print ".aux4 file not found"', () => {
@@ -75,20 +93,26 @@ describe('config', () => {
           it('prints ".aux4 is not a valid json file"', () => {
             expect(out.println).toHaveBeenCalledWith('.aux4 is not a valid json file'.red);
           });
+
+          it('calls the callback with error', () => {
+            expect(callback).toHaveBeenCalledWith(new Error('.aux4 is not a valid json file'));
+          });
         });
 
         describe('without error to parse', () => {
-          let configFile;
+          let configFile, callback;
 
           beforeEach(() => {
             configFile = {
               profiles: []
             };
 
+            callback = jest.fn();
+
             fs.access = jest.fn((name, cb) => cb());
             fs.readFile = jest.fn((name, cb) => cb(undefined, JSON.stringify(configFile)));
 
-            config.load();
+            config.load(callback);
           });
 
           it('does not print ".aux4 file not found"', () => {
@@ -103,6 +127,10 @@ describe('config', () => {
 
           it('does not print ".aux4 is not a valid json file"', () => {
             expect(out.println).not.toHaveBeenCalledWith('.aux4 is not a valid json file'.red);
+          });
+
+          it('calls the callback without error', () => {
+            expect(callback).toHaveBeenCalledWith(undefined);
           });
 
           describe('get config file', () => {
