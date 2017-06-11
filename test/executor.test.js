@@ -89,7 +89,7 @@ describe('executor', () => {
     });
 
     it('calls executorChain', () => {
-      expect(executorChain.execute).toHaveBeenCalledWith(configProfiles.profiles[0].commands[0].execute, ['--enable', 'true']);
+      expect(executorChain.execute).toHaveBeenCalledWith(configProfiles.profiles[0].commands[0], ['--enable', 'true']);
     });
   });
 });
