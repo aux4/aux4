@@ -1,12 +1,16 @@
 const config = require('../lib/config');
 const Profile = require('../lib/profile');
 const executorChain = require('../lib/executorChain');
+const help = require('../lib/help');
+const out = require('../lib/output');
 
 const executor = require('../lib/executor');
 
 describe('executor', () => {
   let configProfiles;
   beforeEach(() => {
+    out.println = jest.fn();
+
     configProfiles = {
       profiles: [
         {
@@ -24,6 +28,14 @@ describe('executor', () => {
             {
               value: 'cmd',
               execute: ['mkdir second', 'cd second']
+            },
+            {
+              value: 'cmd2',
+              execute: ['mkdir second2', 'cd second2']
+            },
+            {
+              value: 't',
+              execute: ['mkdir t', 'cd t']
             }
           ]
         }
@@ -80,16 +92,78 @@ describe('executor', () => {
   });
 
   describe('execute', () => {
-    beforeEach(() => {
-      executorChain.execute = jest.fn();
+    describe('when there are no arguments', () => {
+      beforeEach(() => {
+        help.print = jest.fn();
+        executorChain.execute = jest.fn();
 
-      executor.init();
-    	executor.defineProfile('firstProfile');
-      executor.execute(['cmd', '--enable', 'true']);
+        executor.init();
+        executor.defineProfile('secondProfile');
+        executor.execute([]);
+      });
+
+      it('prints help for each command', () => {
+        expect(help.print).toHaveBeenCalledWith(configProfiles.profiles[1].commands[0], 6);
+      });
     });
 
-    it('calls executorChain', () => {
-      expect(executorChain.execute).toHaveBeenCalledWith(configProfiles.profiles[0].commands[0], ['--enable', 'true']);
+    describe('when there are arguments', () => {
+      let parameters;
+
+      beforeEach(() => {
+        executorChain.execute = jest.fn();
+
+        parameters = {'enable':'true'};
+
+        executor.init();
+      	executor.defineProfile('firstProfile');
+        executor.execute(['cmd'], parameters);
+      });
+
+      it('calls executorChain', () => {
+        expect(executorChain.execute).toHaveBeenCalledWith(configProfiles.profiles[0].commands[0], [], parameters);
+      });
+    });
+
+    describe('when there are wrong arguments', () => {
+      describe('with suggestion', () => {
+        beforeEach(() => {
+          executor.init();
+          executor.defineProfile('firstProfile');
+          executor.execute(['c'], {});
+        });
+
+        it('prints the suggestion', () => {
+          expect(out.println.mock.calls[0][0]).toEqual('What did you mean:');
+          expect(out.println.mock.calls[1][0]).toEqual('  - ', 'cmd'.bold);
+        });
+      });
+
+      describe('without suggestion', () => {
+        beforeEach(() => {
+          executor.init();
+        	executor.defineProfile('firstProfile');
+          executor.execute(['x'], {});
+        });
+
+        it('prints "command not found"', () => {
+          expect(out.println).toHaveBeenCalledWith('Command not found: x');
+        });
+      });
+    });
+
+    describe('help', () => {
+      beforeEach(() => {
+        help.print = jest.fn();
+
+        executor.init();
+        executor.defineProfile('firstProfile');
+        executor.execute(['cmd'], {help: true});
+      });
+
+      it('prints the help', () => {
+        expect(help.print).toHaveBeenCalledWith(configProfiles.profiles[0].commands[0], 5);
+      });
     });
   });
 });

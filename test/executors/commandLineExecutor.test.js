@@ -13,21 +13,22 @@ describe('commandLineExecutor', () => {
   });
 
   describe('execute', () => {
-    let command, args, result;
+    let action, args, result;
 
     describe('with error', () => {
       beforeEach(() => {
         out.println = jest.fn();
       	childProcess.exec = jest.fn((cmd, cb) => cb('error', undefined, 'error message'));
 
-        command = 'mkdir $folder';
-        args = ['--folder', 'test'];
+        action = 'mkdir $folder';
+        args = [];
+        parameters = {folder: 'test'};
 
-        result = commandLineExecutor.execute(command, args);
+        result = commandLineExecutor.execute({}, action, args, parameters);
       });
 
       it('calls interpreter', () => {
-        expect(spyOnInterpreter).toHaveBeenCalledWith(command, args);
+        expect(spyOnInterpreter).toHaveBeenCalledWith(action, args, parameters);
       });
 
       it('calls childProcess.exec', () => {
@@ -38,7 +39,7 @@ describe('commandLineExecutor', () => {
         expect(out.println.mock.calls.length).toEqual(1);
         expect(out.println).toHaveBeenCalledWith('error message');
       });
-      
+
       it('returns true', () => {
         expect(result).toBeTruthy();
       });
@@ -49,10 +50,11 @@ describe('commandLineExecutor', () => {
         out.println = jest.fn();
       	childProcess.exec = jest.fn((cmd, cb) => cb(undefined, 'output message', undefined));
 
-        command = 'mkdir $folder';
-        args = ['--folder', 'test'];
+        action = 'mkdir $folder';
+        args = [];
+        parameters = {folder: 'test'};
 
-        result = commandLineExecutor.execute(command, args);
+        result = commandLineExecutor.execute({}, action, args, parameters);
       });
 
       it('calls childProcess.exec', () => {

@@ -12,14 +12,15 @@ describe('logExecutor', () => {
   });
 
   describe('execute', () => {
-    let command, args, result;
+    let action, args, parameters, result;
 
-    describe('when command is not a log', () => {
+    describe('when action is not a log', () => {
       beforeEach(() => {
-        command = 'mkdir test';
+        action = 'mkdir test';
         args = [];
+        parameters = {};
 
-        result = logExecutor.execute(command, args);
+        result = logExecutor.execute({}, action, args, parameters);
       });
 
       it('returns false', () => {
@@ -27,13 +28,14 @@ describe('logExecutor', () => {
       });
     });
 
-    describe('when command is a log', () => {
+    describe('when action is a log', () => {
       describe('without parameters', () => {
         beforeEach(() => {
-          command = 'log:mkdir test';
+          action = 'log:mkdir test';
           args = [];
+          parameters = {};
 
-          result = logExecutor.execute(command, args);
+          result = logExecutor.execute({}, action, args, parameters);
         });
 
         it('prints the log', () => {
@@ -47,14 +49,15 @@ describe('logExecutor', () => {
 
       describe('with parameters', () => {
         beforeEach(() => {
-          command = 'log:mkdir $folder';
-          args = ['--folder', 'test'];
+          action = 'log:mkdir $folder';
+          args = [];
+          parameters = {folder: 'test'};
 
-          result = logExecutor.execute(command, args);
+          result = logExecutor.execute({}, action, args, parameters);
         });
 
         it('calls the interpreter', () => {
-          expect(spyOnInterpreter).toHaveBeenCalledWith('mkdir $folder', args);
+          expect(spyOnInterpreter).toHaveBeenCalledWith('mkdir $folder', args, parameters);
         });
 
         it('prints the log', () => {

@@ -12,7 +12,7 @@ describe('executorChain', () => {
   });
 
   describe('when there are only command line', () => {
-    let command;
+    let command, args, parameters;
 
     beforeEach(() => {
       logExecutor.execute = jest.fn().mockReturnValue(false);
@@ -22,31 +22,45 @@ describe('executorChain', () => {
       command = {
         execute: ['mkdir test', 'cd test']
       };
-    	executorChain.execute(command);
+      args = [];
+      parameters = {};
+    	executorChain.execute(command, args, parameters);
     });
 
     it('executes logExecutor for each command', () => {
       expect(logExecutor.execute.mock.calls.length).toEqual(2);
       expect(logExecutor.execute.mock.calls[0][0]).toEqual(command);
       expect(logExecutor.execute.mock.calls[0][1]).toEqual('mkdir test');
+      expect(logExecutor.execute.mock.calls[0][2]).toBe(args);
+      expect(logExecutor.execute.mock.calls[0][3]).toBe(parameters);
       expect(logExecutor.execute.mock.calls[1][0]).toEqual(command);
       expect(logExecutor.execute.mock.calls[1][1]).toEqual('cd test');
+      expect(logExecutor.execute.mock.calls[1][2]).toBe(args);
+      expect(logExecutor.execute.mock.calls[1][3]).toBe(parameters);
     });
 
     it('executes profileExecutor for each command', () => {
       expect(profileExecutor.execute.mock.calls.length).toEqual(2);
       expect(profileExecutor.execute.mock.calls[0][0]).toEqual(command);
       expect(profileExecutor.execute.mock.calls[0][1]).toEqual('mkdir test');
+      expect(profileExecutor.execute.mock.calls[0][2]).toBe(args);
+      expect(profileExecutor.execute.mock.calls[0][3]).toBe(parameters);
       expect(profileExecutor.execute.mock.calls[1][0]).toEqual(command);
       expect(profileExecutor.execute.mock.calls[1][1]).toEqual('cd test');
+      expect(profileExecutor.execute.mock.calls[1][2]).toBe(args);
+      expect(profileExecutor.execute.mock.calls[1][3]).toBe(parameters);
     });
 
     it('executes commandLineExecutor for each command', () => {
       expect(commandLineExecutor.execute.mock.calls.length).toEqual(2);
       expect(commandLineExecutor.execute.mock.calls[0][0]).toEqual(command);
       expect(commandLineExecutor.execute.mock.calls[0][1]).toEqual('mkdir test');
+      expect(commandLineExecutor.execute.mock.calls[0][2]).toBe(args);
+      expect(commandLineExecutor.execute.mock.calls[0][3]).toBe(parameters);
       expect(commandLineExecutor.execute.mock.calls[1][0]).toEqual(command);
       expect(commandLineExecutor.execute.mock.calls[1][1]).toEqual('cd test');
+      expect(commandLineExecutor.execute.mock.calls[1][2]).toBe(args);
+      expect(commandLineExecutor.execute.mock.calls[1][3]).toBe(parameters);
     });
   });
 

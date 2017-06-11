@@ -9,14 +9,15 @@ describe('profileExecutor', () => {
   });
 
   describe('execute', () => {
-    let command, args, result;
+    let action, args, parameters, result;
 
     describe('when is not a profile', () => {
       beforeEach(() => {
-      	command = 'mkdir test';
+      	action = 'mkdir test';
         args = [];
+        parameters = {};
 
-        result = profileExecutor.execute(command, args);
+        result = profileExecutor.execute({}, action, args, parameters);
       });
 
       it('returns false', () => {
@@ -29,10 +30,11 @@ describe('profileExecutor', () => {
 
       beforeEach(() => {
         profile = 'git';
-      	command = 'profile:' + profile;
+      	action = 'profile:' + profile;
         args = ['push'];
+        parameters = {};
 
-        result = profileExecutor.execute(command, args);
+        result = profileExecutor.execute({}, action, args, parameters);
       });
 
       it('calls "executor.defineProfile" with the profile', () => {
@@ -40,7 +42,7 @@ describe('profileExecutor', () => {
       });
 
       it('executes "executor.execute"', () => {
-        expect(executor.execute).toHaveBeenCalledWith(args);
+        expect(executor.execute).toHaveBeenCalledWith(args, parameters);
       });
 
       it('returns true', () => {

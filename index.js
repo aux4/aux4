@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const config = require('./lib/config');
+const params = require('./lib/params');
 const executor = require('./lib/executor');
 const executorChain = require('./lib/executorChain');
 
@@ -14,5 +15,8 @@ executorChain.add(commandLineExecutor);
 
 config.load(function(){
   executor.init();
-  executor.execute(process.argv.splice(2));
+
+  let args = process.argv.splice(2);
+  let parameters = params.extract(args);
+  executor.execute(args, parameters);
 });

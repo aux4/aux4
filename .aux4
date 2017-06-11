@@ -1,25 +1,49 @@
 {
   "profiles": [
     {
-      "name": "git",
+      "name": "matrix",
       "commands": [
         {
-          "value": "rebase",
-          "execute": ["git pull -r"],
+          "value": "cast",
+          "execute": [
+            "log:neo",
+            "log:trinithy",
+            "log:morpheys",
+            "log:smith"
+          ],
           "help": {
-            "description": "rebases the current branch"
+            "description": "Display the Matrix main characters"
           }
         },
         {
-          "value": "commit",
-          "execute": ["git commit -m ${message}"],
+          "value": "year",
+          "execute": ["log:1999"],
           "help": {
-            "description": "save the files in the repository",
+            "description": "Display Matrix's year"
+          }
+        }
+      ]
+    },
+    {
+      "name": "fill",
+      "commands": [
+        {
+          "value": "fullName",
+          "execute": [
+            "log:$firstName $lastName"
+          ],
+          "help": {
+            "description": "Display full name",
             "variables": [
               {
-                "name": "message",
-                "text": "Enter the message",
-                "default": "saving file"
+                "name": "firstName",
+                "text": "Enter your first name",
+                "default": "John"
+              },
+              {
+                "name": "lastName",
+                "text": "Enter your first name",
+                "default": "Doe"
               }
             ]
           }
@@ -30,8 +54,12 @@
       "name": "main",
       "commands": [
         {
-          "name": "git",
-          "execute": ["profile:git"]
+          "value": "matrix",
+          "execute": ["profile:matrix"]
+        },
+        {
+          "value": "fill",
+          "execute": ["profile:fill"]
         }
       ]
     }

@@ -1,25 +1,14 @@
 const interpreter = require('../lib/interpreter');
 
-const params = require('../lib/params');
-
 describe('interpreter', () => {
-  let spyOnParams;
-
-  beforeEach(() => {
-  	spyOnParams = jest.spyOn(params, 'extract');
-  });
-
   describe('interpret', () => {
-    let command, args;
+    let command, args, parameters;
 
     describe('with variable between braces', () => {
       beforeEach(() => {
-        args = ['--folder', 'test'];
-      	command = interpreter.interpret('mkdir ${folder}', args);
-      });
-
-      it('params should be extracted from the args', () => {
-        expect(spyOnParams).toHaveBeenCalledWith(args);
+        args = [];
+        parameters = {folder: 'test'};
+      	command = interpreter.interpret('mkdir ${folder}', args, parameters);
       });
 
       it('should replace folder parameter', () => {
@@ -29,12 +18,8 @@ describe('interpreter', () => {
 
     describe('with variable without braces', () => {
       beforeEach(() => {
-        args = ['--folder', 'test'];
-      	command = interpreter.interpret('mkdir $folder', args);
-      });
-
-      it('params should be extracted from the args', () => {
-        expect(spyOnParams).toHaveBeenCalledWith(args);
+        parameters = {folder: 'test'};
+      	command = interpreter.interpret('mkdir $folder', args, parameters);
       });
 
       it('should replace folder parameter', () => {
@@ -44,8 +29,9 @@ describe('interpreter', () => {
 
     describe('with multiple variables', () => {
       beforeEach(() => {
-        args = ['--username', 'user1', '--host', 'localhost', '--port', '3306'];
-      	command = interpreter.interpret('mysql -h ${host} --port ${port} -u ${username}', args);
+        args = [];
+        parameters = {username: 'user1', host: 'localhost', port: '3306'};
+      	command = interpreter.interpret('mysql -h ${host} --port ${port} -u ${username}', args, parameters);
       });
 
       it('should replace folder parameter', () => {

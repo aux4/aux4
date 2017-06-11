@@ -46,6 +46,13 @@ describe('params', () => {
           expect(obj.enabled).toBeTruthy();
         });
       });
+
+      describe('remove params from args', () => {
+        it('contains only "arg" in args', () => {
+          expect(args.length).toEqual(1);
+          expect(args[0]).toEqual('arg');
+        });
+      });
     });
   });
 });
