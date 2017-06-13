@@ -13,22 +13,23 @@ describe('commandLineExecutor', () => {
   });
 
   describe('execute', () => {
-    let action, args, result;
+    let command, action, args, result;
 
     describe('with error', () => {
       beforeEach(() => {
         out.println = jest.fn();
       	childProcess.exec = jest.fn((cmd, cb) => cb('error', undefined, 'error message'));
 
+        command = {};
         action = 'mkdir $folder';
         args = [];
         parameters = {folder: 'test'};
 
-        result = commandLineExecutor.execute({}, action, args, parameters);
+        result = commandLineExecutor.execute(command, action, args, parameters);
       });
 
       it('calls interpreter', () => {
-        expect(spyOnInterpreter).toHaveBeenCalledWith(action, args, parameters);
+        expect(spyOnInterpreter).toHaveBeenCalledWith(command, action, args, parameters);
       });
 
       it('calls childProcess.exec', () => {

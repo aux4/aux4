@@ -12,7 +12,7 @@ describe('logExecutor', () => {
   });
 
   describe('execute', () => {
-    let action, args, parameters, result;
+    let command, action, args, parameters, result;
 
     describe('when action is not a log', () => {
       beforeEach(() => {
@@ -49,15 +49,16 @@ describe('logExecutor', () => {
 
       describe('with parameters', () => {
         beforeEach(() => {
+          command = {};
           action = 'log:mkdir $folder';
           args = [];
           parameters = {folder: 'test'};
 
-          result = logExecutor.execute({}, action, args, parameters);
+          result = logExecutor.execute(command, action, args, parameters);
         });
 
         it('calls the interpreter', () => {
-          expect(spyOnInterpreter).toHaveBeenCalledWith('mkdir $folder', args, parameters);
+          expect(spyOnInterpreter).toHaveBeenCalledWith(command, 'mkdir $folder', args, parameters);
         });
 
         it('prints the log', () => {
