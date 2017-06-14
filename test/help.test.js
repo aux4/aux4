@@ -18,6 +18,16 @@ describe('help', () => {
       };
     });
 
+    describe('without help', () => {
+      beforeEach(() => {
+      	help.print({});
+      });
+
+      it('does not print any message', () => {
+        expect(out.println).not.toHaveBeenCalled();
+      });
+    });
+
     describe('without length', () => {
       beforeEach(() => {
       	help.print(command);
