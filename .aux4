@@ -37,13 +37,11 @@
             "variables": [
               {
                 "name": "firstName",
-                "text": "Enter your first name",
-                "default": "John"
+                "text": "Enter your first name"
               },
               {
                 "name": "lastName",
-                "text": "Enter your first name",
-                "default": "Doe"
+                "text": "Enter your last name"
               }
             ]
           }
