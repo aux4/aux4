@@ -1,3 +1,12 @@
+const wrapper = {
+  prompt: jest.fn(() => 'input')
+};
+
+const promptSync = jest.mock('prompt-sync', () =>
+  jest.fn(() => wrapper.prompt)
+);
+const colors = require('colors');
+
 const interpreter = require('../lib/interpreter');
 
 describe('interpreter', () => {
@@ -6,6 +15,7 @@ describe('interpreter', () => {
 
     beforeEach(() => {
     	command = {
+        value: 'command',
         help: {
           variables: [
             {
@@ -13,7 +23,11 @@ describe('interpreter', () => {
               default: 'John'
             },
             {
-              name: 'noDefault'
+              name: 'noDefault',
+              text: 'enter'
+            },
+            {
+              name: 'lastName'
             }
           ]
         }
@@ -91,14 +105,36 @@ describe('interpreter', () => {
       });
     });
 
-    describe('with variable and no default value', () => {
+    describe('with variable, text and no default value', () => {
       beforeEach(() => {
       	args = [];
         parameters = {};
         result = interpreter.interpret(command, 'echo ${noDefault}', args, parameters);
       });
 
-      it('should use default value for name', () => {
+      it('should call prompt', () => {
+        expect(wrapper.prompt).toHaveBeenCalledWith('enter'.cyan + ': ');
+      });
+
+      it('should replace variable to the input value', () => {
+        expect(result).toEqual('echo input');
+      });
+    });
+
+    describe('with variable and no text neihter default value', () => {
+      beforeEach(() => {
+        wrapper.prompt = jest.fn(() => 'input');
+
+      	args = [];
+        parameters = {};
+        result = interpreter.interpret(command, 'echo ${lastName}', args, parameters);
+      });
+
+      it('should not call prompt', () => {
+        expect(wrapper.prompt).not.toHaveBeenCalled();
+      });
+
+      it('should replace variable to empty value', () => {
         expect(result).toEqual('echo ');
       });
     });
@@ -110,7 +146,7 @@ describe('interpreter', () => {
         result = interpreter.interpret(command, 'echo ${test}', args, parameters);
       });
 
-      it('should use empty', () => {
+      it('should replace variable to empty value', () => {
         expect(result).toEqual('echo ');
       });
     });
@@ -119,10 +155,10 @@ describe('interpreter', () => {
       beforeEach(() => {
       	args = [];
         parameters = {};
-        result = interpreter.interpret({}, 'echo ${noDefault}', args, parameters);
+        result = interpreter.interpret({}, 'echo ${test}', args, parameters);
       });
 
-      it('should use default value for name', () => {
+      it('should replace variable to empty value', () => {
         expect(result).toEqual('echo ');
       });
     });
