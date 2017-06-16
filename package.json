@@ -25,6 +25,7 @@
     "jest": "^20.0.4"
   },
   "dependencies": {
-    "colors": "^1.1.2"
+    "colors": "^1.1.2",
+    "prompt-sync": "^4.1.5"
   }
 }
