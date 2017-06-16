@@ -20,11 +20,11 @@ describe('help', () => {
 
     describe('without help', () => {
       beforeEach(() => {
-      	help.print({});
+      	help.print({value: 'main'});
       });
 
-      it('does not print any message', () => {
-        expect(out.println).not.toHaveBeenCalled();
+      it('prints message without description', () => {
+        expect(out.println).toHaveBeenCalledWith('main'.yellow, ' ', '');
       });
     });
 
