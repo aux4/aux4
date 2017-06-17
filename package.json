@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "colors": "^1.1.2",
+    "cryptr": "^2.0.0",
     "prompt-sync": "^4.1.5"
   }
 }
