@@ -2,12 +2,14 @@ const logExecutor = require('../../lib/executors/logExecutor');
 
 const out = require('../../lib/output');
 const interpreter = require('../../lib/interpreter');
+const parameterInterpreter = require('../../lib/interpreters/parameterInterpreter');
 
 describe('logExecutor', () => {
   let spyOnInterpreter;
 
   beforeEach(() => {
   	out.println = jest.fn();
+    interpreter.add(parameterInterpreter);
     spyOnInterpreter = jest.spyOn(interpreter, 'interpret');
   });
 

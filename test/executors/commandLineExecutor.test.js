@@ -4,11 +4,13 @@ const commandLineExecutor = require('../../lib/executors/commandLineExecutor');
 
 const out = require('../../lib/output');
 const interpreter = require('../../lib/interpreter');
+const parameterInterpreter = require('../../lib/interpreters/parameterInterpreter');
 
 describe('commandLineExecutor', () => {
   let spyOnInterpreter;
 
   beforeEach(() => {
+    interpreter.add(parameterInterpreter);
   	spyOnInterpreter = jest.spyOn(interpreter, 'interpret');
   });
 
