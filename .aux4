@@ -6,9 +6,9 @@
         {
           "value": "cast",
           "execute": [
-            "log:neo",
-            "log:trinithy",
-            "log:morpheys",
+            "echo \"neo\"",
+            "echo \"trinithy\"",
+            "echo \"morpheys\"; exit 0",
             "log:smith"
           ],
           "help": {

@@ -17,39 +17,30 @@ describe('commandLineExecutor', () => {
 
     describe('with error', () => {
       beforeEach(() => {
-        out.println = jest.fn();
-      	childProcess.exec = jest.fn((cmd, cb) => cb('error', undefined, 'error message'));
+      	out.println = jest.fn();
+        childProcess.execSync = jest.fn().mockImplementation(() => {
+          let err = new Error('test');
+          throw err;
+        });
 
-        command = {};
         action = 'mkdir $folder';
         args = [];
         parameters = {folder: 'test'};
-
-        result = commandLineExecutor.execute(command, action, args, parameters);
       });
 
-      it('calls interpreter', () => {
-        expect(spyOnInterpreter).toHaveBeenCalledWith(command, action, args, parameters);
-      });
-
-      it('calls childProcess.exec', () => {
-        expect(childProcess.exec).toHaveBeenCalledWith('mkdir test', expect.any(Function));
-      });
-
-      it('prints error message', () => {
-        expect(out.println.mock.calls.length).toEqual(1);
-        expect(out.println).toHaveBeenCalledWith('error message');
-      });
-
-      it('returns true', () => {
-        expect(result).toBeTruthy();
+      it('throws error', () => {
+        expect(() => {
+          commandLineExecutor.execute({}, action, args, parameters)
+        }).toThrow();
       });
     });
 
     describe('without error', () => {
       beforeEach(() => {
         out.println = jest.fn();
-      	childProcess.exec = jest.fn((cmd, cb) => cb(undefined, 'output message', undefined));
+      	childProcess.execSync = jest.fn().mockReturnValue({
+          toString: jest.fn().mockReturnValue('output message')
+        });
 
         action = 'mkdir $folder';
         args = [];
@@ -58,8 +49,12 @@ describe('commandLineExecutor', () => {
         result = commandLineExecutor.execute({}, action, args, parameters);
       });
 
+      it('should call interpret', () => {
+        expect(interpreter.interpret).toHaveBeenCalledWith({}, action, args, parameters);
+      });
+
       it('calls childProcess.exec', () => {
-        expect(childProcess.exec).toHaveBeenCalledWith('mkdir test', expect.any(Function));
+        expect(childProcess.execSync).toHaveBeenCalledWith('mkdir test');
       });
 
       it('prints output message', () => {

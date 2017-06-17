@@ -94,4 +94,32 @@ describe('executorChain', () => {
       expect(commandLineExecutor.execute.mock.calls.length).toEqual(0);
     });
   });
+
+  describe('when executor throws error', () => {
+    beforeEach(() => {
+    	logExecutor.execute = jest.fn().mockImplementation(() => {
+        throw new Error();
+      });
+      profileExecutor.execute = jest.fn().mockReturnValue(true);
+      commandLineExecutor.execute = jest.fn().mockReturnValue(true);
+
+      command = {
+        execute: ['profile:git']
+      };
+
+      executorChain.execute(command);
+    });
+
+    it('calls logExecutor', () => {
+      expect(logExecutor.execute).toHaveBeenCalled();
+    });
+
+    it('does not call profileExecutor', () => {
+      expect(profileExecutor.execute).not.toHaveBeenCalled();
+    });
+
+    it('does not call commandLineExecutor', () => {
+      expect(commandLineExecutor.execute).not.toHaveBeenCalled();
+    });
+  });
 });
