@@ -24,7 +24,11 @@ interpreter.add(defaultInterpreter);
 interpreter.add(promptInterpreter);
 interpreter.add(cryptoInterpreter);
 
-config.load(function(){
+config.load(function(err){
+  if (err) {
+    return;
+  }
+
   executor.init();
 
   let args = process.argv.splice(2);
