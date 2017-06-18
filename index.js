@@ -11,12 +11,16 @@ const profileExecutor = require('./lib/executors/profileExecutor');
 const commandLineExecutor = require('./lib/executors/commandLineExecutor');
 
 const parameterInterpreter = require('./lib/interpreters/parameterInterpreter');
+const defaultInterpreter = require('./lib/interpreters/defaultInterpreter');
+const promptInterpreter = require('./lib/interpreters/promptInterpreter');
 
 executorChain.add(logExecutor);
 executorChain.add(profileExecutor);
 executorChain.add(commandLineExecutor);
 
 interpreter.add(parameterInterpreter);
+interpreter.add(defaultInterpreter);
+interpreter.add(promptInterpreter);
 
 config.load(function(){
   executor.init();
