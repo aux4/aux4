@@ -13,6 +13,7 @@ const commandLineExecutor = require('./lib/executors/commandLineExecutor');
 const parameterInterpreter = require('./lib/interpreters/parameterInterpreter');
 const defaultInterpreter = require('./lib/interpreters/defaultInterpreter');
 const promptInterpreter = require('./lib/interpreters/promptInterpreter');
+const cryptoInterpreter = require('./lib/interpreters/cryptoInterpreter');
 
 executorChain.add(logExecutor);
 executorChain.add(profileExecutor);
@@ -21,6 +22,7 @@ executorChain.add(commandLineExecutor);
 interpreter.add(parameterInterpreter);
 interpreter.add(defaultInterpreter);
 interpreter.add(promptInterpreter);
+interpreter.add(cryptoInterpreter);
 
 config.load(function(){
   executor.init();
