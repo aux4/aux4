@@ -107,6 +107,25 @@ describe('executor', () => {
       });
     });
 
+    describe('when $ is the first argument', () => {
+      let spyOnExecute, parameters;
+
+      beforeEach(() => {
+        parameters = {};
+      	executor.execute(['$', 'encrypt'], parameters);
+
+        spyOnExecute = jest.spyOn(executor, 'execute');
+      });
+
+      it('defines currentProfile as $', () => {
+        expect(executor.currentProfile()).toEqual('$');
+      });
+
+      it('calls executor.execute', () => {
+        expect(spyOnExecute).toHaveBeenCalledWith(['encrypt'], parameters);
+      });
+    });
+
     describe('when there are arguments', () => {
       let parameters;
 
