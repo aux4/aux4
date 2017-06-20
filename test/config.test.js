@@ -10,6 +10,34 @@ describe('config', () => {
     out.println = jest.fn();
   });
 
+  describe('$', () => {
+    let profile;
+
+    beforeEach(() => {
+    	profile = config.$();
+    });
+
+    describe('name', () => {
+      it('returns $', () => {
+        expect(profile.name).toEqual('$');
+      });
+    });
+
+    describe('commands', () => {
+      it('should have one command', () => {
+        expect(profile.commands.length).toEqual(1);
+      });
+
+      it('returns encrypt command', () => {
+        expect(profile.commands[0].value).toEqual('encrypt');
+      });
+
+      it('returns encrypt execute', () => {
+        expect(profile.commands[0].execute).toEqual(['crypto:encrypt']);
+      });
+    });
+  });
+
   describe('file', () => {
     it('returns an empty object without profiles', () => {
       expect(config.file()).toEqual({profiles: []});
