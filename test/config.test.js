@@ -25,7 +25,7 @@ describe('config', () => {
 
     describe('commands', () => {
       it('should have one command', () => {
-        expect(profile.commands.length).toEqual(1);
+        expect(profile.commands.length).toEqual(2);
       });
 
       it('returns encrypt command', () => {
@@ -34,6 +34,14 @@ describe('config', () => {
 
       it('returns encrypt execute', () => {
         expect(profile.commands[0].execute).toEqual(['crypto:encrypt']);
+      });
+
+      it('returns upgrade command', () => {
+        expect(profile.commands[1].value).toEqual('upgrade');
+      });
+
+      it('returns upgrade execute', () => {
+        expect(profile.commands[1].execute).toEqual(['npm install --global aux4']);
       });
     });
   });
