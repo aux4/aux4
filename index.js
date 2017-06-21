@@ -7,6 +7,7 @@ const executorChain = require('./lib/executorChain');
 const interpreter = require('./lib/interpreter');
 
 const logExecutor = require('./lib/executors/logExecutor');
+const encryptExecutor = require('./lib/executors/encryptExecutor');
 const profileExecutor = require('./lib/executors/profileExecutor');
 const commandLineExecutor = require('./lib/executors/commandLineExecutor');
 
@@ -16,6 +17,7 @@ const promptInterpreter = require('./lib/interpreters/promptInterpreter');
 const cryptoInterpreter = require('./lib/interpreters/cryptoInterpreter');
 
 executorChain.add(logExecutor);
+executorChain.add(encryptExecutor);
 executorChain.add(profileExecutor);
 executorChain.add(commandLineExecutor);
 
