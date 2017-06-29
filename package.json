@@ -1,11 +1,12 @@
 {
   "name": "aux4",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Auxiliary for task execution",
   "main": "index.js",
   "scripts": {
     "test": "jest"
   },
+  "preferGlobal": "true",
   "bin": {
     "cherry-pick-tool": "index.js"
   },
