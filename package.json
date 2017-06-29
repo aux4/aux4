@@ -6,6 +6,9 @@
   "scripts": {
     "test": "jest"
   },
+  "bin": {
+    "cherry-pick-tool": "index.js"
+  },
   "author": "Definity Labs",
   "license": "Apache-2.0",
   "repository": {
