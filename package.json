@@ -8,7 +8,7 @@
   },
   "preferGlobal": "true",
   "bin": {
-    "cherry-pick-tool": "index.js"
+    "aux4": "index.js"
   },
   "author": "Definity Labs",
   "license": "Apache-2.0",
