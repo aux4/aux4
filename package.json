@@ -4,7 +4,9 @@
   "description": "Auxiliary for task execution",
   "main": "index.js",
   "scripts": {
-    "test": "jest"
+    "test": "jest --coverage && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "preferGlobal": "true",
   "bin": {
