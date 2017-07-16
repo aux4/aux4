@@ -1,4 +1,4 @@
-# aux4
+# 🚀 aux4
 high level scripts
 
 ## Docs
