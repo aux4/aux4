@@ -1,63 +1,15 @@
 {
   "profiles": [
     {
-      "name": "matrix",
-      "commands": [
-        {
-          "value": "cast",
-          "execute": [
-            "echo \"neo\"",
-            "echo \"trinithy\"",
-            "echo \"morpheys\"; exit 0",
-            "log:smith"
-          ],
-          "help": {
-            "description": "Display the Matrix main characters"
-          }
-        },
-        {
-          "value": "year",
-          "execute": ["log:1999"],
-          "help": {
-            "description": "Display Matrix's year"
-          }
-        }
-      ]
-    },
-    {
-      "name": "fill",
-      "commands": [
-        {
-          "value": "fullName",
-          "execute": [
-            "log:$firstName $lastName"
-          ],
-          "help": {
-            "description": "Display full name",
-            "variables": [
-              {
-                "name": "firstName",
-                "text": "Enter your first name"
-              },
-              {
-                "name": "lastName",
-                "text": "Enter your last name"
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
       "name": "main",
       "commands": [
         {
-          "value": "matrix",
-          "execute": ["profile:matrix"]
-        },
-        {
-          "value": "fill",
-          "execute": ["profile:fill"]
+          "value": "ship",
+          "execute": [
+            "git pull -r",
+            "npm test",
+            "git push"
+          ]
         }
       ]
     }

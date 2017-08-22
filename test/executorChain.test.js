@@ -1,14 +1,35 @@
+const colors = require('colors');
+
 const executorChain = require('../lib/executorChain');
 
+const out = require('../lib/output');
 const logExecutor = require('../lib/executors/logExecutor');
 const profileExecutor = require('../lib/executors/profileExecutor');
 const commandLineExecutor = require('../lib/executors/commandLineExecutor');
 
 describe('executorChain', () => {
   beforeEach(() => {
+    out.println = jest.fn();
+
   	executorChain.add(logExecutor);
   	executorChain.add(profileExecutor);
   	executorChain.add(commandLineExecutor);
+  });
+
+  describe('when execute is not defined', () => {
+    let command, args, parameters;
+
+    beforeEach(() => {
+    	command = {};
+      args = [];
+      parameters = {};
+
+      executorChain.execute(command, args, parameters);
+    });
+
+    it('prints "execute is not defined"', () => {
+      expect(out.println).toHaveBeenCalledWith('execute is not defined'.red);
+    });
   });
 
   describe('when there are only command line', () => {
