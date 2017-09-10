@@ -109,6 +109,10 @@ describe('promptInterpreter', () => {
       it('should replace variable to the input value', () => {
         expect(result).toEqual('echo input');
       });
+
+      it('should set variable in the parameters', () => {
+        expect(parameters['text']).toEqual('input');
+      });
     });
 
     describe('with expeted variable and default value', () => {

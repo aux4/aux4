@@ -107,5 +107,39 @@ describe('variable', () => {
         expect(result).toEqual('echo John ${lastName}');
       });
     });
+
+    describe('value as object', () => {
+      let result, action, key, value;
+
+      beforeEach(() => {
+        value = {firstName: 'John', lastName: 'Doe'};
+      });
+
+      describe('when key is defined', () => {
+        beforeEach(() => {
+          action = 'echo ${person.firstName} $person.lastName';
+          key = 'person';
+
+          result = variable.replace(action, key, value);
+        });
+
+        it('replaces ${person.firstName} and $person.lastName', () => {
+          expect(result).toEqual('echo John Doe');
+        });
+      });
+
+      describe('when key is not defined', () => {
+        beforeEach(() => {
+          action = 'echo ${person.address.city}';
+          key = 'person';
+
+        	result = variable.replace(action, key, value);
+        });
+
+        it('replaces ${person.address.city}', () => {
+          expect(result).toEqual('echo ');
+        });
+      });
+    });
   });
 });
