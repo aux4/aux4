@@ -4,13 +4,14 @@
   "description": "Auxiliary for task execution",
   "main": "index.js",
   "scripts": {
-    "test": "jest --coverage && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js",
+    "test":
+      "jest --coverage && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
   },
   "preferGlobal": "true",
   "bin": {
-    "aux4": "index.js"
+    "aux4": "executable.js"
   },
   "author": "Definity Labs",
   "license": "Apache-2.0",
@@ -18,13 +19,7 @@
     "type": "git",
     "url": "git+ssh://git@github.com/DefinityLabs/aux4.git"
   },
-  "keywords": [
-    "project",
-    "automation",
-    "devops",
-    "dev ops",
-    "cli"
-  ],
+  "keywords": ["project", "automation", "devops", "dev ops", "cli"],
   "bugs": {
     "url": "https://github.com/DefinityLabs/aux4/issues"
   },

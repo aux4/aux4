@@ -42,12 +42,12 @@ describe('executor', () => {
       ]
     };
 
-  	config.file = jest.fn().mockReturnValue(configProfiles);
+    config.file = jest.fn().mockReturnValue(configProfiles);
   });
 
   describe('initialize executor', () => {
     beforeEach(() => {
-    	executor.init();
+      executor.init();
     });
 
     it('calls config file', () => {
@@ -107,40 +107,25 @@ describe('executor', () => {
       });
     });
 
-    describe('when $ is the first argument', () => {
-      let spyOnExecute, parameters;
-
-      beforeEach(() => {
-        parameters = {};
-      	executor.execute(['$', 'encrypt'], parameters);
-
-        spyOnExecute = jest.spyOn(executor, 'execute');
-      });
-
-      it('defines currentProfile as $', () => {
-        expect(executor.currentProfile()).toEqual('$');
-      });
-
-      it('calls executor.execute', () => {
-        expect(spyOnExecute).toHaveBeenCalledWith(['encrypt'], parameters);
-      });
-    });
-
     describe('when there are arguments', () => {
       let parameters;
 
       beforeEach(() => {
         executorChain.execute = jest.fn();
 
-        parameters = {'enable':'true'};
+        parameters = { enable: 'true' };
 
         executor.init();
-      	executor.defineProfile('firstProfile');
+        executor.defineProfile('firstProfile');
         executor.execute(['cmd'], parameters);
       });
 
       it('calls executorChain', () => {
-        expect(executorChain.execute).toHaveBeenCalledWith(configProfiles.profiles[0].commands[0], [], parameters);
+        expect(executorChain.execute).toHaveBeenCalledWith(
+          configProfiles.profiles[0].commands[0],
+          [],
+          parameters
+        );
       });
     });
 
@@ -161,7 +146,7 @@ describe('executor', () => {
       describe('without suggestion', () => {
         beforeEach(() => {
           executor.init();
-        	executor.defineProfile('firstProfile');
+          executor.defineProfile('firstProfile');
           executor.execute(['x'], {});
         });
 
@@ -177,7 +162,7 @@ describe('executor', () => {
 
         executor.init();
         executor.defineProfile('firstProfile');
-        executor.execute(['cmd'], {help: true});
+        executor.execute(['cmd'], { help: true });
       });
 
       it('prints the help', () => {

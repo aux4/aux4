@@ -31,25 +31,6 @@ describe('profile', () => {
     config.file = jest.fn().mockReturnValue(configProfiles);
   });
 
-  describe('create $ profile', () => {
-    let profile;
-
-    beforeEach(() => {
-      config.$ = jest.fn();
-    	profile = new Profile('$');
-    });
-
-    it('calls config.$()', () => {
-      expect(config.$).toHaveBeenCalled();
-    });
-
-    describe('name', () => {
-      it('returns $', () => {
-        expect(profile.name()).toEqual('$');
-      });
-    });
-  });
-
   describe('create firstProfile', () => {
     let firstProfile, firstProfileName;
     beforeEach(() => {
@@ -86,7 +67,7 @@ describe('profile', () => {
     let secondProfile, secondProfileName;
     beforeEach(() => {
       secondProfileName = 'secondProfile';
-    	secondProfile = new Profile(secondProfileName);
+      secondProfile = new Profile(secondProfileName);
     });
 
     describe('secondProfile name', () => {

@@ -10,6 +10,12 @@
             "npm test",
             "git push"
           ]
+        },
+        {
+          "value": "aux4",
+          "execute": [
+            "profile:aux4"
+          ]
         }
       ]
     }
