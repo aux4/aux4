@@ -3,6 +3,7 @@ const Profile = require('../lib/profile');
 const executorChain = require('../lib/executorChain');
 const help = require('../lib/help');
 const out = require('../lib/output');
+const suggester = require('../lib/suggester');
 
 const executor = require('../lib/executor');
 
@@ -132,26 +133,15 @@ describe('executor', () => {
     describe('when there are wrong arguments', () => {
       describe('with suggestion', () => {
         beforeEach(() => {
+          suggester.suggest = jest.fn();
+
           executor.init();
           executor.defineProfile('firstProfile');
           executor.execute(['c'], {});
         });
 
-        it('prints the suggestion', () => {
-          expect(out.println.mock.calls[0][0]).toEqual('What did you mean:');
-          expect(out.println.mock.calls[1][0]).toEqual('  - ', 'cmd'.bold);
-        });
-      });
-
-      describe('without suggestion', () => {
-        beforeEach(() => {
-          executor.init();
-          executor.defineProfile('firstProfile');
-          executor.execute(['x'], {});
-        });
-
-        it('prints "command not found"', () => {
-          expect(out.println).toHaveBeenCalledWith('Command not found: x');
+        it('calls suggest', () => {
+          expect(suggester.suggest).toBeCalledWith(executor.profile('firstProfile'), 'c');
         });
       });
     });
