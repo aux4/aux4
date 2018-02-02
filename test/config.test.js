@@ -26,9 +26,9 @@ describe('config', () => {
     out.println = jest.fn();
   });
 
-  describe('file', () => {
+  describe('get', () => {
     it('returns an empty object without profiles', () => {
-      expect(config.file()).toEqual({ profiles: [profile$] });
+      expect(config.get()).toEqual({ profiles: [profile$] });
     });
   });
 
@@ -154,7 +154,7 @@ describe('config', () => {
 
             describe('get config file', () => {
               it('returns the object parsed from json', () => {
-                expect(config.file()).toEqual({ profiles: [profile$] });
+                expect(config.get()).toEqual({ profiles: [profile$] });
               });
             });
           });
@@ -271,7 +271,7 @@ describe('config', () => {
 
             describe('get config file', () => {
               it('returns the object parsed from json', () => {
-                expect(config.file()).toEqual({ profiles: [profile$] });
+                expect(config.get()).toEqual({ profiles: [profile$] });
               });
             });
           });
@@ -340,7 +340,7 @@ describe('config', () => {
 
         describe('get config file', () => {
           it('returns the object parsed from json', () => {
-            expect(config.file()).toEqual(configFile);
+            expect(config.get()).toEqual(configFile);
           });
         });
       });

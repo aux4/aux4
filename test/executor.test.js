@@ -43,7 +43,7 @@ describe('executor', () => {
       ]
     };
 
-    config.file = jest.fn().mockReturnValue(configProfiles);
+    config.get = jest.fn().mockReturnValue(configProfiles);
   });
 
   describe('initialize executor', () => {
@@ -51,8 +51,8 @@ describe('executor', () => {
       executor.init();
     });
 
-    it('calls config file', () => {
-      expect(config.file).toHaveBeenCalled();
+    it('calls config get', () => {
+      expect(config.get).toHaveBeenCalled();
     });
 
     it('creates firstProfile', () => {

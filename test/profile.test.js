@@ -28,7 +28,7 @@ describe('profile', () => {
       ]
     };
 
-    config.file = jest.fn().mockReturnValue(configProfiles);
+    config.get = jest.fn().mockReturnValue(configProfiles);
   });
 
   describe('create firstProfile', () => {
