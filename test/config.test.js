@@ -41,7 +41,7 @@ describe('config', () => {
 
         callback = jest.fn();
 
-        config.load(undefined, callback);
+        config.loadFile(undefined, callback);
       });
 
       it('prints ".aux4 file not found"', () => {
@@ -64,7 +64,7 @@ describe('config', () => {
 
             callback = jest.fn();
 
-            config.load(undefined, callback);
+            config.loadFile(undefined, callback);
           });
 
           it('does not print ".aux4 file not found"', () => {
@@ -96,7 +96,7 @@ describe('config', () => {
 
               callback = jest.fn();
 
-              config.load(undefined, callback);
+              config.loadFile(undefined, callback);
             });
 
             it('does not print ".aux4 file not found"', () => {
@@ -131,7 +131,7 @@ describe('config', () => {
               fs.access = jest.fn((name, cb) => cb());
               fs.readFile = jest.fn((name, cb) => cb(undefined, JSON.stringify(configFile)));
 
-              config.load(undefined, callback);
+              config.loadFile(undefined, callback);
             });
 
             it('does not print ".aux4 file not found"', () => {
@@ -177,7 +177,7 @@ describe('config', () => {
 
             callback = jest.fn();
 
-            config.load(fileName, callback);
+            config.loadFile(fileName, callback);
           });
 
           it('does not print "newFile.aux4 file not found"', () => {
@@ -209,7 +209,7 @@ describe('config', () => {
 
               callback = jest.fn();
 
-              config.load(fileName, callback);
+              config.loadFile(fileName, callback);
             });
 
             it('does not print "newFile.aux4 file not found"', () => {
@@ -246,7 +246,7 @@ describe('config', () => {
               fs.access = jest.fn((name, cb) => cb());
               fs.readFile = jest.fn((name, cb) => cb(undefined, JSON.stringify(configFile)));
 
-              config.load(fileName, callback);
+              config.loadFile(fileName, callback);
             });
 
             it('does not print "newFile.aux4 file not found"', () => {
@@ -331,11 +331,11 @@ describe('config', () => {
           fs.access = jest.fn((name, cb) => cb());
           fs.readFile = jest.fn((name, cb) => cb(undefined, JSON.stringify(configFileA)));
 
-          config.load('a.aux4', callback);
+          config.loadFile('a.aux4', callback);
 
           fs.readFile = jest.fn((name, cb) => cb(undefined, JSON.stringify(configFileB)));
 
-          config.load('b.aux4', callback);
+          config.loadFile('b.aux4', callback);
         });
 
         describe('get config file', () => {

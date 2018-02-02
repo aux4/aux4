@@ -26,7 +26,7 @@ interpreter.add(defaultInterpreter);
 interpreter.add(promptInterpreter);
 interpreter.add(cryptoInterpreter);
 
-config.load(undefined, function(err) {
+config.loadFile(undefined, function(err) {
   if (err) {
     return;
   }
