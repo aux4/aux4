@@ -333,9 +333,7 @@ describe('config', () => {
 
           config.loadFile('a.aux4', callback);
 
-          fs.readFile = jest.fn((name, cb) => cb(undefined, JSON.stringify(configFileB)));
-
-          config.loadFile('b.aux4', callback);
+          config.load(configFileB, callback);
         });
 
         describe('get config file', () => {
