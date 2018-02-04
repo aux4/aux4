@@ -6,10 +6,10 @@ const config = require('../lib/config');
 const out = require('../lib/output');
 
 describe('config', () => {
-  let profile$;
+  let aux4Profile, mainProfile;
 
   beforeEach(() => {
-    profile$ = {
+    aux4Profile = {
       name: 'aux4',
       commands: [
         {
@@ -29,12 +29,25 @@ describe('config', () => {
       ]
     };
 
+    mainProfile = {
+      name: 'main',
+      commands: [
+        {
+          value: 'aux4',
+          execute: ['profile:aux4'],
+          help: {
+            description: 'aux4 utilities'
+          }
+        }
+      ]
+    };
+
     out.println = jest.fn();
   });
 
   describe('get', () => {
     it('returns an empty object without profiles', () => {
-      expect(config.get()).toEqual({ profiles: [profile$] });
+      expect(config.get()).toEqual({ profiles: [aux4Profile, mainProfile] });
     });
   });
 
@@ -160,7 +173,7 @@ describe('config', () => {
 
             describe('get config file', () => {
               it('returns the object parsed from json', () => {
-                expect(config.get()).toEqual({ profiles: [profile$] });
+                expect(config.get()).toEqual({ profiles: [aux4Profile, mainProfile] });
               });
             });
           });
@@ -277,7 +290,7 @@ describe('config', () => {
 
             describe('get config file', () => {
               it('returns the object parsed from json', () => {
-                expect(config.get()).toEqual({ profiles: [profile$] });
+                expect(config.get()).toEqual({ profiles: [aux4Profile, mainProfile] });
               });
             });
           });
@@ -313,7 +326,8 @@ describe('config', () => {
 
           configFile = {
             profiles: [
-              profile$,
+              aux4Profile,
+              mainProfile,
               {
                 name: 'A',
                 commands: [
