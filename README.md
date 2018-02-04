@@ -4,7 +4,9 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 # 🚀 aux4
+
 high level scripts
 
 ## Docs
-The full documentation is on [aux4 page](https://definitylabs.github.io/#/products/aux4).
+
+The full documentation is on [aux4 page](http://definitylabs.org/#/products/aux4).
