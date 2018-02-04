@@ -13,7 +13,7 @@ describe('help', () => {
     	command = {
         value: 'cmd',
         help: {
-          description: 'this is the help description'
+          description: 'this is the help description.\nSecond line.'
         }
       };
     });
@@ -34,7 +34,7 @@ describe('help', () => {
       });
 
       it('prints command help description', () => {
-        expect(out.println).toHaveBeenCalledWith(command.value.yellow, ' ', command.help.description);
+        expect(out.println).toHaveBeenCalledWith(command.value.yellow, ' ', 'this is the help description.\n      Second line.');
       });
     });
 
@@ -44,7 +44,7 @@ describe('help', () => {
       });
 
       it('prints command help description', () => {
-        expect(out.println).toHaveBeenCalledWith(('     ' + command.value).yellow, ' ', command.help.description);
+        expect(out.println).toHaveBeenCalledWith(('     ' + command.value).yellow, ' ', 'this is the help description.\n           Second line.');
       });
     });
 
@@ -58,7 +58,7 @@ describe('help', () => {
           },
           {
             name: 'test',
-            text: 'Test parameter to be displayed'
+            text: 'Test parameter to be displayed.\nSecond line.'
           }
         ];
 
@@ -76,7 +76,7 @@ describe('help', () => {
         expect(out.println.mock.calls[2][0]).toEqual('        -');
         expect(out.println.mock.calls[2][1]).toEqual(command.help.variables[1].name.bold);
         expect(out.println.mock.calls[2][2]).toEqual('');
-        expect(out.println.mock.calls[2][3]).toEqual(command.help.variables[1].text);
+        expect(out.println.mock.calls[2][3]).toEqual('Test parameter to be displayed.\n          Second line.');
       });
     });
   });
