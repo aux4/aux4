@@ -9,7 +9,7 @@ describe('crypto', () => {
     	crypto = require('../lib/crypto');
 
       text = 'this is the pure text';
-      encryptedText = '0f2f774fe60bd984524f29b7fccb6025d488b7e3b5';
+      encryptedText = '56b7b26256902d91538ce19fdc8075f5a581789a26d1f5f07f794ef7964f5c63';
     });
 
     describe('encrypt', () => {
@@ -32,7 +32,7 @@ describe('crypto', () => {
     	crypto = require('../lib/crypto');
 
       text = 'this is the pure text';
-      encryptedText = '0f8e130b63b2623a1adf350fda31ebb42a7b63be47';
+      encryptedText = '503075d6009b8f0802950ed740d8d4a502546cabb4c77fbbee35997f378c2a52';
     });
 
     describe('encrypt', () => {
