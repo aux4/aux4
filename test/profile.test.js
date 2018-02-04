@@ -35,7 +35,7 @@ describe('profile', () => {
     let firstProfile, firstProfileName;
     beforeEach(() => {
       firstProfileName = 'firstProfile';
-      firstProfile = new Profile(firstProfileName);
+      firstProfile = new Profile(config, firstProfileName);
     });
 
     describe('firstProfile name', () => {
@@ -67,7 +67,7 @@ describe('profile', () => {
     let secondProfile, secondProfileName;
     beforeEach(() => {
       secondProfileName = 'secondProfile';
-      secondProfile = new Profile(secondProfileName);
+      secondProfile = new Profile(config, secondProfileName);
     });
 
     describe('secondProfile name', () => {
@@ -87,7 +87,7 @@ describe('profile', () => {
     describe('thirdProfile', () => {
       it('returns undefined', () => {
         expect(() => {
-          new Profile('thirdProfile');
+          new Profile(config, 'thirdProfile');
         }).toThrow('profile thirdProfile not found in the configuration file');
       });
     });

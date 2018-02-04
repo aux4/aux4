@@ -48,7 +48,7 @@ describe('executor', () => {
 
   describe('initialize executor', () => {
     beforeEach(() => {
-      executor.init();
+      executor.init(config);
     });
 
     it('calls config get', () => {
@@ -98,7 +98,7 @@ describe('executor', () => {
         help.print = jest.fn();
         executorChain.execute = jest.fn();
 
-        executor.init();
+        executor.init(config);
         executor.defineProfile('secondProfile');
         executor.execute([]);
       });
@@ -116,7 +116,7 @@ describe('executor', () => {
 
         parameters = { enable: 'true' };
 
-        executor.init();
+        executor.init(config);
         executor.defineProfile('firstProfile');
         executor.execute(['cmd'], parameters);
       });
@@ -135,7 +135,8 @@ describe('executor', () => {
         beforeEach(() => {
           suggester.suggest = jest.fn();
 
-          executor.init();
+          executor.init(config);
+          executor.suggester(suggester);
           executor.defineProfile('firstProfile');
           executor.execute(['c'], {});
         });
@@ -150,7 +151,7 @@ describe('executor', () => {
       beforeEach(() => {
         help.print = jest.fn();
 
-        executor.init();
+        executor.init(config);
         executor.defineProfile('firstProfile');
         executor.execute(['cmd'], { help: true });
       });

@@ -14,11 +14,17 @@ describe('config', () => {
       commands: [
         {
           value: 'encrypt',
-          execute: ['crypto:encrypt']
+          execute: ['crypto:encrypt'],
+          help: {
+            description: 'Encrypt value.\nTo make the encryption more safe, you can define a special key in the environment variable AUX4_SECURITY_KEY.'
+          }
         },
         {
           value: 'upgrade',
-          execute: ['npm install --global aux4']
+          execute: ['npm install --global aux4'],
+          help: {
+            description: 'Upgrade the aux4 version.'
+          }
         }
       ]
     };
