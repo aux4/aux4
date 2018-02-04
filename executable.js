@@ -1,20 +1,9 @@
 #!/usr/bin/env node
 
-const config = require('./lib/config');
-const params = require('./lib/params');
-const executor = require('./lib/executor');
-const executorChain = require('./lib/executorChain');
-const interpreter = require('./lib/interpreter');
-
-const logExecutor = require('./lib/executors/logExecutor');
-const encryptExecutor = require('./lib/executors/encryptExecutor');
-const profileExecutor = require('./lib/executors/profileExecutor');
-const commandLineExecutor = require('./lib/executors/commandLineExecutor');
-
-const parameterInterpreter = require('./lib/interpreters/parameterInterpreter');
-const defaultInterpreter = require('./lib/interpreters/defaultInterpreter');
-const promptInterpreter = require('./lib/interpreters/promptInterpreter');
-const cryptoInterpreter = require('./lib/interpreters/cryptoInterpreter');
+const {config, params} = require('.');
+const {executor, executorChain, interpreter} = require('.');
+const {logExecutor, encryptExecutor, profileExecutor, commandLineExecutor} = require('.');
+const {parameterInterpreter, defaultInterpreter, promptInterpreter, cryptoInterpreter} = require('.');
 
 executorChain.add(logExecutor);
 executorChain.add(encryptExecutor);
@@ -31,7 +20,7 @@ config.loadFile(undefined, function(err) {
     return;
   }
 
-  executor.init();
+  executor.init(config);
 
   let args = process.argv.splice(2);
   let parameters = params.extract(args);
