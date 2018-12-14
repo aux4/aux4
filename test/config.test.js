@@ -13,10 +13,46 @@ describe('config', () => {
       name: 'aux4',
       commands: [
         {
+          value: 'packages',
+          execute: ['package:list'],
+          help: {
+            description: 'List installed packages'
+          }
+        },
+        {
+          value: 'install',
+          execute: ['package:install'],
+          help: {
+            description: 'Install new package <file>',
+            variables: [
+              {
+                name: 'name',
+                text: 'Package name',
+                default: ''
+              }
+            ]
+          }
+        },
+        {
+          value: 'uninstall',
+          execute: ['package:uninstall'],
+          help: {
+            description: 'Uninstall package <name>',
+            variables: [
+              {
+                name: 'name',
+                text: 'Package name',
+                default: ''
+              }
+            ]
+          }
+        },
+        {
           value: 'encrypt',
           execute: ['crypto:encrypt'],
           help: {
-            description: 'Encrypt value.\nTo make the encryption more safe, you can define a special key in the environment variable AUX4_SECURITY_KEY.'
+            description:
+              'Encrypt value.\nTo make the encryption more safe, you can define a special key in the environment variable AUX4_SECURITY_KEY.'
           }
         },
         {
@@ -56,7 +92,9 @@ describe('config', () => {
       let callback;
 
       beforeEach(() => {
-        fs.access = jest.fn((name, cb) => cb('error'));
+        fs.accessSync = jest.fn().mockImplementation(() => {
+          throw new Error('Error');
+        });
 
         callback = jest.fn();
 
@@ -78,8 +116,10 @@ describe('config', () => {
           let callback;
 
           beforeEach(() => {
-            fs.access = jest.fn((name, cb) => cb());
-            fs.readFile = jest.fn((name, cb) => cb('error'));
+            fs.accessSync = jest.fn();
+            fs.readFileSync = jest.fn().mockImplementation(() => {
+              throw new Error('Error');
+            });
 
             callback = jest.fn();
 
@@ -108,10 +148,10 @@ describe('config', () => {
             let configFile, callback;
 
             beforeEach(() => {
-              configFile = 'wrong json format';
+              configFile = 'wrong json format 1';
 
-              fs.access = jest.fn((name, cb) => cb());
-              fs.readFile = jest.fn((name, cb) => cb(undefined, configFile));
+              fs.accessSync = jest.fn();
+              fs.readFileSync = jest.fn().mockReturnValue(configFile);
 
               callback = jest.fn();
 
@@ -147,8 +187,8 @@ describe('config', () => {
 
               callback = jest.fn();
 
-              fs.access = jest.fn((name, cb) => cb());
-              fs.readFile = jest.fn((name, cb) => cb(undefined, JSON.stringify(configFile)));
+              fs.accessSync = jest.fn();
+              fs.readFileSync = jest.fn().mockReturnValue(JSON.stringify(configFile));
 
               config.loadFile(undefined, callback);
             });
@@ -191,8 +231,10 @@ describe('config', () => {
           let callback;
 
           beforeEach(() => {
-            fs.access = jest.fn((name, cb) => cb());
-            fs.readFile = jest.fn((name, cb) => cb('error'));
+            fs.accessSync = jest.fn();
+            fs.readFileSync = jest.fn().mockImplementation(() => {
+              throw new Error('Error');
+            });
 
             callback = jest.fn();
 
@@ -221,10 +263,10 @@ describe('config', () => {
             let configFile, callback;
 
             beforeEach(() => {
-              configFile = 'wrong json format';
+              configFile = 'wrong json format 2';
 
-              fs.access = jest.fn((name, cb) => cb());
-              fs.readFile = jest.fn((name, cb) => cb(undefined, configFile));
+              fs.accessSync = jest.fn();
+              fs.readFileSync = jest.fn().mockReturnValue(configFile);
 
               callback = jest.fn();
 
@@ -262,8 +304,8 @@ describe('config', () => {
 
               callback = jest.fn();
 
-              fs.access = jest.fn((name, cb) => cb());
-              fs.readFile = jest.fn((name, cb) => cb(undefined, JSON.stringify(configFile)));
+              fs.accessSync = jest.fn();
+              fs.readFileSync = jest.fn().mockReturnValue(JSON.stringify(configFile));
 
               config.loadFile(fileName, callback);
             });
@@ -348,8 +390,8 @@ describe('config', () => {
 
           callback = jest.fn();
 
-          fs.access = jest.fn((name, cb) => cb());
-          fs.readFile = jest.fn((name, cb) => cb(undefined, JSON.stringify(configFileA)));
+          fs.accessSync = jest.fn();
+          fs.readFileSync = jest.fn().mockReturnValue(JSON.stringify(configFileA));
 
           config.loadFile('a.aux4', callback);
 

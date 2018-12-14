@@ -1,6 +1,6 @@
 {
   "name": "aux4",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "description": "Auxiliary for task execution",
   "main": "index.js",
   "scripts": {
@@ -30,13 +30,12 @@
   },
   "homepage": "http://definitylabs.org/#/products/aux4",
   "devDependencies": {
-    "coveralls": "^2.13.1",
-    "jest": "^20.0.4"
+    "coveralls": "^3.0.2",
+    "jest": "^23.6.0"
   },
   "dependencies": {
     "colors": "^1.1.2",
     "cryptr": "^3.0.0",
-    "npm": "^6.4.1",
     "prompt-sync": "^4.1.5"
   }
 }

@@ -1,12 +1,24 @@
 #!/usr/bin/env node
 
-const {config, params} = require('.');
-const {executor, executorChain, interpreter} = require('.');
-const {logExecutor, encryptExecutor, profileExecutor, commandLineExecutor} = require('.');
-const {parameterInterpreter, defaultInterpreter, promptInterpreter, cryptoInterpreter} = require('.');
+const { config, params } = require('.');
+const { executor, executorChain, interpreter } = require('.');
+const {
+  logExecutor,
+  encryptExecutor,
+  packageExecutor,
+  profileExecutor,
+  commandLineExecutor,
+} = require('.');
+const {
+  parameterInterpreter,
+  defaultInterpreter,
+  promptInterpreter,
+  cryptoInterpreter,
+} = require('.');
 
 executorChain.add(logExecutor);
 executorChain.add(encryptExecutor);
+executorChain.add(packageExecutor);
 executorChain.add(profileExecutor);
 executorChain.add(commandLineExecutor);
 
@@ -15,14 +27,47 @@ interpreter.add(defaultInterpreter);
 interpreter.add(promptInterpreter);
 interpreter.add(cryptoInterpreter);
 
-config.loadFile(undefined, function(err) {
-  if (err) {
-    return;
+const AUX4_PACKAGE_DIRECTORY = '/.aux4/packages/';
+
+const path = require('path');
+const fs = require('fs');
+const homePath = require('os').homedir();
+
+if (fs.existsSync(homePath + AUX4_PACKAGE_DIRECTORY)) {
+  let files = fs.readdirSync(homePath + AUX4_PACKAGE_DIRECTORY);
+  files.forEach(file => {
+    if (file.endsWith('.json')) {
+      let configFile = homePath + AUX4_PACKAGE_DIRECTORY + file;
+      config.loadFile(configFile, () => {});
+    }
+  });
+}
+
+let directories = [];
+
+function loadDirectories(folder) {
+  directories.unshift(folder);
+
+  let parentFolder = path.resolve(folder, '..');
+  if (parentFolder !== folder) {
+    loadDirectories(parentFolder);
   }
+}
 
-  executor.init(config);
+let currentFolder = path.resolve('.');
+loadDirectories(currentFolder);
 
-  let args = process.argv.splice(2);
-  let parameters = params.extract(args);
-  executor.execute(args, parameters);
+directories.forEach(folder => {
+  let configFile = folder + '/.aux4';
+  if (fs.existsSync(configFile)) {
+    if (fs.lstatSync(configFile).isFile()) {
+      config.loadFile(configFile, () => {});
+    }
+  }
 });
+
+executor.init(config);
+
+let args = process.argv.splice(2);
+let parameters = params.extract(args);
+executor.execute(args, parameters);

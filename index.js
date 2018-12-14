@@ -7,6 +7,7 @@ const interpreter = require('./lib/interpreter');
 const logExecutor = require('./lib/executors/logExecutor');
 const encryptExecutor = require('./lib/executors/encryptExecutor');
 const profileExecutor = require('./lib/executors/profileExecutor');
+const packageExecutor = require('./lib/executors/packageExecutor');
 const commandLineExecutor = require('./lib/executors/commandLineExecutor');
 
 const parameterInterpreter = require('./lib/interpreters/parameterInterpreter');
@@ -22,10 +23,11 @@ module.exports = {
   interpreter: interpreter,
   logExecutor: logExecutor,
   encryptExecutor: encryptExecutor,
+  packageExecutor: packageExecutor,
   profileExecutor: profileExecutor,
   commandLineExecutor: commandLineExecutor,
   parameterInterpreter: parameterInterpreter,
   defaultInterpreter: defaultInterpreter,
   promptInterpreter: promptInterpreter,
-  cryptoInterpreter: cryptoInterpreter
+  cryptoInterpreter: cryptoInterpreter,
 };
