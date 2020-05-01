@@ -4,6 +4,7 @@ const { config, params } = require('.');
 const { executor, executorChain, interpreter } = require('.');
 const {
   logExecutor,
+  setParameterExecutor,
   encryptExecutor,
   packageExecutor,
   profileExecutor,
@@ -17,6 +18,7 @@ const {
 } = require('.');
 
 executorChain.add(logExecutor);
+executorChain.add(setParameterExecutor);
 executorChain.add(encryptExecutor);
 executorChain.add(packageExecutor);
 executorChain.add(profileExecutor);
@@ -43,22 +45,22 @@ if (fs.existsSync(homePath + AUX4_PACKAGE_DIRECTORY)) {
   });
 }
 
-let directories = [];
+const directories = [];
 
 function loadDirectories(folder) {
   directories.unshift(folder);
 
-  let parentFolder = path.resolve(folder, '..');
+  const parentFolder = path.resolve(folder, '..');
   if (parentFolder !== folder) {
     loadDirectories(parentFolder);
   }
 }
 
-let currentFolder = path.resolve('.');
+const currentFolder = path.resolve('.');
 loadDirectories(currentFolder);
 
 directories.forEach(folder => {
-  let configFile = folder + '/.aux4';
+  const configFile = folder + '/.aux4';
   if (fs.existsSync(configFile)) {
     if (fs.lstatSync(configFile).isFile()) {
       config.loadFile(configFile, () => {});
@@ -68,6 +70,6 @@ directories.forEach(folder => {
 
 executor.init(config);
 
-let args = process.argv.splice(2);
-let parameters = params.extract(args);
+const args = process.argv.splice(2);
+const parameters = params.extract(args);
 executor.execute(args, parameters);

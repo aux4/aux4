@@ -5,6 +5,7 @@ const executorChain = require('./lib/executorChain');
 const interpreter = require('./lib/interpreter');
 
 const logExecutor = require('./lib/executors/logExecutor');
+const setParameterExecutor = require('./lib/executors/setParameterExecutor');
 const encryptExecutor = require('./lib/executors/encryptExecutor');
 const profileExecutor = require('./lib/executors/profileExecutor');
 const packageExecutor = require('./lib/executors/packageExecutor');
@@ -22,6 +23,7 @@ module.exports = {
   executorChain: executorChain,
   interpreter: interpreter,
   logExecutor: logExecutor,
+  setParameterExecutor: setParameterExecutor,
   encryptExecutor: encryptExecutor,
   packageExecutor: packageExecutor,
   profileExecutor: profileExecutor,

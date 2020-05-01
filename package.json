@@ -31,7 +31,7 @@
   "homepage": "http://definitylabs.org/#/products/aux4",
   "devDependencies": {
     "coveralls": "^3.0.2",
-    "jest": "^23.6.0"
+    "jest": "^25.5.3"
   },
   "dependencies": {
     "colors": "^1.1.2",
