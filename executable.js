@@ -29,11 +29,13 @@ interpreter.add(defaultInterpreter);
 interpreter.add(promptInterpreter);
 interpreter.add(cryptoInterpreter);
 
-const AUX4_PACKAGE_DIRECTORY = '/.aux4/packages/';
+const AUX4_PACKAGE_DIRECTORY = '/.aux4.config/packages/';
 
 const path = require('path');
 const fs = require('fs');
 const homePath = require('os').homedir();
+
+config.load(config.getAux4Config(), () => {});
 
 if (fs.existsSync(homePath + AUX4_PACKAGE_DIRECTORY)) {
   let files = fs.readdirSync(homePath + AUX4_PACKAGE_DIRECTORY);

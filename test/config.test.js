@@ -82,8 +82,20 @@ describe('config', () => {
   });
 
   describe('get', () => {
-    it('returns an empty object without profiles', () => {
-      expect(config.get()).toEqual({ profiles: [aux4Profile, mainProfile] });
+    describe('without default', () => {
+      it('returns an empty object without profiles', () => {
+        expect(config.get()).toEqual({ profiles: [] });
+      });
+    });
+
+    describe('with default', () => {
+      beforeEach(() => {
+        config.load(config.getAux4Config(), () => {});
+      });
+
+      it('returns default aux4 profile', () => {
+        expect(config.get()).toEqual({ profiles: [aux4Profile, mainProfile] });
+      });
     });
   });
 

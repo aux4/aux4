@@ -5,7 +5,7 @@
 
 # 🚀 aux4
 
-high level scripts
+CLI (Command-line Interface) generator
 
 ## Docs
 

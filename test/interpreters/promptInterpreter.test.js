@@ -90,12 +90,16 @@ describe('promptInterpreter', () => {
       	result = promptInterpreter.interpret(command, 'echo ${name}', args, parameters);
       });
 
-      it('does not replace the variable', () => {
-        expect(result).toEqual('echo ${name}');
+      it('should call prompt', () => {
+        expect(wrapper.prompt).toHaveBeenCalledWith(('name'.bold + ': ').cyan, {});
+      });
+
+      it('should replace variable to the input value', () => {
+        expect(result).toEqual('echo input');
       });
     });
 
-    describe('with expeted variable', () => {
+    describe('with expected variable', () => {
       beforeEach(() => {
       	args = [];
         parameters = {};
@@ -103,7 +107,7 @@ describe('promptInterpreter', () => {
       });
 
       it('should call prompt', () => {
-        expect(wrapper.prompt).toHaveBeenCalledWith('enter the text: '.cyan);
+        expect(wrapper.prompt).toHaveBeenCalledWith(('text'.bold + ' [enter the text]: ').cyan, {});
       });
 
       it('should replace variable to the input value', () => {
@@ -115,7 +119,29 @@ describe('promptInterpreter', () => {
       });
     });
 
-    describe('with expeted variable and default value', () => {
+    describe('with expected hidden variable', () => {
+      beforeEach(() => {
+        command.help.variables[2].hide = true;
+
+      	args = [];
+        parameters = {};
+        result = promptInterpreter.interpret(command, 'echo ${text}', args, parameters);
+      });
+
+      it('should call prompt', () => {
+        expect(wrapper.prompt).toHaveBeenCalledWith(('text'.bold + ' [enter the text]: ').cyan, {echo: '*'});
+      });
+
+      it('should replace variable to the input value', () => {
+        expect(result).toEqual('echo input');
+      });
+
+      it('should set variable in the parameters', () => {
+        expect(parameters['text']).toEqual('input');
+      });
+    });
+
+    describe('with expected variable and default value', () => {
       beforeEach(() => {
         wrapper.prompt = jest.fn(() => 'input');
 

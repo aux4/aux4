@@ -9,7 +9,10 @@
             "git pull -r",
             "npm test",
             "git push"
-          ]
+          ],
+          "help": {
+            "description": "🚢 pull test and push the code"
+          }
         }
       ]
     }
