@@ -29,6 +29,11 @@ describe('promptInterpreter', () => {
             {
               name: 'text',
               text: 'enter the text'
+            },
+            {
+              name: 'emptyDefault',
+              default: '',
+              text: 'enter the empty default'
             }
           ]
         }
@@ -156,6 +161,24 @@ describe('promptInterpreter', () => {
 
       it('does not replace the variable', () => {
         expect(result).toEqual('echo ${default}');
+      });
+    });
+
+    describe('with expected variable and default is empty', () => {
+      beforeEach(() => {
+        wrapper.prompt = jest.fn(() => 'input');
+
+      	args = [];
+        parameters = {};
+        result = promptInterpreter.interpret(command, 'echo ${emptyDefault}', args, parameters);
+      });
+
+      it('should not call prompt', () => {
+        expect(wrapper.prompt).not.toHaveBeenCalled();
+      });
+
+      it('does not replace the variable', () => {
+        expect(result).toEqual('echo ${emptyDefault}');
       });
     });
   });

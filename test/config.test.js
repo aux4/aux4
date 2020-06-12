@@ -23,14 +23,7 @@ describe('config', () => {
           value: 'install',
           execute: ['package:install'],
           help: {
-            description: 'Install new package <file>',
-            variables: [
-              {
-                name: 'name',
-                text: 'Package name',
-                default: ''
-              }
-            ]
+            description: 'Install new package <file>'
           }
         },
         {
