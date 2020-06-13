@@ -1,6 +1,6 @@
 {
   "name": "aux4",
-  "version": "2.1.2",
+  "version": "2.2.0",
   "description": "CLI (command-line interface) generator",
   "main": "index.js",
   "scripts": {
@@ -12,11 +12,11 @@
   "bin": {
     "aux4": "executable.js"
   },
-  "author": "Definity Labs",
+  "author": "Aux4",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/DefinityLabs/aux4.git"
+    "url": "git+ssh://git@github.com/aux4/aux4.git"
   },
   "keywords": [
     "command-line",
@@ -28,7 +28,7 @@
     "devops"
   ],
   "bugs": {
-    "url": "http://aux4.io/issues"
+    "url": "http://aux4.io/help"
   },
   "homepage": "http://aux4.io",
   "devDependencies": {

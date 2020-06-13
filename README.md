@@ -9,4 +9,4 @@ CLI (Command-line Interface) generator
 
 ## Docs
 
-The full documentation is on [aux4 page](http://definitylabs.org/#/products/aux4).
+The full documentation is on [aux4 page](https://aux4.io/learn).
