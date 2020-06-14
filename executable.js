@@ -40,7 +40,7 @@ config.load(config.getAux4Config(), () => {});
 if (fs.existsSync(homePath + AUX4_PACKAGE_DIRECTORY)) {
   let files = fs.readdirSync(homePath + AUX4_PACKAGE_DIRECTORY);
   files.forEach(file => {
-    if (file.endsWith('.json')) {
+    if (file.endsWith('.aux4') || file.endsWith('.json')) {
       let configFile = homePath + AUX4_PACKAGE_DIRECTORY + file;
       config.loadFile(configFile, () => {});
     }
