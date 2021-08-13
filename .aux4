@@ -13,6 +13,22 @@
           "help": {
             "description": "🚢 pull test and push the code"
           }
+        },
+        {
+          "value": "release",
+          "execute": [
+            "mkdir build",
+            "cp -r lib executable.js index.js package.json build",
+            "json:cat package.json",
+            "set:version=${response.version}",
+            "git tag -a ${version} -m '${version}'",
+            "git push --follow-tags",
+            "npm publish build",
+            "rm -rf build"
+          ],
+          "help": {
+            "description": "release new version of aux4"
+          }
         }
       ]
     }

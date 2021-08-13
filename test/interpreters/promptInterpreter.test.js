@@ -1,3 +1,5 @@
+const crypto = require('../../lib/crypto');
+
 const wrapper = {
   prompt: jest.fn(() => 'input')
 };
@@ -8,6 +10,7 @@ const promptSync = jest.mock('prompt-sync', () =>
 const colors = require('colors');
 
 const promptInterpreter = require('../../lib/interpreters/promptInterpreter');
+crypto.encrypt = jest.fn((text) => `####-${text}`);
 
 describe('promptInterpreter', () => {
   describe('interpret', () => {
@@ -138,11 +141,11 @@ describe('promptInterpreter', () => {
       });
 
       it('should replace variable to the input value', () => {
-        expect(result).toEqual('echo input');
+        expect(result).toEqual('echo ####-input');
       });
 
       it('should set variable in the parameters', () => {
-        expect(parameters['text']).toEqual('input');
+        expect(parameters['text']).toEqual('####-input');
       });
     });
 
