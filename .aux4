@@ -18,7 +18,7 @@
           "value": "release",
           "execute": [
             "mkdir build",
-            "cp -r lib executable.js index.js package.json build",
+            "cp -r lib executable.js index.js package.json README.md build",
             "json:cat package.json",
             "set:version=${response.version}",
             "git tag -a ${version} -m '${version}'",
