@@ -17,17 +17,27 @@
         {
           "value": "release",
           "execute": [
+            "npm version ${version}",
             "mkdir build",
             "cp -r lib executable.js index.js package.json README.md build",
             "json:cat package.json",
-            "set:version=${response.version}",
-            "git tag -a ${version} -m '${version}'",
+            "set:versionNumber=${response.version}",
+            "git tag -a ${versionNumber} -m '${versionNumber}'",
             "git push --follow-tags",
             "npm publish build",
-            "rm -rf build"
+            "rm -rf build",
+            "git push",
+            "echo ${versionNumber} released successfully"
           ],
           "help": {
-            "description": "release new version of aux4"
+            "description": "release new version of aux4",
+            "variables": [
+              {
+                "name": "version",
+                "text": "type of version release. e.g.: major, minor, patch",
+                "default": "patch"
+              }
+            ]
           }
         }
       ]
