@@ -24,7 +24,7 @@
             "set:versionNumber=${response.version}",
             "git tag -a ${versionNumber} -m '${versionNumber}'",
             "git push --follow-tags",
-            "npm publish build",
+            "npm publish ./build",
             "rm -rf build",
             "git push",
             "echo ${versionNumber} released successfully"
