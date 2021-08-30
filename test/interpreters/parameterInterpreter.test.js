@@ -43,5 +43,17 @@ describe('parameterInterpreter', () => {
         expect(result).toEqual('echo John');
       });
     });
+
+    describe('with multiple variables and parameters', () => {
+      beforeEach(() => {
+        args = [];
+        parameters = {firstName: 'John', lastName: 'Doe'};
+        result = parameterInterpreter.interpret(command, 'echo $firstName $lastName', args, parameters);
+      });
+
+      it('replaces the variable', () => {
+        expect(result).toEqual('echo John Doe');
+      });
+    });
   });
 });
