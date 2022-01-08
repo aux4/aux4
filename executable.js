@@ -1,48 +1,48 @@
 #!/usr/bin/env node
 
-const { config, params } = require('.');
-const { executor, executorChain, interpreter } = require('.');
 const {
-  logExecutor,
-  setParameterExecutor,
-  encryptExecutor,
-  packageExecutor,
-  profileExecutor,
-  commandLineExecutor,
-} = require('.');
-const {
-  parameterInterpreter,
-  defaultInterpreter,
-  promptInterpreter,
-  cryptoInterpreter,
-} = require('.');
+  Engine,
+  Config,
+  ExecutorChain,
+  Interpreter,
+  LogExecutor,
+  SetParameterExecutor,
+  EncryptExecutor,
+  PackageExecutor,
+  ProfileExecutor,
+  CommandLineExecutor
+} = require(".");
+const { ParameterInterpreter, DefaultInterpreter, PromptInterpreter, CryptoInterpreter } = require(".");
 
-executorChain.add(logExecutor);
-executorChain.add(setParameterExecutor);
-executorChain.add(encryptExecutor);
-executorChain.add(packageExecutor);
-executorChain.add(profileExecutor);
-executorChain.add(commandLineExecutor);
+const config = new Config();
+config.load(Config.DEFAULT_CONFIG);
 
-interpreter.add(parameterInterpreter);
-interpreter.add(defaultInterpreter);
-interpreter.add(promptInterpreter);
-interpreter.add(cryptoInterpreter);
+const interpreter = new Interpreter();
+interpreter.add(new ParameterInterpreter());
+interpreter.add(new DefaultInterpreter());
+interpreter.add(new PromptInterpreter());
+interpreter.add(new CryptoInterpreter());
 
-const AUX4_PACKAGE_DIRECTORY = '/.aux4.config/packages/';
+const executorChain = new ExecutorChain(interpreter);
+executorChain.register(LogExecutor);
+executorChain.register(SetParameterExecutor);
+executorChain.register(EncryptExecutor);
+executorChain.register(PackageExecutor);
+executorChain.register(ProfileExecutor.with(config));
+executorChain.register(CommandLineExecutor);
 
-const path = require('path');
-const fs = require('fs');
-const homePath = require('os').homedir();
+const AUX4_PACKAGE_DIRECTORY = "/.aux4.config/packages/";
 
-config.load(config.getAux4Config(), () => {});
+const path = require("path");
+const fs = require("fs");
+const homePath = require("os").homedir();
 
 if (fs.existsSync(homePath + AUX4_PACKAGE_DIRECTORY)) {
   let files = fs.readdirSync(homePath + AUX4_PACKAGE_DIRECTORY);
   files.forEach(file => {
-    if (file.endsWith('.aux4') || file.endsWith('.json')) {
+    if (file.endsWith(".aux4") || file.endsWith(".json")) {
       let configFile = homePath + AUX4_PACKAGE_DIRECTORY + file;
-      config.loadFile(configFile, () => {});
+      config.loadFile(configFile);
     }
   });
 }
@@ -52,26 +52,29 @@ const directories = [];
 function loadDirectories(folder) {
   directories.unshift(folder);
 
-  const parentFolder = path.resolve(folder, '..');
+  const parentFolder = path.resolve(folder, "..");
   if (parentFolder !== folder) {
     loadDirectories(parentFolder);
   }
 }
 
-const currentFolder = path.resolve('.');
+const currentFolder = path.resolve(".");
 loadDirectories(currentFolder);
 
 directories.forEach(folder => {
-  const configFile = folder + '/.aux4';
+  const configFile = folder + "/.aux4";
   if (fs.existsSync(configFile)) {
     if (fs.lstatSync(configFile).isFile()) {
-      config.loadFile(configFile, () => {});
+      config.loadFile(configFile);
     }
   }
 });
 
-executor.init(config);
+const engine = new Engine({
+  config,
+  executorChain,
+  interpreter
+});
 
 const args = process.argv.splice(2);
-const parameters = params.extract(args);
-executor.execute(args, parameters);
+engine.run(args);
