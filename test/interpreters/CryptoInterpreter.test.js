@@ -7,9 +7,19 @@ describe("cryptoInterpreters", () => {
   describe("intercept", () => {
     let result;
 
+    describe("when action is not string", () => {
+      beforeEach(async () => {
+        result = await cryptoInterpreter.interpret({}, 123, [], {});
+      });
+
+      it("returns action", () => {
+        expect(result).toEqual(123);
+      });
+    });
+
     describe("without cryto", () => {
-      beforeEach(() => {
-        result = cryptoInterpreter.interpret({}, "mkdir test", [], {});
+      beforeEach(async () => {
+        result = await cryptoInterpreter.interpret({}, "mkdir test", [], {});
       });
 
       it("does not replace the action", () => {
@@ -18,9 +28,9 @@ describe("cryptoInterpreters", () => {
     });
 
     describe("with a single cryto", () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         Crypto.decrypt = jest.fn(() => "1234");
-        result = cryptoInterpreter.interpret({}, "connect -u root -p crypto(abcd)", [], {});
+        result = await cryptoInterpreter.interpret({}, "connect -u root -p crypto(abcd)", [], {});
       });
 
       it("calls crypto decrypt", () => {
@@ -33,9 +43,9 @@ describe("cryptoInterpreters", () => {
     });
 
     describe("with multiple crytos", () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         Crypto.decrypt = jest.fn().mockReturnValueOnce("1234").mockReturnValue("4321");
-        result = cryptoInterpreter.interpret({}, "connect -u root -p crypto(abcd) -token crypto(dcba)", [], {});
+        result = await cryptoInterpreter.interpret({}, "connect -u root -p crypto(abcd) -token crypto(dcba)", [], {});
       });
 
       it("calls crypto decrypt", () => {

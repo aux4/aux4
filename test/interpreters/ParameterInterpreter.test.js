@@ -10,10 +10,10 @@ describe("parameterInterpreter", () => {
     });
 
     describe("without variables", () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         args = [];
         parameters = {};
-        result = parameterInterpreter.interpret(command, "mkdir test", args, parameters);
+        result = await parameterInterpreter.interpret(command, "mkdir test", args, parameters);
       });
 
       it("does not replace the text", () => {
@@ -22,10 +22,10 @@ describe("parameterInterpreter", () => {
     });
 
     describe("with variable and no parameter", () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         args = [];
         parameters = {};
-        result = parameterInterpreter.interpret(command, "echo ${name}", args, parameters);
+        result = await parameterInterpreter.interpret(command, "echo ${name}", args, parameters);
       });
 
       it("does not replace the variable", () => {
@@ -34,10 +34,10 @@ describe("parameterInterpreter", () => {
     });
 
     describe("with variable and parameter", () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         args = [];
         parameters = { name: "John" };
-        result = parameterInterpreter.interpret(command, "echo ${name}", args, parameters);
+        result = await parameterInterpreter.interpret(command, "echo ${name}", args, parameters);
       });
 
       it("replaces the variable", () => {
@@ -46,10 +46,10 @@ describe("parameterInterpreter", () => {
     });
 
     describe("with multiple variables and parameters", () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         args = [];
         parameters = { firstName: "John", lastName: "Doe" };
-        result = parameterInterpreter.interpret(command, "echo $firstName $lastName", args, parameters);
+        result = await parameterInterpreter.interpret(command, "echo $firstName $lastName", args, parameters);
       });
 
       it("replaces the variable", () => {

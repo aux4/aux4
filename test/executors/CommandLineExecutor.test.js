@@ -18,7 +18,7 @@ describe("commandLineExecutor", () => {
   });
 
   describe("execute", () => {
-    let command, action, args, result;
+    let action, args, result;
 
     describe("with error", () => {
       beforeEach(() => {
@@ -33,15 +33,13 @@ describe("commandLineExecutor", () => {
         parameters = { folder: "test" };
       });
 
-      it("throws error", () => {
-        expect(() => {
-          commandLineExecutor.execute({}, action, args, parameters);
-        }).toThrow();
+      it("throws error", async () => {
+        await expect(() => commandLineExecutor.execute({}, action, args, parameters)).rejects.toThrow();
       });
     });
 
     describe("without error", () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         out.println = jest.fn();
         childProcess.execSync = jest.fn().mockReturnValue({
           toString: jest.fn().mockReturnValue("output message")
@@ -51,7 +49,7 @@ describe("commandLineExecutor", () => {
         args = [];
         parameters = { folder: "test" };
 
-        result = commandLineExecutor.execute({}, action, args, parameters);
+        result = await commandLineExecutor.execute({}, action, args, parameters);
       });
 
       it("should call interpret", () => {
@@ -89,15 +87,13 @@ describe("commandLineExecutor", () => {
           parameters = {};
         });
 
-        it("throws error", () => {
-          expect(() => {
-            commandLineExecutor.execute({}, action, args, parameters);
-          }).toThrow();
+        it("throws error", async () => {
+          await expect(() => commandLineExecutor.execute({}, action, args, parameters)).rejects.toThrow();
         });
       });
 
       describe("without error", () => {
-        beforeEach(() => {
+        beforeEach(async () => {
           out.println = jest.fn();
           childProcess.execSync = jest.fn().mockReturnValue({
             toString: jest.fn().mockReturnValue('{"name": "John"}')
@@ -107,7 +103,7 @@ describe("commandLineExecutor", () => {
           args = [];
           parameters = {};
 
-          result = commandLineExecutor.execute({}, action, args, parameters);
+          result = await commandLineExecutor.execute({}, action, args, parameters);
         });
 
         it("prints output message", () => {

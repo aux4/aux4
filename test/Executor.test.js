@@ -94,13 +94,13 @@ describe("executor", () => {
 
   describe("execute", () => {
     describe("when there are no arguments", () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         Help.print = jest.fn();
         executorChain.execute = jest.fn();
 
         executor = new Executor(config, executorChain, Suggester);
         executor.defineProfile("secondProfile");
-        executor.execute([]);
+        await executor.execute([]);
       });
 
       it("prints help for each command", () => {
@@ -111,14 +111,14 @@ describe("executor", () => {
     describe("when there are arguments", () => {
       let parameters;
 
-      beforeEach(() => {
+      beforeEach(async () => {
         executorChain.execute = jest.fn();
 
         parameters = { enable: "true" };
 
         executor = new Executor(config, executorChain, Suggester);
         executor.defineProfile("firstProfile");
-        executor.execute(["cmd"], parameters);
+        await executor.execute(["cmd"], parameters);
       });
 
       it("calls executorChain", () => {
@@ -130,13 +130,13 @@ describe("executor", () => {
       describe("with suggestion", () => {
         let suggester;
 
-        beforeEach(() => {
+        beforeEach(async () => {
           suggester = {};
           suggester.suggest = jest.fn();
 
           executor = new Executor(config, executorChain, suggester);
           executor.defineProfile("firstProfile");
-          executor.execute(["c"], {});
+          await executor.execute(["c"], {});
         });
 
         it("calls suggest", () => {
@@ -146,12 +146,12 @@ describe("executor", () => {
     });
 
     describe("help", () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         Help.print = jest.fn();
 
         executor = new Executor(config, executorChain, Suggester);
         executor.defineProfile("firstProfile");
-        executor.execute(["cmd"], { help: true });
+        await executor.execute(["cmd"], { help: true });
       });
 
       it("prints the help", () => {

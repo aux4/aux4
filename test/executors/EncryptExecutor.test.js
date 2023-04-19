@@ -20,9 +20,9 @@ describe("encryptExecutor", () => {
 
   describe("execute", () => {
     describe('when the prefix is not "crypto:encrypt"', () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         action = "log:test";
-        result = encryptExecutor.execute(command, action, args, parameters);
+        result = await encryptExecutor.execute(command, action, args, parameters);
       });
 
       it("returns false", () => {
@@ -32,9 +32,9 @@ describe("encryptExecutor", () => {
 
     describe('when prefix is "crypto:encrypt"', () => {
       describe("args is empty", () => {
-        beforeEach(() => {
+        beforeEach(async () => {
           action = "crypto:encrypt";
-          result = encryptExecutor.execute(command, action, args, parameters);
+          result = await encryptExecutor.execute(command, action, args, parameters);
         });
 
         it('prints "There is nothing to encrypt" message', () => {
@@ -47,10 +47,10 @@ describe("encryptExecutor", () => {
       });
 
       describe("args is not empty", () => {
-        beforeEach(() => {
+        beforeEach(async () => {
           action = "crypto:encrypt";
           args = ["abcd"];
-          result = encryptExecutor.execute(command, action, args, parameters);
+          result = await encryptExecutor.execute(command, action, args, parameters);
         });
 
         it('does not prints "There is nothing to encrypt" message', () => {

@@ -65,3 +65,7 @@ typings/
 
 # build
 build
+
+local-test
+
+.DS_Store

@@ -10,6 +10,7 @@ const EncryptExecutor = require("./lib/executors/EncryptExecutor");
 const ProfileExecutor = require("./lib/executors/ProfileExecutor");
 const PackageExecutor = require("./lib/executors/PackageExecutor");
 const CommandLineExecutor = require("./lib/executors/CommandLineExecutor");
+const EachExecutor = require("./lib/executors/EachExecutor");
 
 const ParameterInterpreter = require("./lib/interpreters/ParameterInterpreter");
 const DefaultInterpreter = require("./lib/interpreters/DefaultInterpreter");
@@ -31,6 +32,7 @@ module.exports = {
   PackageExecutor,
   ProfileExecutor,
   CommandLineExecutor,
+  EachExecutor,
   ParameterInterpreter,
   DefaultInterpreter,
   PromptInterpreter,

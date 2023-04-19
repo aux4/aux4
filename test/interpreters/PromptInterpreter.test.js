@@ -1,11 +1,15 @@
 const Crypto = require("../../lib/Crypto");
 
-const wrapper = {
+const promptSyncWrapper = {
   prompt: jest.fn(() => "input")
 };
 
-const promptSync = jest.mock("prompt-sync", () => jest.fn(() => wrapper.prompt));
+const cliSelect = require("cli-select-2");
+jest.mock("cli-select-2");
+
+const promptSync = jest.mock("prompt-sync", () => jest.fn(() => promptSyncWrapper.prompt));
 const colors = require("colors");
+const out = require("../../lib/Output");
 
 const PromptInterpreter = require("../../lib/interpreters/PromptInterpreter");
 const promptInterpreter = new PromptInterpreter();
@@ -37,17 +41,24 @@ describe("promptInterpreter", () => {
               name: "emptyDefault",
               default: "",
               text: "enter the empty default"
+            },
+            {
+              name: "option",
+              text: "choose the option",
+              options: ["option1", "option2"]
             }
           ]
         }
       };
+
+      out.println = jest.fn();
     });
 
     describe("without command help", () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         args = [];
         parameters = {};
-        result = promptInterpreter.interpret({}, "mkdir ${folder}", args, parameters);
+        result = await promptInterpreter.interpret({}, "mkdir ${folder}", args, parameters);
       });
 
       it("does not replace the variable", () => {
@@ -56,10 +67,10 @@ describe("promptInterpreter", () => {
     });
 
     describe("without command help variables", () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         args = [];
         parameters = {};
-        result = promptInterpreter.interpret({ help: {} }, "mkdir ${folder}", args, parameters);
+        result = await promptInterpreter.interpret({ help: {} }, "mkdir ${folder}", args, parameters);
       });
 
       it("does not replace the variable", () => {
@@ -68,10 +79,10 @@ describe("promptInterpreter", () => {
     });
 
     describe("without variables", () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         args = [];
         parameters = {};
-        result = promptInterpreter.interpret(command, "mkdir test", args, parameters);
+        result = await promptInterpreter.interpret(command, "mkdir test", args, parameters);
       });
 
       it("does not replace the variable", () => {
@@ -80,10 +91,10 @@ describe("promptInterpreter", () => {
     });
 
     describe("with not expected variable", () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         args = [];
         parameters = {};
-        result = promptInterpreter.interpret(command, "mkdir ${folder}", args, parameters);
+        result = await promptInterpreter.interpret(command, "mkdir ${folder}", args, parameters);
       });
 
       it("does not replace the variable", () => {
@@ -92,14 +103,14 @@ describe("promptInterpreter", () => {
     });
 
     describe("with variable without help text", () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         args = [];
         parameters = {};
-        result = promptInterpreter.interpret(command, "echo ${name}", args, parameters);
+        result = await promptInterpreter.interpret(command, "echo ${name}", args, parameters);
       });
 
       it("should call prompt", () => {
-        expect(wrapper.prompt).toHaveBeenCalledWith(("name".bold + ": ").cyan, {});
+        expect(promptSyncWrapper.prompt).toHaveBeenCalledWith(("name".bold + ": ").cyan, {});
       });
 
       it("should replace variable to the input value", () => {
@@ -108,14 +119,14 @@ describe("promptInterpreter", () => {
     });
 
     describe("with expected variable", () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         args = [];
         parameters = {};
-        result = promptInterpreter.interpret(command, "echo ${text}", args, parameters);
+        result = await promptInterpreter.interpret(command, "echo ${text}", args, parameters);
       });
 
       it("should call prompt", () => {
-        expect(wrapper.prompt).toHaveBeenCalledWith(("text".bold + " [enter the text]: ").cyan, {});
+        expect(promptSyncWrapper.prompt).toHaveBeenCalledWith(("text".bold + " [enter the text]: ").cyan, {});
       });
 
       it("should replace variable to the input value", () => {
@@ -128,16 +139,18 @@ describe("promptInterpreter", () => {
     });
 
     describe("with expected hidden variable", () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         command.help.variables[2].hide = true;
 
         args = [];
         parameters = {};
-        result = promptInterpreter.interpret(command, "echo ${text}", args, parameters);
+        result = await promptInterpreter.interpret(command, "echo ${text}", args, parameters);
       });
 
       it("should call prompt", () => {
-        expect(wrapper.prompt).toHaveBeenCalledWith(("text".bold + " [enter the text]: ").cyan, { echo: "*" });
+        expect(promptSyncWrapper.prompt).toHaveBeenCalledWith(("text".bold + " [enter the text]: ").cyan, {
+          echo: "*"
+        });
       });
 
       it("should replace variable to the input value", () => {
@@ -150,16 +163,16 @@ describe("promptInterpreter", () => {
     });
 
     describe("with expected variable and default value", () => {
-      beforeEach(() => {
-        wrapper.prompt = jest.fn(() => "input");
+      beforeEach(async () => {
+        promptSyncWrapper.prompt = jest.fn(() => "input");
 
         args = [];
         parameters = {};
-        result = promptInterpreter.interpret(command, "echo ${default}", args, parameters);
+        result = await promptInterpreter.interpret(command, "echo ${default}", args, parameters);
       });
 
       it("should not call prompt", () => {
-        expect(wrapper.prompt).not.toHaveBeenCalled();
+        expect(promptSyncWrapper.prompt).not.toHaveBeenCalled();
       });
 
       it("does not replace the variable", () => {
@@ -168,20 +181,44 @@ describe("promptInterpreter", () => {
     });
 
     describe("with expected variable and default is empty", () => {
-      beforeEach(() => {
-        wrapper.prompt = jest.fn(() => "input");
+      describe("with options", () => {
+        beforeEach(async () => {
+          cliSelect.mockResolvedValue(new Promise(resolve => resolve({ value: "option2" })));
 
-        args = [];
-        parameters = {};
-        result = promptInterpreter.interpret(command, "echo ${emptyDefault}", args, parameters);
+          args = [];
+          parameters = {};
+          result = await promptInterpreter.interpret(command, "echo ${option}", args, parameters);
+        });
+
+        it("should output the options", () => {
+          expect(out.println).toHaveBeenCalledWith(("option".bold + " [choose the option]: ").cyan);
+        });
+
+        it("should call cli-select", () => {
+          expect(cliSelect).toHaveBeenCalledWith({ values: ["option1", "option2"] });
+        });
+
+        it("should replace variable to the input value", () => {
+          expect(result).toEqual("echo option2");
+        });
       });
 
-      it("should not call prompt", () => {
-        expect(wrapper.prompt).not.toHaveBeenCalled();
-      });
+      describe("with no options", () => {
+        beforeEach(async () => {
+          promptSyncWrapper.prompt = jest.fn(() => "input");
 
-      it("does not replace the variable", () => {
-        expect(result).toEqual("echo ${emptyDefault}");
+          args = [];
+          parameters = {};
+          result = await promptInterpreter.interpret(command, "echo ${emptyDefault}", args, parameters);
+        });
+
+        it("should not call prompt", () => {
+          expect(promptSyncWrapper.prompt).not.toHaveBeenCalled();
+        });
+
+        it("does not replace the variable", () => {
+          expect(result).toEqual("echo ${emptyDefault}");
+        });
       });
     });
   });

@@ -34,9 +34,10 @@
   "funding": "https://aux4.io/donate",
   "devDependencies": {
     "coveralls": "^3.0.2",
-    "jest": "^25.5.3"
+    "jest": "^29.5.0"
   },
   "dependencies": {
+    "cli-select-2": "^2.0.0",
     "colors": "^1.4.0",
     "cryptr": "^6.0.2",
     "prompt-sync": "^4.2.0"

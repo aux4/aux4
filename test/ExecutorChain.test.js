@@ -55,10 +55,28 @@ describe("executorChain", () => {
     });
   });
 
+  describe("when execute is a function", () => {
+    let command, args, parameters;
+
+    beforeEach(async () => {
+      command = {
+        execute: jest.fn()
+      };
+      args = [];
+      parameters = {};
+
+      await executorChain.execute(command, args, parameters);
+    });
+
+    it("calls execute", () => {
+      expect(command.execute).toHaveBeenCalledWith(parameters, args, command);
+    });
+  });
+
   describe("when there are only command line", () => {
     let command, args, parameters;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       logExecutor.execute = jest.fn().mockReturnValue(false);
       profileExecutor.execute = jest.fn().mockReturnValue(false);
       commandLineExecutor.execute = jest.fn().mockReturnValue(true);
@@ -68,7 +86,7 @@ describe("executorChain", () => {
       };
       args = [];
       parameters = {};
-      executorChain.execute(command, args, parameters);
+      await executorChain.execute(command, args, parameters);
     });
 
     it("executes logExecutor for each command", () => {
@@ -111,7 +129,7 @@ describe("executorChain", () => {
   describe("when there is a profile command", () => {
     let command;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       logExecutor.execute = jest.fn().mockReturnValue(false);
       profileExecutor.execute = jest.fn().mockReturnValue(true);
       commandLineExecutor.execute = jest.fn().mockReturnValue(true);
@@ -119,7 +137,7 @@ describe("executorChain", () => {
       command = {
         execute: ["profile:git"]
       };
-      executorChain.execute(command);
+      await executorChain.execute(command);
     });
 
     it("executes logExecutor for each command", () => {
@@ -140,7 +158,7 @@ describe("executorChain", () => {
   });
 
   describe("when executor throws error", () => {
-    beforeEach(() => {
+    beforeEach(async () => {
       logExecutor.execute = jest.fn().mockImplementation(() => {
         throw new Error();
       });
@@ -151,7 +169,7 @@ describe("executorChain", () => {
         execute: ["profile:git"]
       };
 
-      executorChain.execute(command);
+      await executorChain.execute(command);
     });
 
     it("calls logExecutor", () => {

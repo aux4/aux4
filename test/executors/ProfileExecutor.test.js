@@ -21,12 +21,12 @@ describe("profileExecutor", () => {
     let action, args, parameters, result;
 
     describe("when is not a profile", () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         action = "mkdir test";
         args = [];
         parameters = {};
 
-        result = profileExecutor.execute({}, action, args, parameters);
+        result = await profileExecutor.execute({}, action, args, parameters);
       });
 
       it("returns false", () => {
@@ -37,13 +37,13 @@ describe("profileExecutor", () => {
     describe("when is a profile", () => {
       let profile;
 
-      beforeEach(() => {
+      beforeEach(async () => {
         profile = "git";
         action = "profile:" + profile;
         args = ["push"];
         parameters = {};
 
-        result = profileExecutor.execute({}, action, args, parameters);
+        result = await profileExecutor.execute({}, action, args, parameters);
       });
 
       it('calls "executor.defineProfile" with the profile', () => {

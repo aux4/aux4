@@ -2,6 +2,20 @@ const Variable = require("../lib/Variable");
 
 describe("variable", () => {
   describe("list", () => {
+    describe("when action is not a string", () => {
+      let list, action;
+
+      beforeEach(() => {
+        action = 123;
+
+        list = Variable.list(action);
+      });
+
+      it("returns an empty list", () => {
+        expect(list).toEqual([]);
+      });
+    });
+
     describe("without variables", () => {
       let list, action;
 
@@ -139,6 +153,22 @@ describe("variable", () => {
         it("replaces ${person.address.city}", () => {
           expect(result).toEqual("echo ");
         });
+      });
+    });
+
+    describe("action is just a variable", () => {
+      let result, action, key, value;
+
+      beforeEach(() => {
+        action = "${folder}";
+        key = "folder";
+        value = "test";
+
+        result = Variable.replace(action, key, value);
+      });
+
+      it("replaces variable", () => {
+        expect(result).toEqual("test");
       });
     });
   });

@@ -7,6 +7,7 @@ const {
   Interpreter,
   LogExecutor,
   SetParameterExecutor,
+  EachExecutor,
   EncryptExecutor,
   PackageExecutor,
   ProfileExecutor,
@@ -26,6 +27,7 @@ interpreter.add(new CryptoInterpreter());
 const executorChain = new ExecutorChain(interpreter);
 executorChain.register(LogExecutor);
 executorChain.register(SetParameterExecutor);
+executorChain.register(EachExecutor);
 executorChain.register(EncryptExecutor);
 executorChain.register(PackageExecutor);
 executorChain.register(ProfileExecutor.with(config));
@@ -70,11 +72,13 @@ directories.forEach(folder => {
   }
 });
 
-const engine = new Engine({
-  config,
-  executorChain,
-  interpreter
-});
+(async () => {
+  const engine = new Engine({
+    config,
+    executorChain,
+    interpreter
+  });
 
-const args = process.argv.splice(2);
-engine.run(args);
+  const args = process.argv.splice(2);
+  await engine.run(args);
+})();

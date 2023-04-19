@@ -28,10 +28,10 @@ describe("defaultInterpreter", () => {
     });
 
     describe("without command help", () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         args = [];
         parameters = {};
-        result = defaultInterpreter.interpret({}, "mkdir ${folder}", args, parameters);
+        result = await defaultInterpreter.interpret({}, "mkdir ${folder}", args, parameters);
       });
 
       it("does not replace the variable", () => {
@@ -40,10 +40,10 @@ describe("defaultInterpreter", () => {
     });
 
     describe("without command help variables", () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         args = [];
         parameters = {};
-        result = defaultInterpreter.interpret({ help: {} }, "mkdir ${folder}", args, parameters);
+        result = await defaultInterpreter.interpret({ help: {} }, "mkdir ${folder}", args, parameters);
       });
 
       it("does not replace the variable", () => {
@@ -52,10 +52,10 @@ describe("defaultInterpreter", () => {
     });
 
     describe("without variables", () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         args = [];
         parameters = {};
-        result = defaultInterpreter.interpret(command, "mkdir test", args, parameters);
+        result = await defaultInterpreter.interpret(command, "mkdir test", args, parameters);
       });
 
       it("does not replace the variable", () => {
@@ -64,10 +64,10 @@ describe("defaultInterpreter", () => {
     });
 
     describe("with not expected variable", () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         args = [];
         parameters = {};
-        result = defaultInterpreter.interpret(command, "mkdir ${folder}", args, parameters);
+        result = await defaultInterpreter.interpret(command, "mkdir ${folder}", args, parameters);
       });
 
       it("does not replace the variable", () => {
@@ -76,10 +76,10 @@ describe("defaultInterpreter", () => {
     });
 
     describe("with variable without help text", () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         args = [];
         parameters = {};
-        result = defaultInterpreter.interpret(command, "echo ${name}", args, parameters);
+        result = await defaultInterpreter.interpret(command, "echo ${name}", args, parameters);
       });
 
       it("does not replace the variable", () => {
@@ -88,10 +88,10 @@ describe("defaultInterpreter", () => {
     });
 
     describe("with expeted variable and no default value", () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         args = [];
         parameters = {};
-        result = defaultInterpreter.interpret(command, "echo ${text}", args, parameters);
+        result = await defaultInterpreter.interpret(command, "echo ${text}", args, parameters);
       });
 
       it("does not replace the variable", () => {
@@ -100,10 +100,10 @@ describe("defaultInterpreter", () => {
     });
 
     describe("with expeted variable and default value", () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         args = [];
         parameters = {};
-        result = defaultInterpreter.interpret(command, "echo ${default}", args, parameters);
+        result = await defaultInterpreter.interpret(command, "echo ${default}", args, parameters);
       });
 
       it("replaces the variable", () => {

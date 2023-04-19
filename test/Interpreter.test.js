@@ -7,7 +7,7 @@ describe("interpreter", () => {
   describe("interpret", () => {
     let result, command, action, args, parameters;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       jest.resetModules();
       parameterInterpreter.interpret = jest.fn();
       interpreter.add(parameterInterpreter);
@@ -17,7 +17,7 @@ describe("interpreter", () => {
       parameters = {};
       action = "";
 
-      result = interpreter.interpret(command, action, args, parameters);
+      result = await interpreter.interpret(command, action, args, parameters);
     });
 
     it("calls parameterInterpreter", () => {

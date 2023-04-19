@@ -20,12 +20,12 @@ describe("logExecutor", () => {
     let command, action, args, parameters, result;
 
     describe("when action is not a log", () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         action = "mkdir test";
         args = [];
         parameters = {};
 
-        result = logExecutor.execute({}, action, args, parameters);
+        result = await logExecutor.execute({}, action, args, parameters);
       });
 
       it("returns false", () => {
@@ -35,12 +35,12 @@ describe("logExecutor", () => {
 
     describe("when action is a log", () => {
       describe("without parameters", () => {
-        beforeEach(() => {
+        beforeEach(async () => {
           action = "log:mkdir test";
           args = [];
           parameters = {};
 
-          result = logExecutor.execute({}, action, args, parameters);
+          result = await logExecutor.execute({}, action, args, parameters);
         });
 
         it("prints the log", () => {

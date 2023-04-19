@@ -20,12 +20,12 @@ describe("setParameterExecutor", () => {
     let command, action, args, parameters, result;
 
     describe("when action is not a set", () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         action = "mkdir test";
         args = [];
         parameters = {};
 
-        result = setParameterExecutor.execute({}, action, args, parameters);
+        result = await setParameterExecutor.execute({}, action, args, parameters);
       });
 
       it("returns false", () => {
@@ -35,12 +35,12 @@ describe("setParameterExecutor", () => {
 
     describe("when action is a set", () => {
       describe("without equals", () => {
-        beforeEach(() => {
+        beforeEach(async () => {
           action = "set:variable";
           args = [];
           parameters = {};
 
-          result = setParameterExecutor.execute({}, action, args, parameters);
+          result = await setParameterExecutor.execute({}, action, args, parameters);
         });
 
         it("prints the log", () => {
@@ -54,13 +54,13 @@ describe("setParameterExecutor", () => {
 
       describe("with equals ", () => {
         describe("and static value", () => {
-          beforeEach(() => {
+          beforeEach(async () => {
             command = {};
             action = "set:variable=value";
             args = [];
             parameters = {};
 
-            result = setParameterExecutor.execute(command, action, args, parameters);
+            result = await setParameterExecutor.execute(command, action, args, parameters);
           });
 
           it("calls the interpreter", () => {
@@ -77,7 +77,7 @@ describe("setParameterExecutor", () => {
         });
 
         describe("and value from another parameter", () => {
-          beforeEach(() => {
+          beforeEach(async () => {
             command = {};
             action = "set:name=${firstName} ${lastName}";
             args = [];
@@ -86,7 +86,7 @@ describe("setParameterExecutor", () => {
               lastName: "Doe"
             };
 
-            result = setParameterExecutor.execute(command, action, args, parameters);
+            result = await setParameterExecutor.execute(command, action, args, parameters);
           });
 
           it("calls the interpreter", () => {
