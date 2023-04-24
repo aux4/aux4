@@ -171,5 +171,37 @@ describe("variable", () => {
         expect(result).toEqual("test");
       });
     });
+
+    describe("variable with index", () => {
+      let result, action, key, value;
+
+      describe("when array is in the object", () => {
+        beforeEach(() => {
+          action = "echo ${main.folder[1]}";
+          key = "main";
+          value = { folder: ["test1", "test2"] };
+
+          result = Variable.replace(action, key, value);
+        });
+
+        it("replaces variable", () => {
+          expect(result).toEqual("echo test2");
+        });
+      });
+
+      describe("when array is not in the object", () => {
+        beforeEach(() => {
+          action = "echo ${folder[1]}";
+          key = "folder";
+          value = ["test1", "test2"];
+
+          result = Variable.replace(action, key, value);
+        });
+
+        it("replaces variable", () => {
+          expect(result).toEqual("echo test2");
+        });
+      });
+    });
   });
 });

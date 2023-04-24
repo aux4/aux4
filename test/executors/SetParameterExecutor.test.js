@@ -97,9 +97,47 @@ describe("setParameterExecutor", () => {
             expect(parameters.name).toBe("John Doe");
           });
 
+          it("sets response parameter to the context", () => {
+            expect(parameters.response).toBe("John Doe");
+          });
+
           it("returns true", () => {
             expect(result).toBeTruthy();
           });
+        });
+      });
+
+      describe("with multiple parameters", () => {
+        beforeEach(async () => {
+          command = {};
+          action = "set:name=${firstName} ${lastName};age=25";
+          args = [];
+          parameters = {
+            firstName: "John",
+            lastName: "Doe"
+          };
+
+          result = await setParameterExecutor.execute(command, action, args, parameters);
+        });
+
+        it("calls the interpreter", () => {
+          expect(spyOnInterpreter).toHaveBeenCalledWith(command, "${firstName} ${lastName}", args, parameters);
+        });
+
+        it("sets parameter name to the context", () => {
+          expect(parameters.name).toBe("John Doe");
+        });
+
+        it("sets parameter age to the context", () => {
+          expect(parameters.age).toBe("25");
+        });
+
+        it("sets response parameter to the context", () => {
+          expect(parameters.response).toBe("25");
+        });
+
+        it("returns true", () => {
+          expect(result).toBeTruthy();
         });
       });
     });
