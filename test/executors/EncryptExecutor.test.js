@@ -1,7 +1,7 @@
 const colors = require("colors");
 
 const Crypto = require("../../lib/Crypto");
-const out = require("../../lib/Output");
+const {Output:out} = require("@aux4/engine");
 
 const EncryptExecutor = require("../../lib/executors/EncryptExecutor");
 const encryptExecutor = new EncryptExecutor();

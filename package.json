@@ -1,6 +1,6 @@
 {
   "name": "aux4",
-  "version": "3.0.2",
+  "version": "4.0.0",
   "description": "CLI (command-line interface) generator",
   "main": "index.js",
   "scripts": {
@@ -10,7 +10,7 @@
   },
   "preferGlobal": true,
   "bin": {
-    "aux4": "executable.js"
+    "aux4": "bin/executable.js"
   },
   "author": "Aux4",
   "license": "Apache-2.0",
@@ -36,9 +36,8 @@
     "jest": "^29.5.0"
   },
   "dependencies": {
-    "cli-select-2": "^2.0.0",
     "colors": "^1.4.0",
     "cryptr": "^6.2.0",
-    "prompt-sync": "^4.2.0"
+    "@aux4/engine": "^1.0.13"
   }
 }
