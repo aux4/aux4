@@ -20,10 +20,8 @@
             "npm version ${version}",
             "json:cat package.json",
             "set:versionNumber=${response.version}",
-            "git tag -a ${versionNumber} -m '${versionNumber}'",
+            "npm publish --access public --otp=${otp}",
             "git push --follow-tags",
-            "npm publish ./build",
-            "git push",
             "echo ${versionNumber} released successfully"
           ],
           "help": {
@@ -33,6 +31,10 @@
                 "name": "version",
                 "text": "type of version release. e.g.: major, minor, patch",
                 "default": "patch"
+              },
+              {
+                "name": "otp",
+                "text": "npm one time password"
               }
             ]
           }
