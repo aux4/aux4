@@ -1,6 +1,6 @@
 const Crypto = require("../../lib/Crypto");
 
-const CryptoInterpreter = require("../../lib/interpreters/CryptoInterpreter");
+const CryptoInterpreter = require("../../lib/interpreter/DecryptInterpreter");
 const cryptoInterpreter = new CryptoInterpreter();
 
 describe("cryptoInterpreters", () => {

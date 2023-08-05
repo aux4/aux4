@@ -16,13 +16,14 @@ const {
   CommandLineExecutor,
   ParameterInterpreter,
   DefaultParameterRetriever,
+  EnvironmentVariableParameterRetriever,
   PromptParameterRetriever
 } = require("@aux4/engine");
-const EncryptExecutor = require("../lib/executors/EncryptExecutor");
-const PackageExecutor = require("../lib/executors/PackageExecutor");
-const CryptoInterpreter = require("../lib/interpreters/CryptoInterpreter");
+const PackageExecutor = require("../lib/executor/PackageExecutor");
+const CryptoInterpreter = require("../lib/interpreter/DecryptInterpreter");
 const CompatibilityAdapter = require("../lib/CompatibilityAdapter");
 const CommandParameters = require("../../aux4-engine/lib/CommandParameters");
+const encryptParameterTransformer = require("../lib/interpreter/EncryptParameterTransformer");
 
 const aux4Profile = {
   name: "aux4",
@@ -53,14 +54,6 @@ const aux4Profile = {
             default: ""
           }
         ]
-      }
-    },
-    {
-      name: "encrypt",
-      execute: ["crypto:encrypt"],
-      help: {
-        text:
-          "Encrypt value.\nTo make the encryption more safe, you can define a special key in the environment variable AUX4_SECURITY_KEY."
       }
     },
     {
@@ -97,14 +90,14 @@ interpreter.add(new ParameterInterpreter());
 interpreter.add(new CryptoInterpreter());
 
 const commandParametersFactory = CommandParameters.newInstance();
+commandParametersFactory.register(new EnvironmentVariableParameterRetriever());
 commandParametersFactory.register(new DefaultParameterRetriever());
-commandParametersFactory.register(new PromptParameterRetriever());
+commandParametersFactory.register(new PromptParameterRetriever(encryptParameterTransformer));
 
 const executorChain = new ExecutorChain(interpreter, commandParametersFactory);
 executorChain.register(LogExecutor);
 executorChain.register(SetParameterExecutor);
 executorChain.register(EachExecutor);
-executorChain.register(EncryptExecutor);
 executorChain.register(PackageExecutor);
 executorChain.register(ProfileExecutor.with(config));
 executorChain.register(CommandLineExecutor);
