@@ -24,6 +24,8 @@ const CryptoInterpreter = require("../lib/interpreter/DecryptInterpreter");
 const CompatibilityAdapter = require("../lib/CompatibilityAdapter");
 const CommandParameters = require("../../aux4-engine/lib/CommandParameters");
 const encryptParameterTransformer = require("../lib/interpreter/EncryptParameterTransformer");
+const ConfigParameterRetriever = require("../lib/retriever/ConfigParameterRetriever");
+const VersionCommand = require("./command/VersionCommand");
 
 const aux4Profile = {
   name: "aux4",
@@ -54,6 +56,13 @@ const aux4Profile = {
             default: ""
           }
         ]
+      }
+    },
+    {
+      name: "version",
+      execute: VersionCommand.execute,
+      help: {
+        text: "Show the aux4 version"
       }
     },
     {
@@ -92,6 +101,7 @@ interpreter.add(new CryptoInterpreter());
 const commandParametersFactory = CommandParameters.newInstance();
 commandParametersFactory.register(new EnvironmentVariableParameterRetriever());
 commandParametersFactory.register(new DefaultParameterRetriever());
+commandParametersFactory.register(ConfigParameterRetriever.with(config));
 commandParametersFactory.register(new PromptParameterRetriever(encryptParameterTransformer));
 
 const executorChain = new ExecutorChain(interpreter, commandParametersFactory);
