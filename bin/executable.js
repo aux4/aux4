@@ -100,8 +100,8 @@ interpreter.add(new CryptoInterpreter());
 
 const commandParametersFactory = CommandParameters.newInstance();
 commandParametersFactory.register(new EnvironmentVariableParameterRetriever());
-commandParametersFactory.register(new DefaultParameterRetriever());
 commandParametersFactory.register(ConfigParameterRetriever.with(config));
+commandParametersFactory.register(new DefaultParameterRetriever());
 commandParametersFactory.register(new PromptParameterRetriever(encryptParameterTransformer));
 
 const executorChain = new ExecutorChain(interpreter, commandParametersFactory);
