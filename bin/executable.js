@@ -22,7 +22,7 @@ const {
 const PackageExecutor = require("../lib/executor/PackageExecutor");
 const CryptoInterpreter = require("../lib/interpreter/DecryptInterpreter");
 const CompatibilityAdapter = require("../lib/CompatibilityAdapter");
-const CommandParameters = require("../../aux4-engine/lib/CommandParameters");
+const { CommandParameters } = require("@aux4/engine");
 const encryptParameterTransformer = require("../lib/interpreter/EncryptParameterTransformer");
 const ConfigParameterRetriever = require("../lib/retriever/ConfigParameterRetriever");
 const VersionCommand = require("./command/VersionCommand");
