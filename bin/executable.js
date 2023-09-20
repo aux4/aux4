@@ -155,5 +155,10 @@ directories.forEach(folder => {
   });
 
   const args = process.argv.splice(2);
-  await engine.run(args);
+
+  try {
+    await engine.run(args);
+  } catch (e) {
+    process.exit(1);
+  }
 })();
