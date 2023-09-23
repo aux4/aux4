@@ -20,7 +20,7 @@ class VersionCommand {
 
     if (latestVersion !== packageJson.version) {
       console.log(`Latest version: ${getFormattedVersion(latestVersion)}`);
-      console.log(`Run ${"aux4 upgrade".cyan} to upgrade to the latest version`);
+      console.log(`Run ${"aux4 aux4 upgrade".cyan} to upgrade to the latest version`);
       console.log();
     }
   }
