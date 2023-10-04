@@ -28,9 +28,9 @@
     "devops"
   ],
   "bugs": {
-    "url": "http://aux4.io/help"
+    "url": "https://aux4.io/help"
   },
-  "homepage": "http://aux4.io",
+  "homepage": "https://aux4.io",
   "funding": "https://aux4.io/donate",
   "devDependencies": {
     "jest": "^29.5.0"
