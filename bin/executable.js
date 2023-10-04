@@ -27,6 +27,8 @@ const encryptParameterTransformer = require("../lib/interpreter/EncryptParameter
 const ConfigParameterRetriever = require("../lib/retriever/ConfigParameterRetriever");
 const VersionCommand = require("./command/VersionCommand");
 
+process.title = "aux4";
+
 const aux4Profile = {
   name: "aux4",
   commands: [
