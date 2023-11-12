@@ -17,14 +17,13 @@ const {
   ParameterInterpreter,
   DefaultParameterRetriever,
   EnvironmentVariableParameterRetriever,
-  PromptParameterRetriever
+  PromptParameterRetriever, ConfigParameterRetriever, EncryptedParameterRetriever, ArgumentParameterRetriever
 } = require("@aux4/engine");
 const PackageExecutor = require("../lib/executor/PackageExecutor");
 const CryptoInterpreter = require("../lib/interpreter/DecryptInterpreter");
 const CompatibilityAdapter = require("../lib/CompatibilityAdapter");
 const { CommandParameters } = require("@aux4/engine");
 const encryptParameterTransformer = require("../lib/interpreter/EncryptParameterTransformer");
-const ConfigParameterRetriever = require("../lib/retriever/ConfigParameterRetriever");
 const VersionCommand = require("./command/VersionCommand");
 
 process.title = "aux4";
@@ -103,6 +102,8 @@ interpreter.add(new CryptoInterpreter());
 const commandParametersFactory = CommandParameters.newInstance();
 commandParametersFactory.register(new EnvironmentVariableParameterRetriever());
 commandParametersFactory.register(ConfigParameterRetriever.with(config));
+commandParametersFactory.register(new EncryptedParameterRetriever());
+commandParametersFactory.register(new ArgumentParameterRetriever());
 commandParametersFactory.register(new DefaultParameterRetriever());
 commandParametersFactory.register(new PromptParameterRetriever(encryptParameterTransformer));
 
@@ -161,6 +162,6 @@ directories.forEach(folder => {
   try {
     await engine.run(args);
   } catch (e) {
-    process.exit(1);
+    process.exit(e.exitCode || 1);
   }
 })();
