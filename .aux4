@@ -7,13 +7,12 @@
         {
           "name": "hello",
           "execute": [
-            "echo hello"
+            "alias:go run . test show"
           ]
         },
         {
           "name": "test",
           "execute": [
-            "set:event=test;order=1",
             "profile:test"
           ]
         }
@@ -25,8 +24,18 @@
         {
           "name": "show",
           "execute": [
-            "echo show ${name} ${event} ${order}"
-          ]
+            "log:this is the show command",
+            "echo show ${name}"
+          ],
+          "help": {
+            "text": "test to show",
+            "variables": [
+              {
+                "name": "name",
+                "text": "the name"
+              }
+            ]
+          }
         }
       ]
     }

@@ -13,7 +13,7 @@ type VirtualProfile struct {
 type VirtualCommand struct {
 	Name    string
 	Execute []VirtualCommandExecutor
-	Help    CommandHelp
+	Help    *CommandHelp
 }
 
 type VirtualCommandExecutor interface {

@@ -36,7 +36,7 @@ func ParseArgs(args []string) ([]string, Parameters) {
 }
 
 type ParameterLookup interface {
-  Get(parameters *Parameters, command *VirtualCommand, name string) any
+  Get(parameters *Parameters, command *VirtualCommand, actions []string, name string) any
 }
 
 type Parameters struct {
@@ -56,14 +56,15 @@ func (p *Parameters) Update(name string, value any) {
   p.params[name] = append(p.params[name], value)
 }
 
-func (p *Parameters) Get(command *VirtualCommand, name string) any {
-	if p.params[name] == nil {
-		return ""
+func (p *Parameters) Get(command *VirtualCommand, actions []string, name string) any {
+	if p.params[name] != nil {
+    return p.params[name][(len(p.params[name]) - 1)]
 	}
-  value := p.params[name][(len(p.params[name]) - 1)]
+
+  value := any(nil)
 
   for _, lookup := range p.lookups {
-    value = lookup.Get(p, command, name)
+    value = lookup.Get(p, command, actions, name)
     if value != nil {
       p.Set(name, value)
       break
@@ -80,12 +81,12 @@ func (p *Parameters) GetMultiple(command *VirtualCommand, name string) []any {
 	return p.params[name]
 }
 
-func InjectParameters(command *VirtualCommand, instruction string, params *Parameters) string {
+func InjectParameters(command *VirtualCommand, instruction string, actions []string, params *Parameters) string {
 	const variableRegex = "\\$\\{([a-zA-Z0-9_]+)\\}"
 	expr := regexp.MustCompile(variableRegex)
 	return expr.ReplaceAllStringFunc(instruction, func(match string) string {
 		name := match[2 : len(match)-1]
-	  value := params.Get(command, name).(string)
+	  value := params.Get(command, actions, name).(string)
     if value == "" {
       return match
     }

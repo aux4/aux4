@@ -16,12 +16,12 @@ type Package struct {
 }
 
 func (pack *Package) GetProfile(name string) (*Profile, bool) {
-  for _, profile := range pack.Profiles {
-    if profile.Name == name {
-      return &profile, true
-    }
-  }
-  return nil, false
+	for _, profile := range pack.Profiles {
+		if profile.Name == name {
+			return &profile, true
+		}
+	}
+	return nil, false
 }
 
 type Profile struct {
@@ -32,18 +32,28 @@ type Profile struct {
 type Command struct {
 	Name    string      `json:"name"`
 	Execute []string    `json:"execute"`
-	Help    CommandHelp `json:"help"`
+	Help    *CommandHelp `json:"help"`
 }
 
 type CommandHelp struct {
-	Text      string                `json:"text"`
-	Variables []CommandHelpVariable `json:"variables"`
+	Text      string                 `json:"text"`
+	Variables []*CommandHelpVariable `json:"variables"`
+}
+
+func (help *CommandHelp) GetVariable(name string) (*CommandHelpVariable, bool) {
+	for _, variable := range help.Variables {
+		if variable.Name == name {
+			return variable, true
+		}
+	}
+	return nil, false
 }
 
 type CommandHelpVariable struct {
 	Name    string   `json:"name"`
 	Text    string   `json:"text"`
 	Default string   `json:"default"`
+	Arg     bool     `json:"arg"`
 	Options []string `json:"options"`
 }
 
