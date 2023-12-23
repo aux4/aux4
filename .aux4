@@ -1,0 +1,34 @@
+{
+  "name": "local",
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "hello",
+          "execute": [
+            "echo hello"
+          ]
+        },
+        {
+          "name": "test",
+          "execute": [
+            "set:event=test;order=1",
+            "profile:test"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "test",
+      "commands": [
+        {
+          "name": "show",
+          "execute": [
+            "echo show ${name} ${event} ${order}"
+          ]
+        }
+      ]
+    }
+  ]
+}
