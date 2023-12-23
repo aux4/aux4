@@ -81,6 +81,24 @@ func (p *Parameters) GetMultiple(command *VirtualCommand, name string) []any {
 	return p.params[name]
 }
 
+func (p *Parameters) String() string {
+  var builder strings.Builder
+  for name, values := range p.params {
+    for i, value := range values {
+      if i > 0 {
+        builder.WriteString(" ")
+      }
+
+      builder.WriteString("--")
+      builder.WriteString(name)
+      builder.WriteString(" '")
+      builder.WriteString(value.(string))
+      builder.WriteString("'")
+    }
+  }
+  return builder.String()
+}
+
 func InjectParameters(command *VirtualCommand, instruction string, actions []string, params *Parameters) string {
 	const variableRegex = "\\$\\{([a-zA-Z0-9_]+)\\}"
 	expr := regexp.MustCompile(variableRegex)

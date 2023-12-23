@@ -30,8 +30,8 @@ type Profile struct {
 }
 
 type Command struct {
-	Name    string      `json:"name"`
-	Execute []string    `json:"execute"`
+	Name    string       `json:"name"`
+	Execute []string     `json:"execute"`
 	Help    *CommandHelp `json:"help"`
 }
 
@@ -54,6 +54,7 @@ type CommandHelpVariable struct {
 	Text    string   `json:"text"`
 	Default string   `json:"default"`
 	Arg     bool     `json:"arg"`
+	Env     string   `json:"env"`
 	Options []string `json:"options"`
 }
 

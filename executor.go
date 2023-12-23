@@ -78,6 +78,15 @@ type AliasCommandExecutor struct {
 func (executor *AliasCommandExecutor) Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error {
   expression := strings.TrimPrefix(executor.Command, "alias:")
 
+  if len(actions) > 1 {
+    expression = expression + " " + strings.Join(actions[1:], " ")
+  }
+
+  stringParams := params.String()
+  if stringParams != "" {
+    expression = expression + " " + stringParams
+  }
+
   cmd := exec.Command("bash", "-c", expression)
   cmd.Stdin = os.Stdin
   cmd.Stdout = os.Stdout

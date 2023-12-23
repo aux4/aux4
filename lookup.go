@@ -8,10 +8,27 @@ import (
 
 func ParameterLookups() []ParameterLookup {
   return []ParameterLookup{
-    &DefaultLookup{},
     &ArgLookup{},
+    &EnvironmentVariableLookup{},
+    &DefaultLookup{},
     &PromptLookup{},
   }
+}
+
+type EnvironmentVariableLookup struct {
+}
+
+func (l EnvironmentVariableLookup) Get(parameters *Parameters, command *VirtualCommand, actions []string, name string) any {
+  variable, ok := command.Help.GetVariable(name)
+  if !ok {
+    return nil
+  }
+
+  if variable.Env == "" {
+    return nil
+  }
+
+  return os.Getenv(variable.Env)
 }
 
 type DefaultLookup struct {
