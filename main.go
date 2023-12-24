@@ -6,6 +6,46 @@ import (
 
 func main() {
   library := LocalLibrary() 
+
+  if err := library.Load("aux4", []byte(`
+    {
+      "profiles": [
+        {
+          "name": "main",
+          "commands": [
+            {
+              "name": "aux4",
+              "execute": [
+                "profile:aux4"
+              ],
+              "help": {
+                "text": "aux4 utility"
+              }
+            }
+          ]
+        },
+        {
+          "name": "aux4",
+          "commands": [
+            {
+              "name": "man",
+              "execute": [
+                "set:help=true",
+                "profile:main"
+              ],
+              "help": {
+                "text": "Display help for a command"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  `)); err != nil {
+    Out(StdErr).Println(err) 
+    os.Exit(err.(Aux4Error).ExitCode)
+  }
+
   if err := library.LoadFile(".aux4"); err != nil {
     Out(StdErr).Println(err) 
     os.Exit(err.(Aux4Error).ExitCode)
