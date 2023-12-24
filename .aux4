@@ -36,6 +36,34 @@
               }
             ]
           }
+        },
+        {
+          "name": "the-second-command",
+          "execute": [],
+          "help": {
+            "text": "the second command description is quite long so we should not know whether will fit in a single line or not. But this is a good opportunity for testing tho",
+            "variables": [
+              {
+                "name": "why-whould-the-variable-so-big",
+                "text": "this variable name should be very big so it's easier to identify how good will it look like in the terminal. it's never a good idea to have a text so long"
+              },
+              {
+                "name": "small",
+                "text": "it is interesting to have a small variable too"
+              },
+              {
+                "name": "with-default",
+                "text": "param with default value",
+                "default": "cool"
+              },
+              {
+                "name": "with-env",
+                "text": "param with env value",
+                "env": "NICE"
+              }
+
+            ]
+          }
         }
       ]
     }

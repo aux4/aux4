@@ -56,6 +56,10 @@ func (p *Parameters) Update(name string, value any) {
   p.params[name] = append(p.params[name], value)
 }
 
+func (p *Parameters) Has(name string) bool {
+  return p.params[name] != nil
+}
+
 func (p *Parameters) Get(command *VirtualCommand, actions []string, name string) any {
 	if p.params[name] != nil {
     return p.params[name][(len(p.params[name]) - 1)]

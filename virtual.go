@@ -20,57 +20,66 @@ type VirtualCommandExecutor interface {
 	Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error
 }
 
-
 func InitializeVirtualEnvironment(library *Library) (*VirtualEnvironment, error) {
 	env := VirtualEnvironment{
-    currentProfile: "main",
-		profiles: make(map[string]*VirtualProfile),
+		currentProfile: "main",
+		profiles:       make(map[string]*VirtualProfile),
 	}
 
-  for _, pack := range library.packages {
-    err := loadPackage(&env, pack)
-    if err != nil {
-      return nil, err
-    }
-  }
+	for _, pack := range library.packages {
+		err := loadPackage(&env, pack)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	return &env, nil
 }
 
 type VirtualEnvironment struct {
-  currentProfile string
-	profiles map[string]*VirtualProfile
+	currentProfile string
+	profiles       map[string]*VirtualProfile
 }
 
 func (env *VirtualEnvironment) SetProfile(profile string) error {
-  if env.profiles[profile] == nil {
-    return InternalError(fmt.Sprintf("Profile not found: %s", profile), nil)
-  }
+	if env.profiles[profile] == nil {
+		return InternalError(fmt.Sprintf("Profile not found: %s", profile), nil)
+	}
 
-  env.currentProfile = profile
-  return nil
+	env.currentProfile = profile
+	return nil
 }
 
 func (env *VirtualEnvironment) Execute(actions []string, params *Parameters) error {
-  profile := env.profiles[env.currentProfile]
-  if profile == nil {
-    return InternalError(fmt.Sprintf("Profile not found: %s", env.currentProfile), nil)
-  }
+	profile := env.profiles[env.currentProfile]
+	if profile == nil {
+		return InternalError(fmt.Sprintf("Profile not found: %s", env.currentProfile), nil)
+	}
 
-  commandName := actions[0]
-  command, exists := profile.Commands[commandName]
-  if !exists {
-    return CommandNotFoundError(commandName)
-  }
+	if len(actions) == 0 {
+		Help(profile)
+		return nil
+	}
 
-  for _, executor := range command.Execute {
-    err := executor.Execute(env, command, actions, params)
-    if err != nil {
-      return err
-    }
-  }
+	commandName := actions[0]
+	command, exists := profile.Commands[commandName]
+	if !exists {
+		return CommandNotFoundError(commandName)
+	}
 
-  return nil
+	if params.Has("help") && len(actions) == 1 {
+		HelpCommand(command)
+		return nil
+	}
+
+	for _, executor := range command.Execute {
+		err := executor.Execute(env, command, actions, params)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func loadPackage(env *VirtualEnvironment, pack *Package) error {
@@ -78,8 +87,8 @@ func loadPackage(env *VirtualEnvironment, pack *Package) error {
 		virtualProfile := env.profiles[profile.Name]
 		if virtualProfile == nil {
 			virtualProfile = &VirtualProfile{
-				Name: profile.Name,
-        Commands: make(map[string]*VirtualCommand),
+				Name:     profile.Name,
+				Commands: make(map[string]*VirtualCommand),
 			}
 			env.profiles[profile.Name] = virtualProfile
 		}
@@ -91,19 +100,20 @@ func loadPackage(env *VirtualEnvironment, pack *Package) error {
 			}
 
 			virtualCommand = &VirtualCommand{
-				Name: command.Name,
-        Help: command.Help,
-        Execute: make([]VirtualCommandExecutor, 0),
+				Name:    command.Name,
+				Help:    command.Help,
+				Execute: make([]VirtualCommandExecutor, 0),
 			}
 
-      for _, executor := range command.Execute {
-        virtualExecutor := VirtualCommandExecutorFactory(executor)
-        virtualCommand.Execute = append(virtualCommand.Execute, virtualExecutor)
-      }
+			for _, executor := range command.Execute {
+				virtualExecutor := VirtualCommandExecutorFactory(executor)
+				virtualCommand.Execute = append(virtualCommand.Execute, virtualExecutor)
+			}
 
 			virtualProfile.CommandsOrdered = append(virtualProfile.CommandsOrdered, command.Name)
 			virtualProfile.Commands[command.Name] = virtualCommand
 		}
 	}
+
 	return nil
 }
