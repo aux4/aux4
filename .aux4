@@ -5,6 +5,28 @@
       "name": "main",
       "commands": [
         {
+          "name": "release",
+          "execute": [
+            "confirm:Are you sure?",
+            "semver -i ${level} $(cat version) > version",
+            "cat version"
+          ],
+          "help": {
+            "text": "release a new version",
+            "variables": [
+              {
+                "name": "level",
+                "text": "the level of the release",
+                "options": [
+                  "major",
+                  "minor",
+                  "patch"
+                ]
+              }
+            ]
+          }
+        },
+        {
           "name": "hello",
           "execute": [
             "alias:go run . test show"

@@ -8,7 +8,10 @@ const spacing = "  "
 const lineLength = 100
 
 func Help(profile *VirtualProfile) {
-	for _, commandName := range profile.CommandsOrdered {
+	for i, commandName := range profile.CommandsOrdered {
+		if i > 0 {
+			Out(StdOut).Println("")
+		}
 		command := profile.Commands[commandName]
 		HelpCommand(command)
 	}
@@ -44,9 +47,9 @@ func HelpCommand(command *VirtualCommand) {
 			variablesHelp.WriteString(Cyan("--"))
 			variablesHelp.WriteString(Cyan(variable.Name))
 
-      if variable.Env != "" {
-        variablesHelp.WriteString(Green(" $", variable.Env))
-      }
+			if variable.Env != "" {
+				variablesHelp.WriteString(Green(" $", variable.Env))
+			}
 
 			if variable.Default != "" {
 				variablesHelp.WriteString(" [")
@@ -58,6 +61,22 @@ func HelpCommand(command *VirtualCommand) {
 				variablesHelp.WriteString("\n")
 				variablesHelp.WriteString(spacing)
 				variablesHelp.WriteString(variable.Text)
+			}
+
+			if variable.Options != nil && len(variable.Options) > 0 {
+				variablesHelp.WriteString("\n")
+				variablesHelp.WriteString(spacing)
+				variablesHelp.WriteString(Bold("Options:"))
+				variablesHelp.WriteString("\n")
+
+				for i, option := range variable.Options {
+					if i > 0 {
+						variablesHelp.WriteString("\n")
+					}
+					variablesHelp.WriteString(spacing)
+					variablesHelp.WriteString("* ")
+					variablesHelp.WriteString(Green(option))
+				}
 			}
 
 			variablesHelp.WriteString("\n")
@@ -81,7 +100,7 @@ func maxCommandNameLength(commandNames []string) int {
 
 func breakLines(text string, maxLineLength int, spacing string) string {
 	if len(text) <= maxLineLength && strings.Index(text, "\n") == -1 {
-		return strings.Trim(text, " ") 
+		return strings.Trim(text, " ")
 	}
 
 	spacingLength := len(spacing)
@@ -105,9 +124,9 @@ func breakLines(text string, maxLineLength int, spacing string) string {
 		nextLine := ""
 
 		nextBreak := strings.Index(remaining, "\n")
-    if nextBreak > -1 {
+		if nextBreak > -1 {
 			nextLine = remaining[:nextBreak]
-      nextBreak += 1
+			nextBreak += 1
 		} else {
 			end := maxLength + 1
 			if len(remaining) < maxLength {
@@ -128,7 +147,7 @@ func breakLines(text string, maxLineLength int, spacing string) string {
 			nextLine = nextLine[:nextBreak]
 		}
 
-    newText.WriteString(strings.Trim(nextLine, " "))
+		newText.WriteString(strings.Trim(nextLine, " "))
 		remaining = strings.Trim(remaining[nextBreak:], " ")
 	}
 

@@ -5,6 +5,7 @@ import (
   "os"
 	"os/exec"
 	"strings"
+  "github.com/manifoldco/promptui"
 )
 
 func VirtualCommandExecutorFactory(command string) VirtualCommandExecutor {
@@ -12,6 +13,8 @@ func VirtualCommandExecutorFactory(command string) VirtualCommandExecutor {
 		return &ProfileCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "set:") {
 		return &SetCommandExecutor{Command: command}
+	} else if strings.HasPrefix(command, "confirm:") {
+    return &ConfirmCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "log:") {
 		return &LogCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "debug:") {
@@ -28,7 +31,10 @@ type ProfileCommandExecutor struct {
 
 func (executor *ProfileCommandExecutor) Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error {
 	profileNameExpression := strings.TrimPrefix(executor.Command, "profile:")
-	profileName := InjectParameters(command, profileNameExpression, actions, params)
+	profileName, err := InjectParameters(command, profileNameExpression, actions, params)
+  if err != nil {
+    return err
+  }
 	env.SetProfile(profileName)
 	return env.Execute(actions[1:], params)
 }
@@ -38,9 +44,37 @@ type DebugCommandExecutor struct {
 }
 
 func (executor *DebugCommandExecutor) Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error {
-	instruction := InjectParameters(command, executor.Command, actions, params)
+	instruction, err := InjectParameters(command, executor.Command, actions, params)
+  if err != nil {
+    return err
+  }
 	Out(Debug).Println(instruction)
 	return nil
+}
+
+type ConfirmCommandExecutor struct {
+  Command string
+}
+
+func (executor *ConfirmCommandExecutor) Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error {
+  text := strings.TrimPrefix(executor.Command, "confirm:")
+  instruction, err := InjectParameters(command, text, actions, params)
+  if err != nil {
+    return err
+  }
+
+  prompt := promptui.Prompt{
+    Label:     instruction,
+    IsConfirm: true,
+  }
+
+  result, _ := prompt.Run()
+
+  if result != "y" {
+    return UserAbortedError()
+  }
+
+  return nil
 }
 
 type LogCommandExecutor struct {
@@ -49,7 +83,10 @@ type LogCommandExecutor struct {
 
 func (executor *LogCommandExecutor) Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error {
   text := strings.TrimPrefix(executor.Command, "log:")
-	instruction := InjectParameters(command, text, actions, params)
+	instruction, err := InjectParameters(command, text, actions, params)
+  if err != nil {
+    return err
+  }
 	Out(StdOut).Println(instruction)
 	return nil
 }
@@ -65,7 +102,10 @@ func (executor *SetCommandExecutor) Execute(env *VirtualEnvironment, command *Vi
 		parts := strings.Split(pair, "=")
 		name := parts[0]
 		valueExpression := parts[1]
-		value := InjectParameters(command, valueExpression, actions, params)
+		value, err := InjectParameters(command, valueExpression, actions, params)
+    if err != nil {
+      return err
+    }
 		params.Set(name, value)
 	}
 	return nil
@@ -104,7 +144,10 @@ type CommandLineExecutor struct {
 }
 
 func (executor *CommandLineExecutor) Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error {
-	instruction := InjectParameters(command, executor.Command, actions, params)
+	instruction, err := InjectParameters(command, executor.Command, actions, params)
+  if err != nil {
+    return err
+  }
 
 	cmd := exec.Command("bash", "-c", instruction)
 

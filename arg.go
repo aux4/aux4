@@ -36,7 +36,7 @@ func ParseArgs(args []string) ([]string, Parameters) {
 }
 
 type ParameterLookup interface {
-  Get(parameters *Parameters, command *VirtualCommand, actions []string, name string) any
+  Get(parameters *Parameters, command *VirtualCommand, actions []string, name string) (any, error)
 }
 
 type Parameters struct {
@@ -60,22 +60,27 @@ func (p *Parameters) Has(name string) bool {
   return p.params[name] != nil
 }
 
-func (p *Parameters) Get(command *VirtualCommand, actions []string, name string) any {
+func (p *Parameters) Get(command *VirtualCommand, actions []string, name string) (any, error) {
 	if p.params[name] != nil {
-    return p.params[name][(len(p.params[name]) - 1)]
+    return p.params[name][(len(p.params[name]) - 1)], nil
 	}
 
   value := any(nil)
 
   for _, lookup := range p.lookups {
-    value = lookup.Get(p, command, actions, name)
-    if value != nil {
-      p.Set(name, value)
+    result, err := lookup.Get(p, command, actions, name)
+    if err != nil {
+      return nil, err
+    }
+
+    if result != nil {
+      p.Set(name, result)
+      value = result
       break
     }
   }
 
-  return value
+  return value, nil
 }
 
 func (p *Parameters) GetMultiple(command *VirtualCommand, name string) []any {
@@ -103,15 +108,28 @@ func (p *Parameters) String() string {
   return builder.String()
 }
 
-func InjectParameters(command *VirtualCommand, instruction string, actions []string, params *Parameters) string {
+func InjectParameters(command *VirtualCommand, instruction string, actions []string, params *Parameters) (string, error) {
 	const variableRegex = "\\$\\{([a-zA-Z0-9_]+)\\}"
 	expr := regexp.MustCompile(variableRegex)
+  matches := expr.FindAllSubmatch([]byte(instruction), -1)
+
+  variables := map[string]any{}
+  for _, match := range matches {
+    name := string(match[1])
+    value, err := params.Get(command, actions, name)
+    if err != nil {
+      return "", err
+    }
+
+    variables[name] = value
+  }
+
 	return expr.ReplaceAllStringFunc(instruction, func(match string) string {
 		name := match[2 : len(match)-1]
-	  value := params.Get(command, actions, name).(string)
-    if value == "" {
+	  value := variables[name] 
+    if value == nil {
       return match
     }
-    return value
-	})
+    return value.(string)
+	}), nil
 }

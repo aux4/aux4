@@ -9,6 +9,7 @@ var red = color.New(color.FgRed).SprintFunc()
 var yellow = color.New(color.FgYellow).SprintFunc()
 var green = color.New(color.FgGreen).SprintFunc()
 var blue = color.New(color.FgBlue).SprintFunc()
+var bold = color.New(color.Bold).SprintFunc()
 var italic = color.New(color.Italic).SprintFunc()
 
 func Cyan(args ...interface{}) string {
@@ -29,6 +30,10 @@ func Green(args ...interface{}) string {
 
 func Blue(args ...interface{}) string {
   return blue(args...)
+}
+
+func Bold(args ...interface{}) string {
+  return bold(args...)
 }
 
 func Italic(args ...interface{}) string {

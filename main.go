@@ -2,9 +2,18 @@ package main
 
 import (
   "os"
+  "os/signal"
 )
 
 func main() {
+  c := make(chan os.Signal, 1)
+  signal.Notify(c, os.Interrupt)
+  go func(){
+    <-c
+    Out(StdErr).Println("Process aborted")
+    os.Exit(130)
+  }()
+
   library := LocalLibrary() 
 
   if err := library.Load("aux4", []byte(`

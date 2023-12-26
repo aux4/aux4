@@ -25,6 +25,13 @@ func InternalError(message string, cause error) Aux4Error {
   }
 }
 
+func UserAbortedError() Aux4Error {
+  return Aux4Error{
+    Message: "User aborted",
+    ExitCode: 130,
+  }
+}
+
 func AccessDeniedError(cause error) Aux4Error {
   return Aux4Error{
     Message: "Access denied",
