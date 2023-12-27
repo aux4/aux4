@@ -6,8 +6,9 @@
       "commands": [
         {
           "name": "release",
-          "execute": [
-            "confirm:Are you sure?",
+          "execute": [ 
+            "set:version=!cat version",
+            "confirm:Are you sure you want to release a new version?",
             "semver -i ${level} $(cat version) > version",
             "cat version"
           ],
@@ -61,7 +62,10 @@
         },
         {
           "name": "the-second-command",
-          "execute": [],
+          "execute": [
+            "set:response=!cat test.txt",
+            "each:echo the letter ${item}"
+          ],
           "help": {
             "text": "the second command description is quite long so we should not know whether will fit in a single line or not. But this is a good opportunity for testing tho",
             "variables": [
