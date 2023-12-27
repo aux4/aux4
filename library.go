@@ -61,11 +61,17 @@ type CommandHelpVariable struct {
 func LocalLibrary() *Library {
 	return &Library{
 		packages: make(map[string]*Package),
+    executors: make(map[string]VirtualCommandExecutor),
 	}
 }
 
 type Library struct {
 	packages map[string]*Package
+  executors map[string]VirtualCommandExecutor
+}
+
+func (library *Library) RegisterExecutor(name string, executor VirtualCommandExecutor) {
+  library.executors[name] = executor
 }
 
 func (library *Library) LoadFile(filename string) error {

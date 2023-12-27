@@ -15,6 +15,7 @@ func main() {
   }()
 
   library := LocalLibrary() 
+  library.RegisterExecutor("aux4.version", &Aux4VersionExecutor{})
 
   if err := library.Load("aux4", []byte(`
     {
@@ -36,6 +37,12 @@ func main() {
         {
           "name": "aux4",
           "commands": [
+            {
+              "name": "version",
+              "help": {
+                "text": "Display the version of aux4"
+              }
+            },
             {
               "name": "man",
               "execute": [

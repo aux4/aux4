@@ -27,7 +27,7 @@ func InitializeVirtualEnvironment(library *Library) (*VirtualEnvironment, error)
 	}
 
 	for _, pack := range library.packages {
-		err := loadPackage(&env, pack)
+		err := loadPackage(&env, pack, library.executors)
 		if err != nil {
 			return nil, err
 		}
@@ -82,7 +82,7 @@ func (env *VirtualEnvironment) Execute(actions []string, params *Parameters) err
 	return nil
 }
 
-func loadPackage(env *VirtualEnvironment, pack *Package) error {
+func loadPackage(env *VirtualEnvironment, pack *Package, executors map[string]VirtualCommandExecutor) error {
 	for _, profile := range pack.Profiles {
 		virtualProfile := env.profiles[profile.Name]
 		if virtualProfile == nil {
@@ -109,6 +109,14 @@ func loadPackage(env *VirtualEnvironment, pack *Package) error {
 				virtualExecutor := VirtualCommandExecutorFactory(executor)
 				virtualCommand.Execute = append(virtualCommand.Execute, virtualExecutor)
 			}
+
+      if len(virtualCommand.Execute) == 0 {
+        key := fmt.Sprintf("%s.%s", profile.Name, command.Name)
+        executor, exists := executors[key]
+        if exists {
+          virtualCommand.Execute = append(virtualCommand.Execute, executor)
+        }
+      }
 
 			virtualProfile.CommandsOrdered = append(virtualProfile.CommandsOrdered, command.Name)
 			virtualProfile.Commands[command.Name] = virtualCommand
