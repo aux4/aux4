@@ -1,8 +1,11 @@
 package main
 
 import (
+	"github.com/yalp/jsonpath"
 	"regexp"
 	"strings"
+  "strconv"
+  "fmt"
 )
 
 func ParseArgs(args []string) ([]string, Parameters) {
@@ -85,11 +88,11 @@ func (p *Parameters) Get(command *VirtualCommand, actions []string, name string)
 	return value, nil
 }
 
-func (p *Parameters) GetMultiple(command *VirtualCommand, name string) []any {
+func (p *Parameters) GetMultiple(command *VirtualCommand, actions []string, name string) ([]any, error) {
 	if p.params[name] == nil {
-		return make([]any, 0)
+		return make([]any, 0), nil
 	}
-	return p.params[name]
+	return p.params[name], nil
 }
 
 func (p *Parameters) String() string {
@@ -111,27 +114,70 @@ func (p *Parameters) String() string {
 }
 
 func InjectParameters(command *VirtualCommand, instruction string, actions []string, params *Parameters) (string, error) {
-	const variableRegex = "\\$\\{([a-zA-Z0-9_]+)\\}"
+	const variableRegex = "\\$\\{?([^}\\s]+)\\}?"
 	expr := regexp.MustCompile(variableRegex)
 	matches := expr.FindAllSubmatch([]byte(instruction), -1)
 
 	variables := map[string]any{}
 	for _, match := range matches {
-		name := string(match[1])
-		value, err := params.Get(command, actions, name)
-		if err != nil {
-			return "", err
+		variableExpression := string(match[0])
+		variablePath := string(match[1])
+
+		var name string
+		var value any
+		index := -1
+		jsonExpr := ""
+
+		if !strings.Contains(variablePath, ".") && !strings.Contains(variablePath, "[") {
+			name = variablePath
+		} else {
+			parts := strings.Split(variablePath, ".")
+			name = parts[0]
+			jsonExpr = strings.Join(parts[1:], ".")
+
+			if strings.Contains(name, "[") {
+				name = name[:strings.Index(name, "[")]
+        indexString := name[strings.Index(name, "[")+1:strings.Index(name, "]")]
+        index, _ = strconv.Atoi(indexString)
+			}
 		}
 
-		variables[name] = value
+		if index == -1 {
+			result, err := params.Get(command, actions, name)
+			if err != nil {
+				return "", err
+			}
+
+      value = result
+		} else {
+			multiValue, err := params.GetMultiple(command, actions, name)
+			if err != nil {
+				return "", err
+			}
+
+			if len(multiValue) > index {
+				value = multiValue[index]
+			} else {
+				return "", InternalError("Index out of range: "+variableExpression, nil)
+			}
+		}
+
+		if jsonExpr != "" {
+			jsonValue, err := jsonpath.Read(value, "$." + jsonExpr)
+			if err != nil {
+				return "", err
+			}
+			value = jsonValue
+		}
+
+		variables[variableExpression] = value
 	}
 
 	return expr.ReplaceAllStringFunc(instruction, func(match string) string {
-		name := match[2 : len(match)-1]
-		value := variables[name]
+		value := variables[match]
 		if value == nil {
 			return match
 		}
-		return value.(string)
+		return fmt.Sprintf("%v", value) 
 	}), nil
 }

@@ -46,7 +46,9 @@
         {
           "name": "hello",
           "execute": [
-            "alias:go run . test show"
+            "json:cat test.json",
+            "set:name=$response.name};age=$response.age",
+            "echo $name $age yo"
           ]
         },
         {

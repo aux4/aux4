@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+  "encoding/json"
 )
 
 func VirtualCommandExecutorFactory(command string) VirtualCommandExecutor {
@@ -22,7 +23,9 @@ func VirtualCommandExecutorFactory(command string) VirtualCommandExecutor {
 		return &DebugCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "alias:") {
 		return &AliasCommandExecutor{Command: command}
-	}
+	} else if strings.HasPrefix(command, "json:") {
+    return &JsonCommandExecutor{Command: command}
+  }
 	return &CommandLineExecutor{Command: command}
 }
 
@@ -51,6 +54,34 @@ func (executor *DebugCommandExecutor) Execute(env *VirtualEnvironment, command *
 	}
 	Out(Debug).Println(instruction)
 	return nil
+}
+
+type JsonCommandExecutor struct {
+  Command string
+}
+
+func (executor *JsonCommandExecutor) Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error {
+  expression := strings.TrimPrefix(executor.Command, "json:")
+
+  instruction, err := InjectParameters(command, expression, actions, params)
+  if err != nil {
+    return err
+  }
+
+  stdout, _, err := ExecuteCommandLine(instruction)
+  if err != nil {
+    return err
+  }
+
+  var data interface{}
+  err = json.Unmarshal([]byte(stdout), &data)
+  if err != nil {
+    return err
+  }
+
+  params.Update("response", data)
+
+  return nil
 }
 
 type EachCommandExecutor struct {
