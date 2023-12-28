@@ -71,6 +71,9 @@ type Library struct {
 }
 
 func (library *Library) RegisterExecutor(name string, executor VirtualCommandExecutor) {
+  if library.executors[name] != nil {
+    return
+  }
   library.executors[name] = executor
 }
 

@@ -211,7 +211,7 @@ func (executor *CommandLineExecutor) Execute(env *VirtualEnvironment, command *V
 
 	Out(StdErr).Print(stderr)
 
-	params.Update("response", stdout)
+	params.Update("response", strings.TrimSpace(stdout))
 	Out(StdOut).Print(stdout)
 
 	return nil

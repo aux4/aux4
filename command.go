@@ -44,3 +44,8 @@ func ExecuteCommandLine(instruction string) (string, string, error) {
 	}
   return string(data), string(errorData), nil 
 }
+
+func IsCommandAvailable(command string) bool {
+  _, err := exec.LookPath(command)
+  return err == nil
+}

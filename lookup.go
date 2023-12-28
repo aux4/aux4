@@ -1,18 +1,88 @@
 package main
 
 import (
-	"github.com/manifoldco/promptui"
+	"fmt"
 	"os"
 	"strings"
+
+	"github.com/manifoldco/promptui"
+	"golang.org/x/text/cases"
+  "golang.org/x/text/language"
 )
 
 func ParameterLookups() []ParameterLookup {
 	return []ParameterLookup{
 		&ArgLookup{},
 		&EnvironmentVariableLookup{},
+    &ConfigLookup{},
+    &EncryptedParameterLookup{},
 		&DefaultLookup{},
 		&PromptLookup{},
 	}
+}
+
+type ConfigLookup struct {
+}
+
+func (l ConfigLookup) Get(parameters *Parameters, command *VirtualCommand, actions []string, name string) (any, error) {
+  if !IsCommandAvailable("aux4-config") {
+    return nil, nil
+  }
+
+  args := []string{}
+
+  if parameters.Has("configFile") {
+    configFile, err := parameters.Get(command, actions, "configFile")
+    if err != nil {
+      return nil, err
+    }
+    args = append(args, "--file " + configFile.(string))
+  }
+
+  if parameters.Has("config") {
+    config, err := parameters.Get(command, actions, "config")
+    if err != nil {
+      return nil, err
+    }
+    args = append(args, fmt.Sprintf("--name %s/", config.(string)))
+  } else {
+    args = append(args, "--name ")
+  }
+
+  stdout, _, err := ExecuteCommandLine(fmt.Sprintf("aux4-config get %s%s", strings.Join(args, " "), name))
+  if err != nil {
+    return nil, nil
+  }
+
+  if stdout == "" {
+    return nil, nil
+  }
+
+  return strings.TrimSpace(stdout), nil
+}
+
+type EncryptedParameterLookup struct {
+}
+
+func (l EncryptedParameterLookup) Get(parameters *Parameters, command *VirtualCommand, actions []string, name string) (any, error) {
+  title := cases.Title(language.English)
+  encryptedParameterName := "encrypted" + title.String(name)
+
+  encryptedParameter, err := parameters.Get(command, actions, encryptedParameterName)
+  if err != nil {
+    return nil, err
+  }
+
+  if !IsCommandAvailable("aux4-encrypt") {
+    return nil, nil
+  }
+
+  stdout, _, err := ExecuteCommandLine(fmt.Sprintf("aux4-encrypt decrypt %s", encryptedParameter.(string)))
+  if err != nil {
+    return nil, err
+  }
+
+  return strings.TrimSpace(stdout), nil
 }
 
 type EnvironmentVariableLookup struct {

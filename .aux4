@@ -6,11 +6,13 @@
       "commands": [
         {
           "name": "release",
-          "execute": [ 
-            "set:version=!cat version",
+          "execute": [
+            "set:version=!tail -n 1 version.go | awk -F '\"' '{print $2}'",
             "confirm:Are you sure you want to release a new version?",
-            "semver -i ${level} $(cat version) > version",
-            "cat version"
+            "semver -i ${level} ${version}",
+            "cat version.go | sed 's/${version}/${response}/g' > version.txt",
+            "mv version.txt version.go",
+            "aux4 build"
           ],
           "help": {
             "text": "release a new version",
@@ -25,6 +27,20 @@
                 ]
               }
             ]
+          }
+        },
+        {
+          "name": "build",
+          "execute": [
+            "GOOS=darwin GOARCH=arm64 go build -o bin/aux4-darwin-arm64 .",
+            "GOOS=darwin GOARCH=amd64 go build -o bin/aux4-darwin-amd64 .",
+            "GOOS=linux GOARCH=amd64 go build -o bin/aux4-linux-amd64 .",
+            "GOOS=linux GOARCH=386 go build -o bin/aux4-linux-386 .",
+            "GOOS=windows GOARCH=amd64 go build -o bin/aux4-windows-amd64.exe .",
+            "GOOS=windows GOARCH=386 go build -o bin/aux4-windows-386.exe ."
+          ],
+          "help": {
+            "text": "build the app for all platforms"
           }
         },
         {
@@ -87,7 +103,6 @@
                 "text": "param with env value",
                 "env": "NICE"
               }
-
             ]
           }
         }
