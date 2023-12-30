@@ -5,6 +5,30 @@
       "name": "main",
       "commands": [
         {
+          "name": "build",
+          "execute": [
+            "GOOS=darwin GOARCH=amd64 go build -o bin/aux4-darwin-amd64 .",
+            "GOOS=darwin GOARCH=arm64 go build -o bin/aux4-darwin-arm64 .",
+            "GOOS=linux GOARCH=amd64 go build -o bin/aux4-linux-amd64 .",
+            "GOOS=linux GOARCH=386 go build -o bin/aux4-linux-386 .",
+            "GOOS=windows GOARCH=amd64 go build -o bin/aux4-windows-amd64.exe .",
+            "GOOS=windows GOARCH=386 go build -o bin/aux4-windows-386.exe ."
+          ],
+          "help": {
+            "text": "build the app for all platforms"
+          }
+        },
+        {
+          "name": "install",
+          "execute": [
+            "aux4 build",
+            "sudo cp bin/aux4-darwin-arm64 /usr/local/bin/aux4"
+          ],
+          "help": {
+            "text": "install the app locally"
+          }
+        },
+        {
           "name": "release",
           "execute": [
             "set:version=!tail -n 1 version.go | awk -F '\"' '{print $2}'",
@@ -27,20 +51,6 @@
                 ]
               }
             ]
-          }
-        },
-        {
-          "name": "build",
-          "execute": [
-            "GOOS=darwin GOARCH=arm64 go build -o bin/aux4-darwin-arm64 .",
-            "GOOS=darwin GOARCH=amd64 go build -o bin/aux4-darwin-amd64 .",
-            "GOOS=linux GOARCH=amd64 go build -o bin/aux4-linux-amd64 .",
-            "GOOS=linux GOARCH=386 go build -o bin/aux4-linux-386 .",
-            "GOOS=windows GOARCH=amd64 go build -o bin/aux4-windows-amd64.exe .",
-            "GOOS=windows GOARCH=386 go build -o bin/aux4-windows-386.exe ."
-          ],
-          "help": {
-            "text": "build the app for all platforms"
           }
         },
         {

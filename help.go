@@ -1,23 +1,34 @@
 package main
 
 import (
+	"encoding/json"
 	"strings"
 )
 
 const spacing = "  "
 const lineLength = 100
 
-func Help(profile *VirtualProfile) {
+func Help(profile *VirtualProfile, json bool) {
+  if json {
+    helpJson(profile)
+    return
+  }
+
 	for i, commandName := range profile.CommandsOrdered {
 		if i > 0 {
 			Out(StdOut).Println("")
 		}
 		command := profile.Commands[commandName]
-		HelpCommand(command)
+		HelpCommand(command, json)
 	}
 }
 
-func HelpCommand(command *VirtualCommand) {
+func HelpCommand(command *VirtualCommand, json bool) {
+	if json {
+		helpCommandJson(command)
+		return
+	}
+
 	output := strings.Builder{}
 	commandName := command.Name
 
@@ -88,6 +99,51 @@ func HelpCommand(command *VirtualCommand) {
 	Out(StdOut).Println(output.String())
 }
 
+func helpJson(profile *VirtualProfile) {
+  Out(StdOut).Print("[")
+  for i, commandName := range profile.CommandsOrdered {
+    if i > 0 {
+      Out(StdOut).Print(",")
+    }
+    command := profile.Commands[commandName]
+    helpCommandJson(command)
+  }
+  Out(StdOut).Print("]")
+}
+
+func helpCommandJson(command *VirtualCommand) {
+	man := Man{
+		Name:      command.Name,
+		Parameters: make([]ManParameter, 0),
+	}
+
+	if command.Help != nil {
+		man.Text = command.Help.Text
+
+		if command.Help.Variables != nil && len(command.Help.Variables) > 0 {
+			for _, v := range command.Help.Variables {
+				variable := ManParameter{
+					Name:    v.Name,
+					Text:    v.Text,
+					Default: v.Default,
+					Env:     v.Env,
+					Arg:     v.Arg,
+					Options: v.Options,
+				}
+
+				man.Parameters = append(man.Parameters, variable)
+			}
+		}
+	}
+
+	value, err := json.Marshal(man)
+	if err != nil {
+		return
+	}
+
+	Out(StdOut).Print(string(value))
+}
+
 func maxCommandNameLength(commandNames []string) int {
 	max := 0
 	for _, commandName := range commandNames {
@@ -152,4 +208,19 @@ func breakLines(text string, maxLineLength int, spacing string) string {
 	}
 
 	return newText.String()
+}
+
+type Man struct {
+	Name      string        `json:"name"`
+	Text      string        `json:"text"`
+	Parameters []ManParameter `json:"params"`
+}
+
+type ManParameter struct {
+	Name    string   `json:"name"`
+	Text    string   `json:"text"`
+	Default string   `json:"default"`
+	Env     string   `json:"env"`
+	Arg     bool     `json:"arg"`
+	Options []string `json:"options"`
 }

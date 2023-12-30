@@ -57,7 +57,9 @@ func (env *VirtualEnvironment) Execute(actions []string, params *Parameters) err
 	}
 
 	if len(actions) == 0 {
-		Help(profile)
+    json := params.JustGet("json")
+    isJson := json == true || json == "true"
+		Help(profile, isJson)
 		return nil
 	}
 
@@ -68,7 +70,9 @@ func (env *VirtualEnvironment) Execute(actions []string, params *Parameters) err
 	}
 
 	if params.Has("help") && len(actions) == 1 {
-		HelpCommand(command)
+    json := params.JustGet("json")
+    isJson := json == true || json == "true"
+		HelpCommand(command, isJson)
 		return nil
 	}
 

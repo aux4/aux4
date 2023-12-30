@@ -1,11 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"github.com/yalp/jsonpath"
 	"regexp"
+	"strconv"
 	"strings"
-  "strconv"
-  "fmt"
 )
 
 func ParseArgs(args []string) ([]string, Parameters) {
@@ -63,6 +63,13 @@ func (p *Parameters) Update(name string, value any) {
 
 func (p *Parameters) Has(name string) bool {
 	return p.params[name] != nil
+}
+
+func (p *Parameters) JustGet(name string) any {
+  if p.params[name] != nil {
+		return p.params[name][(len(p.params[name]) - 1)]
+  }
+  return nil
 }
 
 func (p *Parameters) Get(command *VirtualCommand, actions []string, name string) (any, error) {
@@ -137,8 +144,8 @@ func InjectParameters(command *VirtualCommand, instruction string, actions []str
 
 			if strings.Contains(name, "[") {
 				name = name[:strings.Index(name, "[")]
-        indexString := name[strings.Index(name, "[")+1:strings.Index(name, "]")]
-        index, _ = strconv.Atoi(indexString)
+				indexString := name[strings.Index(name, "[")+1 : strings.Index(name, "]")]
+				index, _ = strconv.Atoi(indexString)
 			}
 		}
 
@@ -148,7 +155,7 @@ func InjectParameters(command *VirtualCommand, instruction string, actions []str
 				return "", err
 			}
 
-      value = result
+			value = result
 		} else {
 			multiValue, err := params.GetMultiple(command, actions, name)
 			if err != nil {
@@ -163,7 +170,7 @@ func InjectParameters(command *VirtualCommand, instruction string, actions []str
 		}
 
 		if jsonExpr != "" {
-			jsonValue, err := jsonpath.Read(value, "$." + jsonExpr)
+			jsonValue, err := jsonpath.Read(value, "$."+jsonExpr)
 			if err != nil {
 				return "", err
 			}
@@ -178,6 +185,6 @@ func InjectParameters(command *VirtualCommand, instruction string, actions []str
 		if value == nil {
 			return match
 		}
-		return fmt.Sprintf("%v", value) 
+		return fmt.Sprintf("%v", value)
 	}), nil
 }
