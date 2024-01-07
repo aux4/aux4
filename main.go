@@ -81,8 +81,11 @@ func main() {
 	actions, params := ParseArgs(os.Args[1:])
 
 	if err := env.Execute(actions, &params); err != nil {
-    Out(StdErr).Println(Red(err))
-		os.Exit(err.(Aux4Error).ExitCode)
+		if err, ok := err.(Aux4Error); ok {
+			os.Exit(err.ExitCode)
+		} else {
+			os.Exit(1)
+		}
 	}
 }
 
