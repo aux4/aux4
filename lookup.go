@@ -65,12 +65,20 @@ type EncryptedParameterLookup struct {
 }
 
 func (l EncryptedParameterLookup) Get(parameters *Parameters, command *VirtualCommand, actions []string, name string) (any, error) {
+  if strings.HasPrefix(name, "encrypted") {
+    return nil, nil
+  }
+
   title := cases.Title(language.English)
   encryptedParameterName := "encrypted" + title.String(name)
 
   encryptedParameter, err := parameters.Get(command, actions, encryptedParameterName)
   if err != nil {
     return nil, err
+  }
+
+  if encryptedParameter == nil {
+    return nil, nil
   }
 
   if !IsCommandAvailable("aux4-encrypt") {
@@ -149,6 +157,7 @@ func (l PromptLookup) Get(parameters *Parameters, command *VirtualCommand, actio
 	if variable.Default != "" {
 		return nil, nil
 	}
+
  
   var text string 
   var err error

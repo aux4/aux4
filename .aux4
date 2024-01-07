@@ -7,22 +7,26 @@
         {
           "name": "build",
           "execute": [
-            "GOOS=darwin GOARCH=amd64 go build -o bin/aux4-darwin-amd64 .",
-            "GOOS=darwin GOARCH=arm64 go build -o bin/aux4-darwin-arm64 .",
-            "GOOS=linux GOARCH=amd64 go build -o bin/aux4-linux-amd64 .",
-            "GOOS=linux GOARCH=386 go build -o bin/aux4-linux-386 .",
-            "GOOS=windows GOARCH=amd64 go build -o bin/aux4-windows-amd64.exe .",
-            "GOOS=windows GOARCH=386 go build -o bin/aux4-windows-386.exe ."
+            "profile:build"
           ],
           "help": {
-            "text": "build the app for all platforms"
+            "text": "build the app"
           }
         },
         {
           "name": "install",
           "execute": [
-            "aux4 build",
-            "sudo cp bin/aux4-darwin-arm64 /usr/local/bin/aux4"
+            "set:os=!go env GOOS",
+            "set:arch=!go env GOARCH",
+            "set:version=!tail -n 1 version.go | awk -F '\"' '{print $2}'",
+            "cp version.go version.go.bak",
+            "cat version.go | sed 's/${version}/${version}-local/g' > version.txt",
+            "mv version.txt version.go",
+            "log:building aux4 for $os $arch",
+            "aux4 build $os",
+            "log:installing aux4 on /usr/local/bin",
+            "sudo cp bin/aux4-${os}-${arch} /usr/local/bin/aux4",
+            "mv version.go.bak version.go"
           ],
           "help": {
             "text": "install the app locally"
@@ -57,15 +61,62 @@
           "name": "hello",
           "execute": [
             "json:cat test.json",
-            "set:name=$response.name};age=$response.age",
-            "echo $name $age yo"
+            "set:name=$response.name;age=$response.age;child=$response.children",
+            "echo $name $age yo",
+            "echo ${child[0].name}"
           ]
         },
         {
-          "name": "test",
+          "name": "my-test",
           "execute": [
             "profile:test"
           ]
+        }
+      ]
+    },
+    {
+      "name": "build",
+      "commands": [
+        {
+          "name": "darwin",
+          "execute": [
+            "GOOS=darwin GOARCH=amd64 go build -o bin/aux4-darwin-amd64 .",
+            "GOOS=darwin GOARCH=arm64 go build -o bin/aux4-darwin-arm64 ."
+          ],
+          "help": {
+            "text": "build the app for darwin"
+          }
+        },
+        {
+          "name": "linux",
+          "execute": [
+            "GOOS=linux GOARCH=amd64 go build -o bin/aux4-linux-amd64 .",
+            "GOOS=linux GOARCH=386 go build -o bin/aux4-linux-386 ."
+          ],
+          "help": {
+            "text": "build the app for linux"
+          }
+        },
+        {
+          "name": "windows",
+          "execute": [
+            "GOOS=windows GOARCH=amd64 go build -o bin/aux4-windows-amd64.exe .",
+            "GOOS=windows GOARCH=386 go build -o bin/aux4-windows-386.exe ."
+          ],
+          "help": {
+            "text": "build the app for windows"
+          }
+        },
+        {
+          "name": "all",
+          "execute": [
+            "aux4 build darwin",
+            "aux4 build linux",
+            "aux4 build windows"
+          ],
+          "help": {
+            "text": "build the app for all platforms"
+          }
         }
       ]
     },
@@ -113,6 +164,7 @@
               {
                 "name": "with-env",
                 "text": "param with env value",
+                "default": "cool",
                 "env": "NICE"
               }
             ]

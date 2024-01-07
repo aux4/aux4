@@ -1,23 +1,24 @@
 package main
 
 import (
-  "os"
-  "os/signal"
+	"os"
+	"os/signal"
+	"path/filepath"
 )
 
 func main() {
-  c := make(chan os.Signal, 1)
-  signal.Notify(c, os.Interrupt)
-  go func(){
-    <-c
-    Out(StdErr).Println("Process aborted")
-    os.Exit(130)
-  }()
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		<-c
+		Out(StdErr).Println("Process aborted")
+		os.Exit(130)
+	}()
 
-  library := LocalLibrary() 
-  library.RegisterExecutor("aux4.version", &Aux4VersionExecutor{})
+	library := LocalLibrary()
+	library.RegisterExecutor("aux4.version", &Aux4VersionExecutor{})
 
-  if err := library.Load("aux4", []byte(`
+	if err := library.Load("", "aux4", []byte(`
     {
       "profiles": [
         {
@@ -58,25 +59,46 @@ func main() {
       ]
     }
   `)); err != nil {
-    Out(StdErr).Println(err) 
-    os.Exit(err.(Aux4Error).ExitCode)
-  }
+		Out(StdErr).Println(err)
+		os.Exit(err.(Aux4Error).ExitCode)
+	}
 
-  if err := library.LoadFile(".aux4"); err != nil {
-    Out(StdErr).Println(err) 
-    os.Exit(err.(Aux4Error).ExitCode)
-  }
+	var aux4Files []string
+	listAux4Files(".", &aux4Files)
 
-  env, err := InitializeVirtualEnvironment(library)
-  if err != nil {
-    Out(StdErr).Println(err) 
-    os.Exit(err.(Aux4Error).ExitCode)
-  }
+	for _, aux4File := range aux4Files {
+		if err := library.LoadFile(aux4File); err != nil {
+			Out(StdErr).Println(Red("Error loading file"), Red(aux4File), Red(err))
+		}
+	}
 
-  actions, params := ParseArgs(os.Args[1:])
+	env, err := InitializeVirtualEnvironment(library)
+	if err != nil {
+		Out(StdErr).Println(err)
+		os.Exit(err.(Aux4Error).ExitCode)
+	}
 
-  if err := env.Execute(actions, &params); err != nil {
-    Out(StdErr).Println(err) 
-    os.Exit(err.(Aux4Error).ExitCode)
-  }
+	actions, params := ParseArgs(os.Args[1:])
+
+	if err := env.Execute(actions, &params); err != nil {
+    Out(StdErr).Println(Red(err))
+		os.Exit(err.(Aux4Error).ExitCode)
+	}
+}
+
+func listAux4Files(path string, list *[]string) {
+	dir, err := filepath.Abs(path)
+	if err != nil {
+		dir = path
+	}
+
+	aux4File := filepath.Join(dir, ".aux4")
+	if _, err := os.Stat(aux4File); err == nil {
+		*list = append([]string{aux4File}, *list...)
+	}
+
+	parent := filepath.Dir(dir)
+	if parent != dir {
+		listAux4Files(parent, list)
+	}
 }

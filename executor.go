@@ -1,11 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"github.com/manifoldco/promptui"
 	"os"
 	"os/exec"
 	"strings"
-  "encoding/json"
 )
 
 func VirtualCommandExecutorFactory(command string) VirtualCommandExecutor {
@@ -13,8 +13,8 @@ func VirtualCommandExecutorFactory(command string) VirtualCommandExecutor {
 		return &ProfileCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "set:") {
 		return &SetCommandExecutor{Command: command}
-  } else if strings.HasPrefix(command, "each:") {
-    return &EachCommandExecutor{Command: command}
+	} else if strings.HasPrefix(command, "each:") {
+		return &EachCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "confirm:") {
 		return &ConfirmCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "log:") {
@@ -24,8 +24,8 @@ func VirtualCommandExecutorFactory(command string) VirtualCommandExecutor {
 	} else if strings.HasPrefix(command, "alias:") {
 		return &AliasCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "json:") {
-    return &JsonCommandExecutor{Command: command}
-  }
+		return &JsonCommandExecutor{Command: command}
+	}
 	return &CommandLineExecutor{Command: command}
 }
 
@@ -57,68 +57,68 @@ func (executor *DebugCommandExecutor) Execute(env *VirtualEnvironment, command *
 }
 
 type JsonCommandExecutor struct {
-  Command string
+	Command string
 }
 
 func (executor *JsonCommandExecutor) Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error {
-  expression := strings.TrimPrefix(executor.Command, "json:")
+	expression := strings.TrimPrefix(executor.Command, "json:")
 
-  instruction, err := InjectParameters(command, expression, actions, params)
-  if err != nil {
-    return err
-  }
+	instruction, err := InjectParameters(command, expression, actions, params)
+	if err != nil {
+		return err
+	}
 
-  stdout, _, err := ExecuteCommandLine(instruction)
-  if err != nil {
-    return err
-  }
+	stdout, _, err := ExecuteCommandLine(instruction)
+	if err != nil {
+		return err
+	}
 
-  var data interface{}
-  err = json.Unmarshal([]byte(stdout), &data)
-  if err != nil {
-    return err
-  }
+	var data interface{}
+	err = json.Unmarshal([]byte(stdout), &data)
+	if err != nil {
+		return err
+	}
 
-  params.Update("response", data)
+	params.Update("response", data)
 
-  return nil
+	return nil
 }
 
 type EachCommandExecutor struct {
-  Command string
+	Command string
 }
 
 func (executor *EachCommandExecutor) Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error {
-  expression := strings.TrimPrefix(executor.Command, "each:")
+	expression := strings.TrimPrefix(executor.Command, "each:")
 
-  response, err := params.Get(command, actions, "response")
-  if err != nil {
-    return err
-  }
+	response, err := params.Get(command, actions, "response")
+	if err != nil {
+		return err
+	}
 
-  list := strings.Split(response.(string), "\n")
+	list := strings.Split(response.(string), "\n")
 
-  for _, item := range list {
-    if item == "" {
-      continue
-    }
+	for _, item := range list {
+		if item == "" {
+			continue
+		}
 
-    params.Update("item", item)
+		params.Update("item", item)
 
-    instruction, err := InjectParameters(command, expression, actions, params)
-    if err != nil {
-      return err
-    }
-    
-    stdout, _, err := ExecuteCommandLine(instruction)
-    if err != nil {
-      return err
-    }
+		instruction, err := InjectParameters(command, expression, actions, params)
+		if err != nil {
+			return err
+		}
 
-    Out(StdOut).Print(stdout)
-  }
+		stdout, _, err := ExecuteCommandLine(instruction)
+		if err != nil {
+			return err
+		}
 
-  return nil
+		Out(StdOut).Print(stdout)
+	}
+
+	return nil
 }
 
 type ConfirmCommandExecutor struct {
@@ -180,12 +180,18 @@ func (executor *SetCommandExecutor) Execute(env *VirtualEnvironment, command *Vi
 				return err
 			}
 
-      stdout, _, err := ExecuteCommandLine(instruction)
-      if err != nil {
-        return err
-      }
+			stdout, _, err := ExecuteCommandLine(instruction)
+			if err != nil {
+				return err
+			}
 
 			params.Set(name, strings.TrimSpace(stdout))
+		} else if strings.HasPrefix(valueExpression, "$") {
+			value, err := params.Expr(command, actions, valueExpression)
+			if err != nil {
+				return err
+			}
+			params.Set(name, value)
 		} else {
 			value, err := InjectParameters(command, valueExpression, actions, params)
 			if err != nil {
@@ -237,6 +243,8 @@ func (executor *CommandLineExecutor) Execute(env *VirtualEnvironment, command *V
 
 	stdout, stderr, err := ExecuteCommandLine(instruction)
 	if err != nil {
+		Out(StdErr).Print(stderr)
+		Out(StdOut).Print(stdout)
 		return err
 	}
 

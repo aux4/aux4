@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/yalp/jsonpath"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -53,7 +54,13 @@ func (p *Parameters) Set(name string, value any) {
 	if p.params[name] == nil {
 		p.params[name] = make([]any, 0)
 	}
-	p.params[name] = append(p.params[name], value)
+
+	typeOfValue := reflect.TypeOf(value)
+	if typeOfValue.Kind() == reflect.Slice || typeOfValue.Kind() == reflect.Array {
+		p.params[name] = append(p.params[name], value.([]any)...)
+	} else {
+		p.params[name] = append(p.params[name], value)
+	}
 }
 
 func (p *Parameters) Update(name string, value any) {
@@ -66,10 +73,10 @@ func (p *Parameters) Has(name string) bool {
 }
 
 func (p *Parameters) JustGet(name string) any {
-  if p.params[name] != nil {
+	if p.params[name] != nil {
 		return p.params[name][(len(p.params[name]) - 1)]
-  }
-  return nil
+	}
+	return nil
 }
 
 func (p *Parameters) Get(command *VirtualCommand, actions []string, name string) (any, error) {
@@ -102,6 +109,64 @@ func (p *Parameters) GetMultiple(command *VirtualCommand, actions []string, name
 	return p.params[name], nil
 }
 
+func (p *Parameters) Expr(command *VirtualCommand, actions []string, expression string) (any, error) {
+	var name string
+	var value any
+	index := -1
+	jsonExpr := ""
+
+	if strings.HasPrefix(expression, "$") {
+		expression = strings.TrimPrefix(expression, "$")
+    expression = strings.TrimPrefix(expression, "{")
+    expression = strings.TrimSuffix(expression, "}")
+	}
+
+	if !strings.Contains(expression, ".") && !strings.Contains(expression, "[") {
+		name = expression
+	} else {
+		parts := strings.Split(expression, ".")
+		name = parts[0]
+		jsonExpr = strings.Join(parts[1:], ".")
+
+		if strings.Contains(name, "[") {
+			originalName := name
+			name = name[:strings.Index(name, "[")]
+			indexString := originalName[strings.Index(originalName, "[")+1 : strings.Index(originalName, "]")]
+			index, _ = strconv.Atoi(indexString)
+		}
+	}
+
+	if index == -1 {
+		result, err := p.Get(command, actions, name)
+		if err != nil {
+			return "", err
+		}
+
+		value = result
+	} else {
+		multiValue, err := p.GetMultiple(command, actions, name)
+		if err != nil {
+			return "", err
+		}
+
+		if len(multiValue) > index {
+			value = multiValue[index]
+		} else {
+			return "", InternalError("Index out of range: "+expression, nil)
+		}
+	}
+
+	if jsonExpr != "" {
+		jsonValue, err := jsonpath.Read(value, "$."+jsonExpr)
+		if err != nil {
+			return "", err
+		}
+		value = jsonValue
+	}
+
+	return value, nil
+}
+
 func (p *Parameters) String() string {
 	var builder strings.Builder
 	for name, values := range p.params {
@@ -130,51 +195,9 @@ func InjectParameters(command *VirtualCommand, instruction string, actions []str
 		variableExpression := string(match[0])
 		variablePath := string(match[1])
 
-		var name string
-		var value any
-		index := -1
-		jsonExpr := ""
-
-		if !strings.Contains(variablePath, ".") && !strings.Contains(variablePath, "[") {
-			name = variablePath
-		} else {
-			parts := strings.Split(variablePath, ".")
-			name = parts[0]
-			jsonExpr = strings.Join(parts[1:], ".")
-
-			if strings.Contains(name, "[") {
-				name = name[:strings.Index(name, "[")]
-				indexString := name[strings.Index(name, "[")+1 : strings.Index(name, "]")]
-				index, _ = strconv.Atoi(indexString)
-			}
-		}
-
-		if index == -1 {
-			result, err := params.Get(command, actions, name)
-			if err != nil {
-				return "", err
-			}
-
-			value = result
-		} else {
-			multiValue, err := params.GetMultiple(command, actions, name)
-			if err != nil {
-				return "", err
-			}
-
-			if len(multiValue) > index {
-				value = multiValue[index]
-			} else {
-				return "", InternalError("Index out of range: "+variableExpression, nil)
-			}
-		}
-
-		if jsonExpr != "" {
-			jsonValue, err := jsonpath.Read(value, "$."+jsonExpr)
-			if err != nil {
-				return "", err
-			}
-			value = jsonValue
+		value, err := params.Expr(command, actions, variablePath)
+		if err != nil {
+			return "", err
 		}
 
 		variables[variableExpression] = value

@@ -8,6 +8,7 @@ import (
 )
 
 type Package struct {
+  Path        string
 	Name        string    `json:"name"`
 	Version     string    `json:"version"`
 	Description string    `json:"description"`
@@ -85,16 +86,18 @@ func (library *Library) LoadFile(filename string) error {
 		return err
 	}
 
-	return library.Load(path, file)
+	return library.Load(path, path, file)
 }
 
-func (library *Library) Load(name string, data []byte) error {
+func (library *Library) Load(path string, name string, data []byte) error {
 	var pack Package
 
 	err := json.Unmarshal(data, &pack)
 	if err != nil {
 		return err
 	}
+
+  pack.Path = path
 
 	if pack.Name == "" {
 		pack.Name = name

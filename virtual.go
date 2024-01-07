@@ -14,6 +14,14 @@ type VirtualCommand struct {
 	Name    string
 	Execute []VirtualCommandExecutor
 	Help    *CommandHelp
+  Ref     *VirtualCommandRef
+}
+
+type VirtualCommandRef struct {
+  Path string
+  Package string
+  Profile string
+  Command string
 }
 
 type VirtualCommandExecutor interface {
@@ -59,7 +67,11 @@ func (env *VirtualEnvironment) Execute(actions []string, params *Parameters) err
 	if len(actions) == 0 {
     json := params.JustGet("json")
     isJson := json == true || json == "true"
-		Help(profile, isJson)
+
+    help := params.JustGet("help")
+    isHelp := help == true || help == "true"
+
+		Help(profile, isJson, isHelp)
 		return nil
 	}
 
@@ -72,7 +84,11 @@ func (env *VirtualEnvironment) Execute(actions []string, params *Parameters) err
 	if params.Has("help") && len(actions) == 1 {
     json := params.JustGet("json")
     isJson := json == true || json == "true"
-		HelpCommand(command, isJson)
+
+    help := params.JustGet("help")
+    isHelp := help == true || help == "true"
+
+		HelpCommand(command, isJson, isHelp)
 		return nil
 	}
 
@@ -100,13 +116,19 @@ func loadPackage(env *VirtualEnvironment, pack *Package, executors map[string]Vi
 		for _, command := range profile.Commands {
 			virtualCommand, exists := virtualProfile.Commands[command.Name]
 			if exists {
-				return InternalError(fmt.Sprintf("Command %s already exists in profile %s", command.Name, profile.Name), nil)
+				return InternalError(fmt.Sprintf("Command %s already exists in profile %s. Ref. %s %s", command.Name, profile.Name, virtualCommand.Ref.Path, virtualCommand.Ref.Package), nil)
 			}
 
 			virtualCommand = &VirtualCommand{
 				Name:    command.Name,
 				Help:    command.Help,
 				Execute: make([]VirtualCommandExecutor, 0),
+        Ref: &VirtualCommandRef{
+          Path: pack.Path,
+          Package: pack.Name,
+          Profile: profile.Name,
+          Command: command.Name,
+        },
 			}
 
 			for _, executor := range command.Execute {

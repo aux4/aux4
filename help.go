@@ -8,22 +8,22 @@ import (
 const spacing = "  "
 const lineLength = 100
 
-func Help(profile *VirtualProfile, json bool) {
-  if json {
-    helpJson(profile)
-    return
-  }
+func Help(profile *VirtualProfile, json bool, long bool) {
+	if json {
+		helpJson(profile)
+		return
+	}
 
 	for i, commandName := range profile.CommandsOrdered {
 		if i > 0 {
 			Out(StdOut).Println("")
 		}
 		command := profile.Commands[commandName]
-		HelpCommand(command, json)
+		HelpCommand(command, json, long)
 	}
 }
 
-func HelpCommand(command *VirtualCommand, json bool) {
+func HelpCommand(command *VirtualCommand, json bool, long bool) {
 	if json {
 		helpCommandJson(command)
 		return
@@ -32,25 +32,47 @@ func HelpCommand(command *VirtualCommand, json bool) {
 	output := strings.Builder{}
 	commandName := command.Name
 
-	output.WriteString(Yellow(commandName))
+	output.WriteString(Yellow(Bold(commandName)))
 
-	description := ""
-	if command.Help != nil {
-		description = breakLines(command.Help.Text, lineLength, "")
-	}
+	if long {
+		description := ""
+		if command.Help != nil {
+			description = breakLines(command.Help.Text, lineLength, "")
+		}
 
-	if description != "" {
-		output.WriteString("\n")
-		output.WriteString(description)
+		if description != "" {
+			output.WriteString("\n")
+			output.WriteString(description)
+		}
+	} else {
+		description := ""
+		if command.Help != nil {
+			description = command.Help.Text
+			if len(description) > 100 {
+				if strings.Index(description, ".") > -1 {
+					description = description[:strings.Index(description, ".")+1]
+				}
+				if len(description) > 100 {
+					description = description[:100] + "..."
+				}
+			}
+
+			output.WriteString("\n")
+			output.WriteString(description)
+		}
 	}
 
 	if command.Help != nil && command.Help.Variables != nil && len(command.Help.Variables) > 0 {
-		output.WriteString("\n\n")
+		output.WriteString("\n")
+		output.WriteString("\n")
 
 		variablesHelp := strings.Builder{}
 
 		for i, variable := range command.Help.Variables {
 			if i > 0 {
+				if long {
+					variablesHelp.WriteString("\n")
+				}
 				variablesHelp.WriteString("\n")
 			}
 
@@ -58,62 +80,69 @@ func HelpCommand(command *VirtualCommand, json bool) {
 			variablesHelp.WriteString(Cyan("--"))
 			variablesHelp.WriteString(Cyan(variable.Name))
 
-			if variable.Env != "" {
-				variablesHelp.WriteString(Green(" $", variable.Env))
-			}
+			if long {
+				if variable.Text != "" {
+					variablesHelp.WriteString("\n")
+					variablesHelp.WriteString(breakLines(variable.Text, lineLength, spacing+spacing))
+				}
 
-			if variable.Default != "" {
-				variablesHelp.WriteString(" [")
-				variablesHelp.WriteString(Italic(variable.Default))
-				variablesHelp.WriteString("]")
-			}
-
-			if variable.Text != "" {
-				variablesHelp.WriteString("\n")
-				variablesHelp.WriteString(spacing)
-				variablesHelp.WriteString(variable.Text)
-			}
-
-			if variable.Options != nil && len(variable.Options) > 0 {
-				variablesHelp.WriteString("\n")
-				variablesHelp.WriteString(spacing)
-				variablesHelp.WriteString(Bold("Options:"))
-				variablesHelp.WriteString("\n")
-
-				for i, option := range variable.Options {
-					if i > 0 {
-						variablesHelp.WriteString("\n")
-					}
+				if variable.Options != nil && len(variable.Options) > 0 {
+					variablesHelp.WriteString("\n\n")
 					variablesHelp.WriteString(spacing)
-					variablesHelp.WriteString("* ")
-					variablesHelp.WriteString(Green(option))
+					variablesHelp.WriteString(spacing)
+					variablesHelp.WriteString(Bold("Options:"))
+					variablesHelp.WriteString("\n")
+
+					for i, option := range variable.Options {
+						if i > 0 {
+							variablesHelp.WriteString("\n")
+						}
+						variablesHelp.WriteString(spacing)
+						variablesHelp.WriteString(spacing)
+						variablesHelp.WriteString("* ")
+						variablesHelp.WriteString(Green(option))
+					}
+				}
+
+				if variable.Default != "" {
+					variablesHelp.WriteString("\n\n")
+					variablesHelp.WriteString(spacing)
+					variablesHelp.WriteString(spacing)
+					variablesHelp.WriteString(Bold("Default: "))
+					variablesHelp.WriteString(Italic(variable.Default))
+				}
+
+				if variable.Env != "" {
+					variablesHelp.WriteString("\n\n")
+					variablesHelp.WriteString(spacing)
+					variablesHelp.WriteString(spacing)
+					variablesHelp.WriteString(Bold("Environment variable: "))
+					variablesHelp.WriteString(Green(variable.Env))
 				}
 			}
-
-			variablesHelp.WriteString("\n")
 		}
 
-		output.WriteString(breakLines(variablesHelp.String(), lineLength, spacing))
+		output.WriteString(variablesHelp.String())
 	}
 
 	Out(StdOut).Println(output.String())
 }
 
 func helpJson(profile *VirtualProfile) {
-  Out(StdOut).Print("[")
-  for i, commandName := range profile.CommandsOrdered {
-    if i > 0 {
-      Out(StdOut).Print(",")
-    }
-    command := profile.Commands[commandName]
-    helpCommandJson(command)
-  }
-  Out(StdOut).Print("]")
+	Out(StdOut).Print("[")
+	for i, commandName := range profile.CommandsOrdered {
+		if i > 0 {
+			Out(StdOut).Print(",")
+		}
+		command := profile.Commands[commandName]
+		helpCommandJson(command)
+	}
+	Out(StdOut).Print("]")
 }
 
 func helpCommandJson(command *VirtualCommand) {
 	man := Man{
-		Name:      command.Name,
+		Name:       command.Name,
 		Parameters: make([]ManParameter, 0),
 	}
 
@@ -155,8 +184,8 @@ func maxCommandNameLength(commandNames []string) int {
 }
 
 func breakLines(text string, maxLineLength int, spacing string) string {
-	if len(text) <= maxLineLength && strings.Index(text, "\n") == -1 {
-		return strings.Trim(text, " ")
+	if len(text)+len(spacing) <= maxLineLength && strings.Index(text, "\n") == -1 {
+		return spacing + strings.Trim(text, " ")
 	}
 
 	spacingLength := len(spacing)
@@ -172,7 +201,7 @@ func breakLines(text string, maxLineLength int, spacing string) string {
 
 		newText.WriteString(spacing)
 
-		if len(remaining) < maxLength && strings.Index(remaining, "\n") == -1 {
+		if len(remaining)+len(spacing) < maxLength && strings.Index(remaining, "\n") == -1 {
 			newText.WriteString(strings.Trim(remaining, " "))
 			break
 		}
@@ -211,8 +240,8 @@ func breakLines(text string, maxLineLength int, spacing string) string {
 }
 
 type Man struct {
-	Name      string        `json:"name"`
-	Text      string        `json:"text"`
+	Name       string         `json:"name"`
+	Text       string         `json:"text"`
 	Parameters []ManParameter `json:"params"`
 }
 
