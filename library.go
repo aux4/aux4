@@ -55,6 +55,8 @@ type CommandHelpVariable struct {
 	Text    string   `json:"text"`
 	Default string   `json:"default"`
 	Arg     bool     `json:"arg"`
+  Hide    bool     `json:"hide"`
+  Encrypt bool     `json:"encrypt"`
 	Env     string   `json:"env"`
 	Options []string `json:"options"`
 }
