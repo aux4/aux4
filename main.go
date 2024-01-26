@@ -82,8 +82,10 @@ func main() {
 
 	if err := env.Execute(actions, &params); err != nil {
 		if err, ok := err.(Aux4Error); ok {
+		  Out(StdErr).Println(err)
 			os.Exit(err.ExitCode)
 		} else {
+		  Out(StdErr).Println(err)
 			os.Exit(1)
 		}
 	}

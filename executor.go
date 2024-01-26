@@ -5,6 +5,7 @@ import (
 	"github.com/manifoldco/promptui"
 	"os"
 	"os/exec"
+	"reflect"
 	"strings"
 )
 
@@ -91,18 +92,30 @@ type EachCommandExecutor struct {
 func (executor *EachCommandExecutor) Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error {
 	expression := strings.TrimPrefix(executor.Command, "each:")
 
-	response, err := params.Get(command, actions, "response")
-	if err != nil {
-		return err
-	}
+	response := params.GetRaw("response")
 
-	list := strings.Split(response.(string), "\n")
+	var list []any
 
-	for _, item := range list {
+	typeOfResponse := reflect.TypeOf(response)
+	if typeOfResponse.Kind() == reflect.Slice || typeOfResponse.Kind() == reflect.Array {
+		list = response.([]any)
+	} else if typeOfResponse.Kind() == reflect.String {
+		lines := strings.Split(response.(string), "\n")
+		list = make([]any, len(lines))
+		for index, line := range lines {
+			list[index] = line
+		}
+	} else {
+    return InternalError("response is not array", nil)
+  }
+
+
+	for index, item := range list {
 		if item == "" {
 			continue
 		}
 
+		params.Update("index", index)
 		params.Update("item", item)
 
 		instruction, err := InjectParameters(command, expression, actions, params)
@@ -185,19 +198,19 @@ func (executor *SetCommandExecutor) Execute(env *VirtualEnvironment, command *Vi
 				return err
 			}
 
-			params.Set(name, strings.TrimSpace(stdout))
+			params.Update(name, strings.TrimSpace(stdout))
 		} else if strings.HasPrefix(valueExpression, "$") {
 			value, err := params.Expr(command, actions, valueExpression)
 			if err != nil {
 				return err
 			}
-			params.Set(name, value)
+			params.Update(name, value)
 		} else {
 			value, err := InjectParameters(command, valueExpression, actions, params)
 			if err != nil {
 				return err
 			}
-			params.Set(name, value)
+			params.Update(name, value)
 		}
 	}
 	return nil

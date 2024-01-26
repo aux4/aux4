@@ -64,8 +64,13 @@ func (p *Parameters) Set(name string, value any) {
 }
 
 func (p *Parameters) Update(name string, value any) {
-	p.params[name] = make([]any, 0)
-	p.params[name] = append(p.params[name], value)
+	typeOfValue := reflect.TypeOf(value)
+	if typeOfValue.Kind() == reflect.Slice || typeOfValue.Kind() == reflect.Array {
+		p.params[name] = value.([]any)
+	} else {
+		p.params[name] = make([]any, 0)
+		p.params[name] = append(p.params[name], value)
+	}
 }
 
 func (p *Parameters) Has(name string) bool {
@@ -77,6 +82,10 @@ func (p *Parameters) JustGet(name string) any {
 		return p.params[name][(len(p.params[name]) - 1)]
 	}
 	return nil
+}
+
+func (p *Parameters) GetRaw(name string) any {
+  return p.params[name]
 }
 
 func (p *Parameters) Get(command *VirtualCommand, actions []string, name string) (any, error) {
@@ -117,8 +126,8 @@ func (p *Parameters) Expr(command *VirtualCommand, actions []string, expression 
 
 	if strings.HasPrefix(expression, "$") {
 		expression = strings.TrimPrefix(expression, "$")
-    expression = strings.TrimPrefix(expression, "{")
-    expression = strings.TrimSuffix(expression, "}")
+		expression = strings.TrimPrefix(expression, "{")
+		expression = strings.TrimSuffix(expression, "}")
 	}
 
 	if !strings.Contains(expression, ".") && !strings.Contains(expression, "[") {

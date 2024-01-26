@@ -64,7 +64,9 @@ func HelpCommand(command *VirtualCommand, json bool, long bool) {
 
 	if command.Help != nil && command.Help.Variables != nil && len(command.Help.Variables) > 0 {
 		output.WriteString("\n")
-		output.WriteString("\n")
+		if long {
+			output.WriteString("\n")
+		}
 
 		variablesHelp := strings.Builder{}
 
