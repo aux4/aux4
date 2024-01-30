@@ -37,7 +37,7 @@
   },
   "dependencies": {
     "@aux4/encrypt": "^1.0.7",
-    "@aux4/engine": "^1.0.65",
+    "@aux4/engine": "^1.0.67",
     "colors": "^1.4.0"
   }
 }
