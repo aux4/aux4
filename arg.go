@@ -64,13 +64,8 @@ func (p *Parameters) Set(name string, value any) {
 }
 
 func (p *Parameters) Update(name string, value any) {
-	typeOfValue := reflect.TypeOf(value)
-	if typeOfValue.Kind() == reflect.Slice || typeOfValue.Kind() == reflect.Array {
-		p.params[name] = value.([]any)
-	} else {
-		p.params[name] = make([]any, 0)
-		p.params[name] = append(p.params[name], value)
-	}
+	p.params[name] = make([]any, 0)
+	p.params[name] = append(p.params[name], value)
 }
 
 func (p *Parameters) Has(name string) bool {
@@ -82,10 +77,6 @@ func (p *Parameters) JustGet(name string) any {
 		return p.params[name][(len(p.params[name]) - 1)]
 	}
 	return nil
-}
-
-func (p *Parameters) GetRaw(name string) any {
-  return p.params[name]
 }
 
 func (p *Parameters) Get(command *VirtualCommand, actions []string, name string) (any, error) {
@@ -145,23 +136,37 @@ func (p *Parameters) Expr(command *VirtualCommand, actions []string, expression 
 		}
 	}
 
-	if index == -1 {
+	multiple := false
+
+	if strings.HasSuffix(name, "*") {
+		name = strings.TrimSuffix(name, "*")
+		multiple = true
+	}
+
+	if multiple {
+		multiValue, err := p.GetMultiple(command, actions, name)
+		if err != nil {
+			return "", err
+		}
+
+		value = multiValue
+	} else {
 		result, err := p.Get(command, actions, name)
 		if err != nil {
 			return "", err
 		}
 
 		value = result
-	} else {
-		multiValue, err := p.GetMultiple(command, actions, name)
-		if err != nil {
-			return "", err
-		}
+	}
 
-		if len(multiValue) > index {
-			value = multiValue[index]
-		} else {
-			return "", InternalError("Index out of range: "+expression, nil)
+	if index != -1 {
+		typeOfValue := reflect.TypeOf(value)
+		if typeOfValue.Kind() == reflect.Slice || typeOfValue.Kind() == reflect.Array {
+			if len(value.([]any)) > index {
+				value = value.([]any)[index]
+			} else {
+				return "", InternalError("Index out of range: "+expression, nil)
+			}
 		}
 	}
 

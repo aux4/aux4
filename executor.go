@@ -92,7 +92,7 @@ type EachCommandExecutor struct {
 func (executor *EachCommandExecutor) Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error {
 	expression := strings.TrimPrefix(executor.Command, "each:")
 
-	response := params.GetRaw("response")
+	response := params.JustGet("response")
 
 	var list []any
 
@@ -108,7 +108,6 @@ func (executor *EachCommandExecutor) Execute(env *VirtualEnvironment, command *V
 	} else {
     return InternalError("response is not array", nil)
   }
-
 
 	for index, item := range list {
 		if item == "" {

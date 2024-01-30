@@ -1,51 +1,34 @@
 package main
 
 import (
-  "io"
-  "os/exec"
+	"bytes"
+	"os/exec"
 )
 
 func ExecuteCommandLine(instruction string) (string, string, error) {
 	cmd := exec.Command("bash", "-c", instruction)
 
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return "", "", InternalError("Error getting stdout from command", err)
-	}
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
 
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return "", "", InternalError("Error getting stderr from command", err)
-	}
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 
-	if err := cmd.Start(); err != nil {
-		return "", "", InternalError("Error executing command", err)
+	if err := cmd.Run(); err != nil {
+		exitError, ok := err.(*exec.ExitError)
+		if ok {
+			return stdout.String(), stderr.String(), Aux4Error{
+				Message:  exitError.Error(),
+				ExitCode: exitError.ExitCode(),
+				Cause:    err,
+			}
+		}
+		return stdout.String(), stderr.String(), InternalError("Error waiting the command execute", err)
 	}
-
-	errorData, err := io.ReadAll(stderr)
-	if err != nil {
-		return "", "", InternalError("Error reading the command error output", err)
-	}
-
-	data, err := io.ReadAll(stdout)
-	if err != nil {
-		return "", "", InternalError("Error reading the command output", err)
-	}
-	if err := cmd.Wait(); err != nil {
-    exitError, ok := err.(*exec.ExitError)
-    if ok {
-      return string(data), string(errorData), Aux4Error{
-        Message: exitError.Error(), 
-        ExitCode: exitError.ExitCode(),
-        Cause: err,
-      }
-    }
-		return string(data), string(errorData), InternalError("Error waiting the command execute", err)
-	}
-  return string(data), string(errorData), nil 
+	return stdout.String(), stderr.String(), nil
 }
 
 func IsCommandAvailable(command string) bool {
-  _, err := exec.LookPath(command)
-  return err == nil
+	_, err := exec.LookPath(command)
+	return err == nil
 }
