@@ -26,7 +26,11 @@ func VirtualCommandExecutorFactory(command string) VirtualCommandExecutor {
 		return &AliasCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "json:") {
 		return &JsonCommandExecutor{Command: command}
-	}
+	} else if strings.HasPrefix(command, "nout:") {
+    return &NoutCommandExecutor{Command: command}
+	} else if strings.HasPrefix(command, "stdin:") {
+    return &StdinCommandExecutor{Command: command}
+  }
 	return &CommandLineExecutor{Command: command}
 }
 
@@ -241,6 +245,57 @@ func (executor *AliasCommandExecutor) Execute(env *VirtualEnvironment, command *
 	}
 
 	return nil
+}
+
+type NoutCommandExecutor struct {
+  Command string
+}
+
+func (executor *NoutCommandExecutor) Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error {
+  expression := strings.TrimPrefix(executor.Command, "nout:")
+
+  instruction, err := InjectParameters(command, expression, actions, params)
+  if err != nil {
+    return err
+  }
+
+  stdout, stderr, err := ExecuteCommandLine(instruction)
+	if err != nil {
+		Out(StdErr).Print(stderr)
+		Out(StdOut).Print(stdout)
+		return err
+	}
+
+	params.Update("response", strings.TrimSpace(stdout))
+
+	return nil
+}
+
+type StdinCommandExecutor struct {
+  Command string
+}
+
+func (executor *StdinCommandExecutor) Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error {
+  expression := strings.TrimPrefix(executor.Command, "stdin:")
+
+  instruction, err := InjectParameters(command, expression, actions, params)
+  if err != nil {
+    return err
+  }
+
+  stdout, stderr, err := ExecuteCommandLineWithStdIn(instruction)
+  if err != nil {
+    Out(StdErr).Print(stderr)
+    Out(StdOut).Print(stdout)
+    return err
+  }
+
+	Out(StdErr).Print(stderr)
+
+	params.Update("response", strings.TrimSpace(stdout))
+	Out(StdOut).Print(stdout)
+
+  return nil
 }
 
 type CommandLineExecutor struct {

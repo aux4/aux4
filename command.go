@@ -2,10 +2,19 @@ package main
 
 import (
 	"bytes"
+	"os"
 	"os/exec"
 )
 
 func ExecuteCommandLine(instruction string) (string, string, error) {
+  return executeCommand(instruction, false)
+}
+
+func ExecuteCommandLineWithStdIn(instruction string) (string, string, error) {
+  return executeCommand(instruction, true)
+}
+
+func executeCommand(instruction string, withStdIn bool) (string, string, error) {
 	cmd := exec.Command("bash", "-c", instruction)
 
 	var stdout bytes.Buffer
@@ -13,6 +22,10 @@ func ExecuteCommandLine(instruction string) (string, string, error) {
 
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
+
+  if withStdIn {
+    cmd.Stdin = os.Stdin
+  }
 
 	if err := cmd.Run(); err != nil {
 		exitError, ok := err.(*exec.ExitError)
