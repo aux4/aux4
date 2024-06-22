@@ -235,7 +235,12 @@ func (executor *AliasCommandExecutor) Execute(env *VirtualEnvironment, command *
 		expression = expression + " " + stringParams
 	}
 
-	cmd := exec.Command("bash", "-c", expression)
+  instruction, err := InjectParameters(command, expression, actions, params)
+  if err != nil {
+    return err
+  }
+
+	cmd := exec.Command("bash", "-c", instruction)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
