@@ -106,12 +106,12 @@ func HelpCommand(command *VirtualCommand, json bool, long bool) {
 					}
 				}
 
-				if variable.Default != "" {
+				if variable.Default != nil {
 					variablesHelp.WriteString("\n\n")
 					variablesHelp.WriteString(spacing)
 					variablesHelp.WriteString(spacing)
 					variablesHelp.WriteString(Bold("Default: "))
-					variablesHelp.WriteString(Italic(variable.Default))
+					variablesHelp.WriteString(Italic(*variable.Default))
 				}
 
 				if variable.Env != "" {
@@ -156,7 +156,7 @@ func helpCommandJson(command *VirtualCommand) {
 				variable := ManParameter{
 					Name:    v.Name,
 					Text:    v.Text,
-					Default: v.Default,
+					Default: *v.Default,
 					Env:     v.Env,
 					Arg:     v.Arg,
 					Options: v.Options,

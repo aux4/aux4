@@ -109,11 +109,13 @@ func (p *Parameters) GetMultiple(command *VirtualCommand, actions []string, name
 	return p.params[name], nil
 }
 
-func (p *Parameters) Expr(command *VirtualCommand, actions []string, expression string) (any, error) {
+func (p *Parameters) Expr(command *VirtualCommand, actions []string, originalExpression string) (any, error) {
 	var name string
 	var value any
 	index := -1
 	jsonExpr := ""
+
+  var expression = strings.TrimSpace(originalExpression)
 
 	if strings.HasPrefix(expression, "$") {
 		expression = strings.TrimPrefix(expression, "$")
@@ -200,14 +202,18 @@ func (p *Parameters) String() string {
 }
 
 func InjectParameters(command *VirtualCommand, instruction string, actions []string, params *Parameters) (string, error) {
-	const variableRegex = "\\$\\{?([^}\\s]+)\\}?"
+	const variableRegex = "\\$([a-zA-Z0-9]+)|\\$\\{([^}\\s]+)\\}"
 	expr := regexp.MustCompile(variableRegex)
 	matches := expr.FindAllSubmatch([]byte(instruction), -1)
 
 	variables := map[string]any{}
 	for _, match := range matches {
 		variableExpression := string(match[0])
-		variablePath := string(match[1])
+    variablePath := string(match[1])
+
+    if variablePath == "" {
+      variablePath = string(match[2])
+    }
 
 		value, err := params.Expr(command, actions, variablePath)
 		if err != nil {

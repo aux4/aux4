@@ -28,6 +28,35 @@ aux4 print --name Joe
 hello Joe
 ```
 
+## Use variable without curl brackets
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print",
+          "execute": [
+            "echo 'hello $name'"
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print --name Joe
+```
+
+```expect
+hello Joe
+```
+
+
 ## Print variable default value
 
 ```file:.aux4

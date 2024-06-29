@@ -8,7 +8,7 @@ import (
 )
 
 type Package struct {
-  Path        string
+	Path        string
 	Name        string    `json:"name"`
 	Version     string    `json:"version"`
 	Description string    `json:"description"`
@@ -42,6 +42,10 @@ type CommandHelp struct {
 }
 
 func (help *CommandHelp) GetVariable(name string) (*CommandHelpVariable, bool) {
+  if help == nil || help.Variables == nil {
+    return nil, false
+  }
+
 	for _, variable := range help.Variables {
 		if variable.Name == name {
 			return variable, true
@@ -53,31 +57,31 @@ func (help *CommandHelp) GetVariable(name string) (*CommandHelpVariable, bool) {
 type CommandHelpVariable struct {
 	Name    string   `json:"name"`
 	Text    string   `json:"text"`
-	Default string   `json:"default"`
+	Default *string  `json:"default"`
 	Arg     bool     `json:"arg"`
-  Hide    bool     `json:"hide"`
-  Encrypt bool     `json:"encrypt"`
+	Hide    bool     `json:"hide"`
+	Encrypt bool     `json:"encrypt"`
 	Env     string   `json:"env"`
 	Options []string `json:"options"`
 }
 
 func LocalLibrary() *Library {
 	return &Library{
-		packages: make(map[string]*Package),
-    executors: make(map[string]VirtualCommandExecutor),
+		packages:  make(map[string]*Package),
+		executors: make(map[string]VirtualCommandExecutor),
 	}
 }
 
 type Library struct {
-	packages map[string]*Package
-  executors map[string]VirtualCommandExecutor
+	packages  map[string]*Package
+	executors map[string]VirtualCommandExecutor
 }
 
 func (library *Library) RegisterExecutor(name string, executor VirtualCommandExecutor) {
-  if library.executors[name] != nil {
-    return
-  }
-  library.executors[name] = executor
+	if library.executors[name] != nil {
+		return
+	}
+	library.executors[name] = executor
 }
 
 func (library *Library) LoadFile(filename string) error {
@@ -99,7 +103,7 @@ func (library *Library) Load(path string, name string, data []byte) error {
 		return err
 	}
 
-  pack.Path = path
+	pack.Path = path
 
 	if pack.Name == "" {
 		pack.Name = name

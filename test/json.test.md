@@ -28,10 +28,10 @@
                 "execute": [
                     "json:cat array.json",
                     "set:first=${response[0]};second=${response[1]}",
-                    "log:$first.name",
-                    "log:$first.age",
-                    "log:$second.name",
-                    "log:$second.age"
+                    "log:${first.name}",
+                    "log:${first.age}",
+                    "log:${second.name}",
+                    "log:${second.age}"
                 ],
                 "help": {
                     "text": "get first item of array and return name and age"
@@ -66,7 +66,7 @@ mary
                 "name": "get-each",
                 "execute": [
                     "json:cat array.json",
-                    "each:echo $item.name $item.age"
+                    "each:echo ${item.name} ${item.age}"
                 ],
                 "help": {
                     "text": "print name and age for each item of the array"

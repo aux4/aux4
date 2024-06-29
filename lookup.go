@@ -118,11 +118,11 @@ func (l DefaultLookup) Get(parameters *Parameters, command *VirtualCommand, acti
 		return nil, nil
 	}
 
-	if variable.Default == "" {
+	if variable.Default == nil {
 		return nil, nil
 	}
 
-	return variable.Default, nil
+	return *variable.Default, nil
 }
 
 type ArgLookup struct {
@@ -154,7 +154,7 @@ func (l PromptLookup) Get(parameters *Parameters, command *VirtualCommand, actio
 		return nil, nil
 	}
 
-	if variable.Default != "" {
+	if variable.Default != nil {
 		return nil, nil
 	}
 
