@@ -1,70 +1,106 @@
 {
+  "name": "local",
   "profiles": [
     {
       "name": "main",
       "commands": [
         {
-          "name": "ship",
+          "name": "build",
           "execute": [
-            "git pull -r",
-            "npm test",
-            "git push"
+            "profile:build"
           ],
           "help": {
-            "text": "🚢 pull test and push the code"
+            "text": "build the app"
+          }
+        },
+        {
+          "name": "install",
+          "execute": [
+            "set:os=!go env GOOS",
+            "set:arch=!go env GOARCH",
+            "set:version=!tail -n 1 version.go | awk -F '\"' '{print $2}'",
+            "cp version.go version.go.bak",
+            "cat version.go | sed 's/${version}/${version}-local/g' > version.txt",
+            "mv version.txt version.go",
+            "log:building aux4 for $os $arch",
+            "aux4 build $os",
+            "log:installing aux4 on /usr/local/bin",
+            "sudo cp bin/aux4-${os}-${arch} /usr/local/bin/aux4",
+            "mv version.go.bak version.go"
+          ],
+          "help": {
+            "text": "install the app locally"
           }
         },
         {
           "name": "release",
           "execute": [
-            "npm version ${version}",
-            "json:cat package.json",
-            "set:versionNumber=${response.version}",
-            "npm publish --access public --tag ${tag} --otp=${otp}",
-            "git push --follow-tags",
-            "echo ${versionNumber} released successfully"
+            "set:version=!tail -n 1 version.go | awk -F '\"' '{print $2}'",
+            "confirm:Are you sure you want to release a new version?",
+            "semver -i ${level} ${version}",
+            "cat version.go | sed 's/${version}/${response}/g' > version.txt",
+            "mv version.txt version.go",
+            "aux4 build"
           ],
           "help": {
-            "text": "release new version of aux4",
+            "text": "release a new version",
             "variables": [
               {
-                "name": "version",
-                "text": "type of version release. e.g.: major, minor, patch",
-                "default": "patch"
-              },
-              {
-                "name": "tag",
-                "text": "dist tag for npm publish",
-                "default": "latest"
-              },
-              {
-                "name": "otp",
-                "text": "npm one time password"
+                "name": "level",
+                "text": "the level of the release",
+                "options": [
+                  "major",
+                  "minor",
+                  "patch"
+                ]
               }
             ]
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "build",
+      "commands": [
         {
-          "name": "publish",
+          "name": "darwin",
           "execute": [
-            "json:cat package.json",
-            "set:packageName=${response.name};version=${response.version}",
-            "npm dist-tag remove ${packageName}@${version} beta --otp=${otp}",
-            "npm dist-tag add ${packageName}@${version} ${tag} --otp=${otp}"
+            "GOOS=darwin GOARCH=amd64 go build -o bin/aux4-darwin-amd64 .",
+            "GOOS=darwin GOARCH=arm64 go build -o bin/aux4-darwin-arm64 ."
           ],
           "help": {
-            "text": "publish the current version to npm",
-            "variables": [
-              {
-                "name": "tag",
-                "text": "dist tag for npm publish",
-                "default": "latest"
-              },
-              {
-                "name": "otp",
-                "text": "npm one time password"
-              }
-            ]
+            "text": "build the app for darwin"
+          }
+        },
+        {
+          "name": "linux",
+          "execute": [
+            "GOOS=linux GOARCH=amd64 go build -o bin/aux4-linux-amd64 .",
+            "GOOS=linux GOARCH=386 go build -o bin/aux4-linux-386 ."
+          ],
+          "help": {
+            "text": "build the app for linux"
+          }
+        },
+        {
+          "name": "windows",
+          "execute": [
+            "GOOS=windows GOARCH=amd64 go build -o bin/aux4-windows-amd64.exe .",
+            "GOOS=windows GOARCH=386 go build -o bin/aux4-windows-386.exe ."
+          ],
+          "help": {
+            "text": "build the app for windows"
+          }
+        },
+        {
+          "name": "all",
+          "execute": [
+            "aux4 build darwin",
+            "aux4 build linux",
+            "aux4 build windows"
+          ],
+          "help": {
+            "text": "build the app for all platforms"
           }
         }
       ]
