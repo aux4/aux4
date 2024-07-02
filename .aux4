@@ -46,6 +46,7 @@
             "aux4 build",
             "git commit -am 'release: $version'",
             "git tag -a v${version} -m 'release: v${version}'",
+            "git push --follow-tags",
             "gh release create v${version} bin/*"
           ],
           "help": {
