@@ -44,7 +44,7 @@
             "cat version.go | sed 's/${currentVersion}/${version}/g' > version.txt",
             "mv version.txt version.go",
             "aux4 build",
-            "git commit -ad -m 'release: $version'",
+            "git commit -am 'release: $version'",
             "git tag -a v${version} -m 'release: v${version}'",
             "gh release create v${version} bin/*"
           ],
