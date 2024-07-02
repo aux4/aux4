@@ -35,12 +35,18 @@
         {
           "name": "release",
           "execute": [
-            "set:version=!tail -n 1 version.go | awk -F '\"' '{print $2}'",
+            "git pull -r",
+            "set:currentVersion=!tail -n 1 version.go | awk -F '\"' '{print $2}'",
             "confirm:Are you sure you want to release a new version?",
-            "semver -i ${level} ${version}",
-            "cat version.go | sed 's/${version}/${response}/g' > version.txt",
+            "semver -i ${level} ${currentVersion}",
+            "set:version=${response}",
+            "log:releasing version $version",
+            "cat version.go | sed 's/${currentVersion}/${version}/g' > version.txt",
             "mv version.txt version.go",
-            "aux4 build"
+            "aux4 build",
+            "git commit -ad -m 'release: $version'",
+            "git tag -a v${version} -m 'release: v${version}'",
+            "gh release create v${version} bin/*"
           ],
           "help": {
             "text": "release a new version",
