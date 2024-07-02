@@ -56,9 +56,9 @@
                 "name": "level",
                 "text": "the level of the release",
                 "options": [
-                  "major",
+                  "patch",
                   "minor",
-                  "patch"
+                  "major"
                 ]
               }
             ]
