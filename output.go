@@ -33,14 +33,14 @@ func (e ErrorOutput) Println(args ...interface{}) {
 type DebugOutput struct{}
 
 func (d DebugOutput) Print(args ...interface{}) {
-  debug := os.Getenv("DEBUG")
+  debug := os.Getenv("AUX4_DEBUG")
   if debug == "true" {
     fmt.Fprint(os.Stderr, append([]interface{}{Cyan("[DEBUG]")}, args...)...)
   }
 }
 
 func (d DebugOutput) Println(args ...interface{}) {
-	debug := os.Getenv("DEBUG")
+	debug := os.Getenv("AUX4_DEBUG")
 	if debug == "true" {
 		fmt.Fprintln(os.Stderr, append([]interface{}{Cyan("[DEBUG]")}, args...)...)
 	}

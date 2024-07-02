@@ -53,7 +53,9 @@ type DebugCommandExecutor struct {
 }
 
 func (executor *DebugCommandExecutor) Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error {
-	instruction, err := InjectParameters(command, executor.Command, actions, params)
+	expression := strings.TrimPrefix(executor.Command, "debug:")
+
+	instruction, err := InjectParameters(command, expression, actions, params)
 	if err != nil {
 		return err
 	}

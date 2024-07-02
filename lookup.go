@@ -177,10 +177,12 @@ func (l PromptLookup) Get(parameters *Parameters, command *VirtualCommand, actio
 func promptText(variable *CommandHelpVariable) (string, error) {
 	var prompt promptui.Prompt
 
+  var text = fmt.Sprintf("%s %s", variable.Name, Gray(variable.Text))
+
 	if variable.Hide {
-		prompt = promptui.Prompt{Label: variable.Text, Mask: '*'}
+		prompt = promptui.Prompt{Label: text, Mask: '*'}
 	} else {
-		prompt = promptui.Prompt{Label: variable.Text}
+		prompt = promptui.Prompt{Label: text}
 	}
 
 	text, err := prompt.Run()
@@ -208,7 +210,9 @@ func promptText(variable *CommandHelpVariable) (string, error) {
 }
 
 func promptSelect(variable *CommandHelpVariable) (string, error) {
-	prompt := promptui.Select{Label: variable.Text, Items: variable.Options}
+  var text = fmt.Sprintf("%s %s", variable.Name, Gray(variable.Text))
+
+	prompt := promptui.Select{Label: text, Items: variable.Options}
 
 	_, text, err := prompt.Run()
 	if err != nil {
