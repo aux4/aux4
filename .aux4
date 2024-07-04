@@ -43,7 +43,7 @@
             "log:releasing version $version",
             "cat version.go | sed 's/${currentVersion}/${version}/g' > version.txt",
             "mv version.txt version.go",
-            "aux4 build",
+            "aux4 build all",
             "git commit -am 'release: $version'",
             "git tag -a v${version} -m 'release: v${version}'",
             "git push --follow-tags",
