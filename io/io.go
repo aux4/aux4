@@ -1,4 +1,4 @@
-package main
+package io
 
 import (
 	"archive/zip"
@@ -7,22 +7,12 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+  "aux4/config"
 )
 
-func GetConfigDirectory() (string) {
-	return filepath.Join(os.Getenv("HOME"), ".aux4.config")
-}
 
-func GetConfigPath(path string) (string) {
-  return filepath.Join(GetConfigDirectory(), path)
-}
-
-func GetAux4GlobalPath() (string) {
-  return filepath.Join(GetConfigDirectory(), "global.aux4")
-}
-
-func StoreGlobalAux4(globalPackage *Package) error {
-	var path = GetAux4GlobalPath()
+func StoreGlobalAux4(globalPackage any) error {
+	var path = config.GetAux4GlobalPath()
   var content, err = json.Marshal(globalPackage)
 	if err != nil {
 		return err

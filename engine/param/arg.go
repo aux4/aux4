@@ -1,12 +1,14 @@
-package main
+package param
 
 import (
+  "aux4/core"
 	"fmt"
-	"github.com/yalp/jsonpath"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/yalp/jsonpath"
 )
 
 func ParseArgs(args []string) ([]string, Parameters) {
@@ -42,7 +44,7 @@ func ParseArgs(args []string) ([]string, Parameters) {
 }
 
 type ParameterLookup interface {
-	Get(parameters *Parameters, command *VirtualCommand, actions []string, name string) (any, error)
+	Get(parameters *Parameters, command core.Command, actions []string, name string) (any, error)
 }
 
 type Parameters struct {
@@ -79,7 +81,7 @@ func (p *Parameters) JustGet(name string) any {
 	return nil
 }
 
-func (p *Parameters) Get(command *VirtualCommand, actions []string, name string) (any, error) {
+func (p *Parameters) Get(command core.Command, actions []string, name string) (any, error) {
 	if p.params[name] != nil {
 		return p.params[name][(len(p.params[name]) - 1)], nil
 	}
@@ -102,14 +104,14 @@ func (p *Parameters) Get(command *VirtualCommand, actions []string, name string)
 	return value, nil
 }
 
-func (p *Parameters) GetMultiple(command *VirtualCommand, actions []string, name string) ([]any, error) {
+func (p *Parameters) GetMultiple(command core.Command, actions []string, name string) ([]any, error) {
 	if p.params[name] == nil {
 		return make([]any, 0), nil
 	}
 	return p.params[name], nil
 }
 
-func (p *Parameters) Expr(command *VirtualCommand, actions []string, originalExpression string) (any, error) {
+func (p *Parameters) Expr(command core.Command, actions []string, originalExpression string) (any, error) {
 	var name string
 	var value any
 	index := -1
@@ -167,7 +169,7 @@ func (p *Parameters) Expr(command *VirtualCommand, actions []string, originalExp
 			if len(value.([]any)) > index {
 				value = value.([]any)[index]
 			} else {
-				return "", InternalError("Index out of range: "+expression, nil)
+				return "", core.InternalError("Index out of range: "+expression, nil)
 			}
 		}
 	}
@@ -201,7 +203,7 @@ func (p *Parameters) String() string {
 	return builder.String()
 }
 
-func InjectParameters(command *VirtualCommand, instruction string, actions []string, params *Parameters) (string, error) {
+func InjectParameters(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
 	const variableRegex = "\\$([a-zA-Z0-9]+)|\\$\\{([^}\\s]+)\\}"
 	expr := regexp.MustCompile(variableRegex)
 	matches := expr.FindAllSubmatch([]byte(instruction), -1)

@@ -1,6 +1,9 @@
-package main
+package param
 
 import (
+	"aux4/core"
+	"aux4/cmd"
+	"aux4/output"
 	"fmt"
 	"os"
 	"strings"
@@ -24,8 +27,8 @@ func ParameterLookups() []ParameterLookup {
 type ConfigLookup struct {
 }
 
-func (l ConfigLookup) Get(parameters *Parameters, command *VirtualCommand, actions []string, name string) (any, error) {
-	if !IsCommandAvailable("aux4-config") {
+func (l ConfigLookup) Get(parameters *Parameters, command core.Command, actions []string, name string) (any, error) {
+	if !cmd.IsCommandAvailable("aux4-config") {
 		return nil, nil
 	}
 
@@ -49,7 +52,7 @@ func (l ConfigLookup) Get(parameters *Parameters, command *VirtualCommand, actio
 		args = append(args, "--name ")
 	}
 
-	stdout, _, err := ExecuteCommandLine(fmt.Sprintf("aux4-config get %s%s", strings.Join(args, " "), name))
+	stdout, _, err := cmd.ExecuteCommandLine(fmt.Sprintf("aux4-config get %s%s", strings.Join(args, " "), name))
 	if err != nil {
 		return nil, nil
 	}
@@ -64,7 +67,7 @@ func (l ConfigLookup) Get(parameters *Parameters, command *VirtualCommand, actio
 type EncryptedParameterLookup struct {
 }
 
-func (l EncryptedParameterLookup) Get(parameters *Parameters, command *VirtualCommand, actions []string, name string) (any, error) {
+func (l EncryptedParameterLookup) Get(parameters *Parameters, command core.Command, actions []string, name string) (any, error) {
 	if strings.HasPrefix(name, "encrypted") {
 		return nil, nil
 	}
@@ -81,11 +84,11 @@ func (l EncryptedParameterLookup) Get(parameters *Parameters, command *VirtualCo
 		return nil, nil
 	}
 
-	if !IsCommandAvailable("aux4-encrypt") {
+	if !cmd.IsCommandAvailable("aux4-encrypt") {
 		return nil, nil
 	}
 
-	stdout, _, err := ExecuteCommandLine(fmt.Sprintf("aux4-encrypt decrypt %s", encryptedParameter.(string)))
+	stdout, _, err := cmd.ExecuteCommandLine(fmt.Sprintf("aux4-encrypt decrypt %s", encryptedParameter.(string)))
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +99,7 @@ func (l EncryptedParameterLookup) Get(parameters *Parameters, command *VirtualCo
 type EnvironmentVariableLookup struct {
 }
 
-func (l EnvironmentVariableLookup) Get(parameters *Parameters, command *VirtualCommand, actions []string, name string) (any, error) {
+func (l EnvironmentVariableLookup) Get(parameters *Parameters, command core.Command, actions []string, name string) (any, error) {
 	variable, ok := command.Help.GetVariable(name)
 	if !ok {
 		return nil, nil
@@ -112,7 +115,7 @@ func (l EnvironmentVariableLookup) Get(parameters *Parameters, command *VirtualC
 type DefaultLookup struct {
 }
 
-func (l DefaultLookup) Get(parameters *Parameters, command *VirtualCommand, actions []string, name string) (any, error) {
+func (l DefaultLookup) Get(parameters *Parameters, command core.Command, actions []string, name string) (any, error) {
 	variable, ok := command.Help.GetVariable(name)
 	if !ok {
 		return nil, nil
@@ -128,7 +131,7 @@ func (l DefaultLookup) Get(parameters *Parameters, command *VirtualCommand, acti
 type ArgLookup struct {
 }
 
-func (l ArgLookup) Get(parameters *Parameters, command *VirtualCommand, actions []string, name string) (any, error) {
+func (l ArgLookup) Get(parameters *Parameters, command core.Command, actions []string, name string) (any, error) {
 	variable, ok := command.Help.GetVariable(name)
 	if !ok {
 		return nil, nil
@@ -148,7 +151,7 @@ func (l ArgLookup) Get(parameters *Parameters, command *VirtualCommand, actions 
 type PromptLookup struct {
 }
 
-func (l PromptLookup) Get(parameters *Parameters, command *VirtualCommand, action []string, name string) (any, error) {
+func (l PromptLookup) Get(parameters *Parameters, command core.Command, action []string, name string) (any, error) {
 	variable, ok := command.Help.GetVariable(name)
 	if !ok {
 		return nil, nil
@@ -162,9 +165,9 @@ func (l PromptLookup) Get(parameters *Parameters, command *VirtualCommand, actio
 	var err error
 
 	if variable.Options != nil && len(variable.Options) > 0 {
-		text, err = promptSelect(variable)
+		text, err = promptSelect(*variable)
 	} else {
-		text, err = promptText(variable)
+		text, err = promptText(*variable)
 	}
 
 	if err != nil {
@@ -174,10 +177,10 @@ func (l PromptLookup) Get(parameters *Parameters, command *VirtualCommand, actio
 	return strings.TrimSpace(text), nil
 }
 
-func promptText(variable *CommandHelpVariable) (string, error) {
+func promptText(variable core.CommandHelpVariable) (string, error) {
 	var prompt promptui.Prompt
 
-  var text = fmt.Sprintf("%s %s", variable.Name, Gray(variable.Text))
+	var text = fmt.Sprintf("%s %s", variable.Name, output.Gray(variable.Text))
 
 	if variable.Hide {
 		prompt = promptui.Prompt{Label: text, Mask: '*'}
@@ -188,38 +191,38 @@ func promptText(variable *CommandHelpVariable) (string, error) {
 	text, err := prompt.Run()
 	if err != nil {
 		if err.Error() == "^C" {
-			return "", UserAbortedError()
+			return "", core.UserAbortedError()
 		}
-		return "", InternalError("Error to enter the value of "+variable.Name, err)
+		return "", core.InternalError("Error to enter the value of "+variable.Name, err)
 	}
 
 	if variable.Encrypt {
-		if !IsCommandAvailable("aux4-encrypt") {
+		if !cmd.IsCommandAvailable("aux4-encrypt") {
 			return text, nil
 		}
 
-		stdout, _, err := ExecuteCommandLine(fmt.Sprintf("aux4-encrypt encrypt %s", text))
+		stdout, _, err := cmd.ExecuteCommandLine(fmt.Sprintf("aux4-encrypt encrypt %s", text))
 		if err != nil {
 			return text, err
 		}
 
-    text = strings.TrimSpace(stdout)
+		text = strings.TrimSpace(stdout)
 	}
 
 	return text, nil
 }
 
-func promptSelect(variable *CommandHelpVariable) (string, error) {
-  var text = fmt.Sprintf("%s %s", variable.Name, Gray(variable.Text))
+func promptSelect(variable core.CommandHelpVariable) (string, error) {
+	var text = fmt.Sprintf("%s %s", variable.Name, output.Gray(variable.Text))
 
 	prompt := promptui.Select{Label: text, Items: variable.Options}
 
 	_, text, err := prompt.Run()
 	if err != nil {
 		if err.Error() == "^C" {
-			return "", UserAbortedError()
+			return "", core.UserAbortedError()
 		}
-		return "", InternalError("Error to select the value of "+variable.Name, err)
+		return "", core.InternalError("Error to select the value of "+variable.Name, err)
 	}
 
 	return text, nil

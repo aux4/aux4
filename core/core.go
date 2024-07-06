@@ -1,11 +1,4 @@
-package main
-
-import (
-	"encoding/json"
-	"fmt"
-	"os"
-	"path/filepath"
-)
+package core
 
 type Package struct {
 	Path        string
@@ -63,65 +56,4 @@ type CommandHelpVariable struct {
 	Encrypt bool     `json:"encrypt"`
 	Env     string   `json:"env"`
 	Options []string `json:"options"`
-}
-
-func LocalLibrary() *Library {
-	return &Library{
-		packages:  make(map[string]*Package),
-		executors: make(map[string]VirtualCommandExecutor),
-	}
-}
-
-type Library struct {
-  orderedPackages []string
-	packages  map[string]*Package
-	executors map[string]VirtualCommandExecutor
-}
-
-func (library *Library) RegisterExecutor(name string, executor VirtualCommandExecutor) {
-	if library.executors[name] != nil {
-		return
-	}
-	library.executors[name] = executor
-}
-
-func (library *Library) LoadFile(filename string) error {
-	path, err := filepath.Abs(filename)
-
-	file, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-
-	return library.Load(path, path, file)
-}
-
-func (library *Library) Load(path string, name string, data []byte) error {
-	var pack Package
-
-	err := json.Unmarshal(data, &pack)
-	if err != nil {
-		return err
-	}
-
-	pack.Path = path
-
-	if pack.Name == "" {
-		pack.Name = name
-	}
-
-	_, ok := library.packages[pack.Name]
-	if ok {
-		return InternalError(fmt.Sprintf("Package %s already exists", pack.Name), nil)
-	}
-
-  library.orderedPackages = append(library.orderedPackages, pack.Name)
-	library.packages[pack.Name] = &pack
-
-	return nil
-}
-
-func (library *Library) GetPackage(name string) (*Package, bool) {
-	pack, ok := library.packages[name]
-	return pack, ok
 }

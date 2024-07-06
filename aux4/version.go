@@ -1,2 +1,2 @@
-package main
+package aux4
 var Version = "5.0.3"

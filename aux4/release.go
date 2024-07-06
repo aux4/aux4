@@ -1,4 +1,4 @@
-package main
+package aux4
 
 import (
 	"encoding/json"

@@ -1,6 +1,8 @@
-package main
+package man
 
 import (
+	"aux4/core"
+	"aux4/output"
 	"encoding/json"
 	"strings"
 )
@@ -8,31 +10,30 @@ import (
 const spacing = "  "
 const lineLength = 100
 
-func Help(profile *VirtualProfile, json bool, long bool) {
+func Help(profile core.Profile, json bool, long bool) {
 	if json {
 		helpJson(profile)
 		return
 	}
 
-	for i, commandName := range profile.CommandsOrdered {
+	for i, command := range profile.Commands{
 		if i > 0 {
-			Out(StdOut).Println("")
+			output.Out(output.StdOut).Println("")
 		}
-		command := profile.Commands[commandName]
 		HelpCommand(command, json, long)
 	}
 }
 
-func HelpCommand(command *VirtualCommand, json bool, long bool) {
+func HelpCommand(command core.Command, json bool, long bool) {
 	if json {
 		helpCommandJson(command)
 		return
 	}
 
-	output := strings.Builder{}
+	outputHelp := strings.Builder{}
 	commandName := command.Name
 
-	output.WriteString(Yellow(Bold(commandName)))
+	outputHelp.WriteString(output.Yellow(output.Bold(commandName)))
 
 	if long {
 		description := ""
@@ -41,8 +42,8 @@ func HelpCommand(command *VirtualCommand, json bool, long bool) {
 		}
 
 		if description != "" {
-			output.WriteString("\n")
-			output.WriteString(description)
+			outputHelp.WriteString("\n")
+			outputHelp.WriteString(description)
 		}
 	} else {
 		description := ""
@@ -57,15 +58,15 @@ func HelpCommand(command *VirtualCommand, json bool, long bool) {
 				}
 			}
 
-			output.WriteString("\n")
-			output.WriteString(description)
+			outputHelp.WriteString("\n")
+			outputHelp.WriteString(description)
 		}
 	}
 
 	if command.Help != nil && command.Help.Variables != nil && len(command.Help.Variables) > 0 {
-		output.WriteString("\n")
+		outputHelp.WriteString("\n")
 		if long {
-			output.WriteString("\n")
+			outputHelp.WriteString("\n")
 		}
 
 		variablesHelp := strings.Builder{}
@@ -79,8 +80,8 @@ func HelpCommand(command *VirtualCommand, json bool, long bool) {
 			}
 
 			variablesHelp.WriteString(spacing)
-			variablesHelp.WriteString(Cyan("--"))
-			variablesHelp.WriteString(Cyan(variable.Name))
+			variablesHelp.WriteString(output.Cyan("--"))
+			variablesHelp.WriteString(output.Cyan(variable.Name))
 
 			if long {
 				if variable.Text != "" {
@@ -92,7 +93,7 @@ func HelpCommand(command *VirtualCommand, json bool, long bool) {
 					variablesHelp.WriteString("\n\n")
 					variablesHelp.WriteString(spacing)
 					variablesHelp.WriteString(spacing)
-					variablesHelp.WriteString(Bold("Options:"))
+					variablesHelp.WriteString(output.Bold("Options:"))
 					variablesHelp.WriteString("\n")
 
 					for i, option := range variable.Options {
@@ -102,7 +103,7 @@ func HelpCommand(command *VirtualCommand, json bool, long bool) {
 						variablesHelp.WriteString(spacing)
 						variablesHelp.WriteString(spacing)
 						variablesHelp.WriteString("* ")
-						variablesHelp.WriteString(Green(option))
+						variablesHelp.WriteString(output.Green(option))
 					}
 				}
 
@@ -110,39 +111,38 @@ func HelpCommand(command *VirtualCommand, json bool, long bool) {
 					variablesHelp.WriteString("\n\n")
 					variablesHelp.WriteString(spacing)
 					variablesHelp.WriteString(spacing)
-					variablesHelp.WriteString(Bold("Default: "))
-					variablesHelp.WriteString(Italic(*variable.Default))
+					variablesHelp.WriteString(output.Bold("Default: "))
+					variablesHelp.WriteString(output.Italic(*variable.Default))
 				}
 
 				if variable.Env != "" {
 					variablesHelp.WriteString("\n\n")
 					variablesHelp.WriteString(spacing)
 					variablesHelp.WriteString(spacing)
-					variablesHelp.WriteString(Bold("Environment variable: "))
-					variablesHelp.WriteString(Green(variable.Env))
+					variablesHelp.WriteString(output.Bold("Environment variable: "))
+					variablesHelp.WriteString(output.Green(variable.Env))
 				}
 			}
 		}
 
-		output.WriteString(variablesHelp.String())
+		outputHelp.WriteString(variablesHelp.String())
 	}
 
-	Out(StdOut).Println(output.String())
+	output.Out(output.StdOut).Println(outputHelp.String())
 }
 
-func helpJson(profile *VirtualProfile) {
-	Out(StdOut).Print("[")
-	for i, commandName := range profile.CommandsOrdered {
+func helpJson(profile core.Profile) {
+	output.Out(output.StdOut).Print("[")
+	for i, command := range profile.Commands {
 		if i > 0 {
-			Out(StdOut).Print(",")
+			output.Out(output.StdOut).Print(",")
 		}
-		command := profile.Commands[commandName]
 		helpCommandJson(command)
 	}
-	Out(StdOut).Print("]")
+	output.Out(output.StdOut).Print("]")
 }
 
-func helpCommandJson(command *VirtualCommand) {
+func helpCommandJson(command core.Command) {
 	man := Man{
 		Name:       command.Name,
 		Parameters: make([]ManParameter, 0),
@@ -172,7 +172,7 @@ func helpCommandJson(command *VirtualCommand) {
 		return
 	}
 
-	Out(StdOut).Print(string(value))
+	output.Out(output.StdOut).Print(string(value))
 }
 
 func maxCommandNameLength(commandNames []string) int {
