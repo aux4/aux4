@@ -38,6 +38,10 @@ type ProfileCommandExecutor struct {
 	Command string
 }
 
+func (executor *ProfileCommandExecutor) GetCommandLine() string {
+  return executor.Command
+}
+
 func (executor *ProfileCommandExecutor) Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error {
 	profileNameExpression := strings.TrimPrefix(executor.Command, "profile:")
 	profileName, err := InjectParameters(command, profileNameExpression, actions, params)
@@ -50,6 +54,10 @@ func (executor *ProfileCommandExecutor) Execute(env *VirtualEnvironment, command
 
 type DebugCommandExecutor struct {
 	Command string
+}
+
+func (executor *DebugCommandExecutor) GetCommandLine() string {
+  return executor.Command
 }
 
 func (executor *DebugCommandExecutor) Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error {
@@ -65,6 +73,10 @@ func (executor *DebugCommandExecutor) Execute(env *VirtualEnvironment, command *
 
 type JsonCommandExecutor struct {
 	Command string
+}
+
+func (executor *JsonCommandExecutor) GetCommandLine() string {
+  return executor.Command
 }
 
 func (executor *JsonCommandExecutor) Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error {
@@ -93,6 +105,10 @@ func (executor *JsonCommandExecutor) Execute(env *VirtualEnvironment, command *V
 
 type EachCommandExecutor struct {
 	Command string
+}
+
+func (executor *EachCommandExecutor) GetCommandLine() string {
+  return executor.Command
 }
 
 func (executor *EachCommandExecutor) Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error {
@@ -143,6 +159,10 @@ type ConfirmCommandExecutor struct {
 	Command string
 }
 
+func (executor *ConfirmCommandExecutor) GetCommandLine() string {
+  return executor.Command
+}
+
 func (executor *ConfirmCommandExecutor) Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error {
 	text := strings.TrimPrefix(executor.Command, "confirm:")
 
@@ -168,6 +188,10 @@ type LogCommandExecutor struct {
 	Command string
 }
 
+func (executor *LogCommandExecutor) GetCommandLine() string {
+  return executor.Command
+}
+
 func (executor *LogCommandExecutor) Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error {
 	text := strings.TrimPrefix(executor.Command, "log:")
 	instruction, err := InjectParameters(command, text, actions, params)
@@ -180,6 +204,10 @@ func (executor *LogCommandExecutor) Execute(env *VirtualEnvironment, command *Vi
 
 type SetCommandExecutor struct {
 	Command string
+}
+
+func (executor *SetCommandExecutor) GetCommandLine() string {
+  return executor.Command
 }
 
 func (executor *SetCommandExecutor) Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error {
@@ -225,6 +253,10 @@ type AliasCommandExecutor struct {
 	Command string
 }
 
+func (executor *AliasCommandExecutor) GetCommandLine() string {
+  return executor.Command
+}
+
 func (executor *AliasCommandExecutor) Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error {
 	expression := strings.TrimPrefix(executor.Command, "alias:")
 
@@ -258,6 +290,10 @@ type NoutCommandExecutor struct {
   Command string
 }
 
+func (executor *NoutCommandExecutor) GetCommandLine() string {
+  return executor.Command
+}
+
 func (executor *NoutCommandExecutor) Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error {
   expression := strings.TrimPrefix(executor.Command, "nout:")
 
@@ -280,6 +316,10 @@ func (executor *NoutCommandExecutor) Execute(env *VirtualEnvironment, command *V
 
 type StdinCommandExecutor struct {
   Command string
+}
+
+func (executor *StdinCommandExecutor) GetCommandLine() string {
+  return executor.Command
 }
 
 func (executor *StdinCommandExecutor) Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error {
@@ -307,6 +347,10 @@ func (executor *StdinCommandExecutor) Execute(env *VirtualEnvironment, command *
 
 type CommandLineExecutor struct {
 	Command string
+}
+
+func (executor *CommandLineExecutor) GetCommandLine() string {
+  return executor.Command
 }
 
 func (executor *CommandLineExecutor) Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error {

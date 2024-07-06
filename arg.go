@@ -115,7 +115,7 @@ func (p *Parameters) Expr(command *VirtualCommand, actions []string, originalExp
 	index := -1
 	jsonExpr := ""
 
-  var expression = strings.TrimSpace(originalExpression)
+	var expression = strings.TrimSpace(originalExpression)
 
 	if strings.HasPrefix(expression, "$") {
 		expression = strings.TrimPrefix(expression, "$")
@@ -209,11 +209,11 @@ func InjectParameters(command *VirtualCommand, instruction string, actions []str
 	variables := map[string]any{}
 	for _, match := range matches {
 		variableExpression := string(match[0])
-    variablePath := string(match[1])
+		variablePath := string(match[1])
 
-    if variablePath == "" {
-      variablePath = string(match[2])
-    }
+		if variablePath == "" {
+			variablePath = string(match[2])
+		}
 
 		value, err := params.Expr(command, actions, variablePath)
 		if err != nil {

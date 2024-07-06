@@ -17,6 +17,8 @@ func main() {
 
 	library := LocalLibrary()
 	library.RegisterExecutor("aux4.version", &Aux4VersionExecutor{})
+  library.RegisterExecutor("aux4:pkger.install", &Aux4PkgerInstallExecutor{})
+  library.RegisterExecutor("aux4:pkger.uninstall", &Aux4PkgerUninstallExecutor{})
 
 	if err := library.Load("", "aux4", []byte(`
     {
@@ -45,6 +47,15 @@ func main() {
               }
             },
             {
+              "name": "pkger",
+              "execute": [
+                "profile:aux4:pkger"
+              ],
+              "help": {
+                "text": "Manage aux4 packages"
+              }
+            },
+            {
               "name": "man",
               "execute": [
                 "set:help=true",
@@ -52,6 +63,37 @@ func main() {
               ],
               "help": {
                 "text": "Display help for a command"
+              }
+            }
+          ]
+        },
+        {
+          "name": "aux4:pkger",
+          "commands": [
+            {
+              "name": "install",
+              "help": {
+                "text": "Install a package",
+                "variables": [
+                  {
+                    "name": "package",
+                    "text": "the package to install",
+                    "arg": true
+                  }
+                ]
+              }
+            },
+            {
+              "name": "uninstall",
+              "help": {
+                "text": "Uninstall a package",
+                "variables": [
+                  {
+                    "name": "package",
+                    "text": "the package to uninstall",
+                    "arg": true
+                  }
+                ]
               }
             }
           ]
@@ -64,7 +106,13 @@ func main() {
 	}
 
 	var aux4Files []string
-	listAux4Files(".", &aux4Files)
+
+  listAux4Files(".", &aux4Files)
+
+	var globalAux4 = GetAux4GlobalPath()
+	if _, err := os.Stat(globalAux4); err == nil {
+		aux4Files = append([]string{globalAux4}, aux4Files...)
+	}
 
 	for _, aux4File := range aux4Files {
 		if err := library.LoadFile(aux4File); err != nil {
@@ -82,10 +130,10 @@ func main() {
 
 	if err := env.Execute(actions, &params); err != nil {
 		if err, ok := err.(Aux4Error); ok {
-		  Out(StdErr).Println(err)
+			Out(StdErr).Println(err)
 			os.Exit(err.ExitCode)
 		} else {
-		  Out(StdErr).Println(err)
+			Out(StdErr).Println(err)
 			os.Exit(1)
 		}
 	}

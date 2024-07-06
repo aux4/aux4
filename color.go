@@ -1,7 +1,7 @@
 package main
 
 import (
-  "github.com/fatih/color"
+	"github.com/fatih/color"
 )
 
 var gray = color.New(90).SprintFunc()
@@ -16,41 +16,41 @@ var bold = color.New(color.Bold).SprintFunc()
 var italic = color.New(color.Italic).SprintFunc()
 
 func Gray(args ...interface{}) string {
-  return gray(args...)
+	return gray(args...)
 }
 
 func Orange(args ...interface{}) string {
-  return orange(args...)
+	return orange(args...)
 }
 
 func Cyan(args ...interface{}) string {
-  return cyan(args...)
+	return cyan(args...)
 }
 
 func Red(args ...interface{}) string {
-  return red(args...)
+	return red(args...)
 }
 
 func Yellow(args ...interface{}) string {
-  return yellow(args...)
+	return yellow(args...)
 }
 
 func Magenta(args ...interface{}) string {
-  return magenta(args...)
+	return magenta(args...)
 }
 
 func Green(args ...interface{}) string {
-  return green(args...)
+	return green(args...)
 }
 
 func Blue(args ...interface{}) string {
-  return blue(args...)
+	return blue(args...)
 }
 
 func Bold(args ...interface{}) string {
-  return bold(args...)
+	return bold(args...)
 }
 
 func Italic(args ...interface{}) string {
-  return italic(args...)
+	return italic(args...)
 }

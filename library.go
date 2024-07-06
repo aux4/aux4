@@ -42,9 +42,9 @@ type CommandHelp struct {
 }
 
 func (help *CommandHelp) GetVariable(name string) (*CommandHelpVariable, bool) {
-  if help == nil || help.Variables == nil {
-    return nil, false
-  }
+	if help == nil || help.Variables == nil {
+		return nil, false
+	}
 
 	for _, variable := range help.Variables {
 		if variable.Name == name {
@@ -73,6 +73,7 @@ func LocalLibrary() *Library {
 }
 
 type Library struct {
+  orderedPackages []string
 	packages  map[string]*Package
 	executors map[string]VirtualCommandExecutor
 }
@@ -114,6 +115,7 @@ func (library *Library) Load(path string, name string, data []byte) error {
 		return InternalError(fmt.Sprintf("Package %s already exists", pack.Name), nil)
 	}
 
+  library.orderedPackages = append(library.orderedPackages, pack.Name)
 	library.packages[pack.Name] = &pack
 
 	return nil

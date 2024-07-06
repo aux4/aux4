@@ -13,7 +13,7 @@ type Output interface {
 type StandardOutput struct{}
 
 func (s StandardOutput) Print(args ...interface{}) {
-  fmt.Fprint(os.Stdout, args...)
+	fmt.Fprint(os.Stdout, args...)
 }
 
 func (s StandardOutput) Println(args ...interface{}) {
@@ -23,7 +23,7 @@ func (s StandardOutput) Println(args ...interface{}) {
 type ErrorOutput struct{}
 
 func (e ErrorOutput) Print(args ...interface{}) {
-  fmt.Fprint(os.Stderr, args...)
+	fmt.Fprint(os.Stderr, args...)
 }
 
 func (e ErrorOutput) Println(args ...interface{}) {
@@ -33,10 +33,10 @@ func (e ErrorOutput) Println(args ...interface{}) {
 type DebugOutput struct{}
 
 func (d DebugOutput) Print(args ...interface{}) {
-  debug := os.Getenv("AUX4_DEBUG")
-  if debug == "true" {
-    fmt.Fprint(os.Stderr, append([]interface{}{Cyan("[DEBUG]")}, args...)...)
-  }
+	debug := os.Getenv("AUX4_DEBUG")
+	if debug == "true" {
+		fmt.Fprint(os.Stderr, append([]interface{}{Cyan("[DEBUG]")}, args...)...)
+	}
 }
 
 func (d DebugOutput) Println(args ...interface{}) {
@@ -79,5 +79,5 @@ func (outputType OutputType) Out() Output {
 }
 
 func Out(outputType OutputType) Output {
-  return outputType.Out()
+	return outputType.Out()
 }

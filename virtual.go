@@ -14,17 +14,19 @@ type VirtualCommand struct {
 	Name    string
 	Execute []VirtualCommandExecutor
 	Help    *CommandHelp
-  Ref     *VirtualCommandRef
+	Ref     *VirtualCommandRef
 }
 
 type VirtualCommandRef struct {
-  Path string
-  Package string
-  Profile string
-  Command string
+	Path    string
+	Package string
+	Profile string
+	Command string
 }
 
 type VirtualCommandExecutor interface {
+  GetCommandLine() string
+
 	Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error
 }
 
@@ -34,8 +36,9 @@ func InitializeVirtualEnvironment(library *Library) (*VirtualEnvironment, error)
 		profiles:       make(map[string]*VirtualProfile),
 	}
 
-	for _, pack := range library.packages {
-		err := loadPackage(&env, pack, library.executors)
+	for _, packageName := range library.orderedPackages {
+    var pack, _ = library.GetPackage(packageName)
+    err := loadPackage(&env, pack, library.executors)
 		if err != nil {
 			return nil, err
 		}
@@ -65,11 +68,11 @@ func (env *VirtualEnvironment) Execute(actions []string, params *Parameters) err
 	}
 
 	if len(actions) == 0 {
-    json := params.JustGet("json")
-    isJson := json == true || json == "true"
+		json := params.JustGet("json")
+		isJson := json == true || json == "true"
 
-    help := params.JustGet("help")
-    isHelp := help == true || help == "true"
+		help := params.JustGet("help")
+		isHelp := help == true || help == "true"
 
 		Help(profile, isJson, isHelp)
 		return nil
@@ -82,11 +85,11 @@ func (env *VirtualEnvironment) Execute(actions []string, params *Parameters) err
 	}
 
 	if params.Has("help") && len(actions) == 1 {
-    json := params.JustGet("json")
-    isJson := json == true || json == "true"
+		json := params.JustGet("json")
+		isJson := json == true || json == "true"
 
-    help := params.JustGet("help")
-    isHelp := help == true || help == "true"
+		help := params.JustGet("help")
+		isHelp := help == true || help == "true"
 
 		HelpCommand(command, isJson, isHelp)
 		return nil
@@ -123,12 +126,12 @@ func loadPackage(env *VirtualEnvironment, pack *Package, executors map[string]Vi
 				Name:    command.Name,
 				Help:    command.Help,
 				Execute: make([]VirtualCommandExecutor, 0),
-        Ref: &VirtualCommandRef{
-          Path: pack.Path,
-          Package: pack.Name,
-          Profile: profile.Name,
-          Command: command.Name,
-        },
+				Ref: &VirtualCommandRef{
+					Path:    pack.Path,
+					Package: pack.Name,
+					Profile: profile.Name,
+					Command: command.Name,
+				},
 			}
 
 			for _, executor := range command.Execute {
@@ -136,13 +139,13 @@ func loadPackage(env *VirtualEnvironment, pack *Package, executors map[string]Vi
 				virtualCommand.Execute = append(virtualCommand.Execute, virtualExecutor)
 			}
 
-      if len(virtualCommand.Execute) == 0 {
-        key := fmt.Sprintf("%s.%s", profile.Name, command.Name)
-        executor, exists := executors[key]
-        if exists {
-          virtualCommand.Execute = append(virtualCommand.Execute, executor)
-        }
-      }
+			if len(virtualCommand.Execute) == 0 {
+				key := fmt.Sprintf("%s.%s", profile.Name, command.Name)
+				executor, exists := executors[key]
+				if exists {
+					virtualCommand.Execute = append(virtualCommand.Execute, executor)
+				}
+			}
 
 			virtualProfile.CommandsOrdered = append(virtualProfile.CommandsOrdered, command.Name)
 			virtualProfile.Commands[command.Name] = virtualCommand
