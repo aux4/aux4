@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 )
 
 type VirtualProfile struct {
@@ -25,7 +26,7 @@ type VirtualCommandRef struct {
 }
 
 type VirtualCommandExecutor interface {
-  GetCommandLine() string
+	GetCommandLine() string
 
 	Execute(env *VirtualEnvironment, command *VirtualCommand, actions []string, params *Parameters) error
 }
@@ -37,8 +38,8 @@ func InitializeVirtualEnvironment(library *Library) (*VirtualEnvironment, error)
 	}
 
 	for _, packageName := range library.orderedPackages {
-    var pack, _ = library.GetPackage(packageName)
-    err := loadPackage(&env, pack, library.executors)
+		var pack, _ = library.GetPackage(packageName)
+		err := loadPackage(&env, pack, library.executors)
 		if err != nil {
 			return nil, err
 		}
@@ -107,6 +108,10 @@ func (env *VirtualEnvironment) Execute(actions []string, params *Parameters) err
 
 func loadPackage(env *VirtualEnvironment, pack *Package, executors map[string]VirtualCommandExecutor) error {
 	for _, profile := range pack.Profiles {
+    if profile.Name == "" {
+      return InternalError(strings.Join([]string{"Profile name is required in", pack.Name, "package"}, " "), nil)
+    }
+
 		virtualProfile := env.profiles[profile.Name]
 		if virtualProfile == nil {
 			virtualProfile = &VirtualProfile{
@@ -117,9 +122,13 @@ func loadPackage(env *VirtualEnvironment, pack *Package, executors map[string]Vi
 		}
 
 		for _, command := range profile.Commands {
+      if command.Name == "" {
+        return InternalError(strings.Join([]string{"Command name is required in", profile.Name, "profile. Package:", pack.Name}, " "), nil)
+      }
+
 			virtualCommand, exists := virtualProfile.Commands[command.Name]
 			if exists {
-				return InternalError(fmt.Sprintf("Command %s already exists in profile %s. Ref. %s %s", command.Name, profile.Name, virtualCommand.Ref.Path, virtualCommand.Ref.Package), nil)
+				continue
 			}
 
 			virtualCommand = &VirtualCommand{

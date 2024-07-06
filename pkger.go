@@ -12,7 +12,7 @@ type Pkger struct {
 }
 
 func (pkger *Pkger) Install(owner string, name string, version string) error {
-  var temporaryDirectory, err = GetTemporaryDirectory("aux4-install")
+  temporaryDirectory, err := GetTemporaryDirectory("aux4-install")
   if err != nil {
     return err
   }
@@ -46,9 +46,9 @@ func (pkger *Pkger) Install(owner string, name string, version string) error {
     return err
   }
 
-  var env, envErr = InitializeVirtualEnvironment(library)
-  if envErr != nil {
-    return envErr
+  env, err := InitializeVirtualEnvironment(library)
+  if err != nil {
+    return err
   }
 
   var globalPackage = Package{
