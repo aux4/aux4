@@ -16,7 +16,8 @@ type VirtualProfile struct {
 
 func (profile *VirtualProfile) GetProfile() core.Profile {
 	commands := make([]core.Command, 0)
-	for _, command := range profile.Commands {
+	for _, commandName := range profile.CommandsOrdered {
+    command := profile.Commands[commandName]
 		commands = append(commands, command.Command)
 	}
 
