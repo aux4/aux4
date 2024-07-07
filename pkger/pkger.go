@@ -60,6 +60,17 @@ func (pkger *Pkger) Install(owner string, name string, version string) error {
     return err
   }
 
+  packageManager, err := InitPackageManager()
+  if err != nil {
+    return err
+  }
+
+  packageManager.Add(owner, name, version)
+  err = packageManager.Save()
+  if err != nil {
+    return err
+  }
+
   err = env.Save(config.GetAux4GlobalPath())
   if err != nil {
     return err
@@ -69,6 +80,39 @@ func (pkger *Pkger) Install(owner string, name string, version string) error {
 }
 
 func (pkger *Pkger) Uninstall(owner string, name string) error {
+  packageManager, err := InitPackageManager()
+  if err != nil {
+    return err
+  }
+
+  packageManager.Remove(owner, name)
+  err = packageManager.Save()
+  if err != nil {
+    return err
+  }
+
+  var library = engine.LocalLibrary()
+
+  for _, pack := range packageManager.Packages {
+    packagePath := filepath.Join(config.GetConfigPath("packages"), pack.Owner, pack.Name, ".aux4")
+    err = library.LoadFile(packagePath)
+    if err != nil {
+      return err
+    }
+  }
+
+  registry := engine.VirtualExecutorRegisty{}
+
+  env, err := engine.InitializeVirtualEnvironment(library, &registry)
+  if err != nil {
+    return err
+  }
+
+  err = env.Save(config.GetAux4GlobalPath())
+  if err != nil {
+    return err
+  }
+
   return nil
 }
 

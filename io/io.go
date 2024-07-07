@@ -9,8 +9,22 @@ import (
 	"path/filepath"
 )
 
-func WriteAux4File(path string, aux4Package any) error {
-  var content, err = json.Marshal(aux4Package)
+func ReadJsonFile(path string, object any) error {
+  file, err := os.ReadFile(path)
+  if err != nil {
+    return err
+  }
+
+  err = json.Unmarshal(file, object)
+  if err != nil {
+    return err
+  }
+
+  return nil
+}
+
+func WriteJsonFile(path string, object any) error {
+  var content, err = json.Marshal(object)
 	if err != nil {
 		return err
 	}

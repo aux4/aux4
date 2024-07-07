@@ -64,6 +64,12 @@ func (executor *Aux4PkgerUninstallExecutor) Execute(env *engine.VirtualEnvironme
 
 	output.Out(output.StdOut).Println("Uninstalling package", output.Yellow(fmt.Sprintf("%s/%s", owner, name)), "version", output.Yellow(version))
 
+	var pkger = &pkger.Pkger{}
+	err = pkger.Uninstall(owner, name)
+	if err != nil {
+		output.Out(output.StdErr).Println(err)
+	}
+
 	return nil
 }
 
