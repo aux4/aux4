@@ -2,7 +2,6 @@ package pkger
 
 import (
 	"aux4/config"
-	"aux4/core"
 	"aux4/engine"
 	"aux4/io"
 	"fmt"
@@ -40,9 +39,13 @@ func (pkger *Pkger) Install(owner string, name string, version string) error {
   }
 
   var library = engine.LocalLibrary()
-  err = library.LoadFile(config.GetAux4GlobalPath())
-  if err != nil {
-    return err
+
+	var globalAux4 = config.GetAux4GlobalPath()
+	if _, err := os.Stat(globalAux4); err == nil {
+    err = library.LoadFile(config.GetAux4GlobalPath())
+    if err != nil {
+      return err
+    }
   }
 
   err = library.LoadFile(filepath.Join(packageFolder, owner, name, ".aux4"))
@@ -52,41 +55,12 @@ func (pkger *Pkger) Install(owner string, name string, version string) error {
 
   registry := engine.VirtualExecutorRegisty{}
 
-  _, err = engine.InitializeVirtualEnvironment(library, &registry)
+  env, err := engine.InitializeVirtualEnvironment(library, &registry)
   if err != nil {
     return err
   }
 
-  var globalPackage = core.Package{
-    Profiles: []core.Profile{},
-  }
-
-//  for _, profile := range env.profiles {
-//    globalProfile := core.Profile{
-//      Name: profile.Name,
-//      Commands: []core.Command{},
-//    }
-//
-//    for _, commandName := range profile.CommandsOrdered {
-//      command := profile.Commands[commandName]
-//
-//      globalCommand := core.Command{
-//        Name: command.Name,
-//        Execute: []string{},
-//        Help: command.Help,
-//      }
-//
-//      for _, executor := range command.Execute {
-//        globalCommand.Execute = append(globalCommand.Execute, executor.GetCommandLine())
-//      }
-//
-//      globalProfile.Commands = append(globalProfile.Commands, globalCommand)
-//    }
-//
-//    globalPackage.Profiles = append(globalPackage.Profiles, globalProfile)
-//  }
-
-  err = io.StoreGlobalAux4(&globalPackage)
+  err = env.Save(config.GetAux4GlobalPath())
   if err != nil {
     return err
   }

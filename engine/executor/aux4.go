@@ -36,10 +36,6 @@ func (executor *Aux4VersionExecutor) Execute(env *engine.VirtualEnvironment, com
 type Aux4PkgerInstallExecutor struct {
 }
 
-func (executor *Aux4PkgerInstallExecutor) GetCommandLine() string {
-	return "install <package>"
-}
-
 func (executor *Aux4PkgerInstallExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
 	var owner, name, version, err = getPackage(command, actions, params)
 	if err != nil {
@@ -58,10 +54,6 @@ func (executor *Aux4PkgerInstallExecutor) Execute(env *engine.VirtualEnvironment
 }
 
 type Aux4PkgerUninstallExecutor struct {
-}
-
-func (executor *Aux4PkgerUninstallExecutor) GetCommandLine() string {
-	return "uninstall <package>"
 }
 
 func (executor *Aux4PkgerUninstallExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {

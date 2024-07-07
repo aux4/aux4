@@ -3,7 +3,7 @@ package main
 import (
 	"aux4/aux4"
 	"aux4/cmd"
-  //	"aux4/config"
+	"aux4/config"
 	"aux4/core"
 	"aux4/engine"
 	"aux4/engine/executor"
@@ -22,13 +22,13 @@ func main() {
 		os.Exit(err.(core.Aux4Error).ExitCode)
 	}
 
-//	var aux4Files = config.ListAux4Files(".")
-//
-//	for _, aux4File := range aux4Files {
-//		if err := library.LoadFile(aux4File); err != nil {
-//			output.Out(output.StdErr).Println(output.Red("Error loading file"), output.Red(aux4File), output.Red(err))
-//		}
-//	}
+	var aux4Files = config.ListAux4Files(".")
+
+	for _, aux4File := range aux4Files {
+		if err := library.LoadFile(aux4File); err != nil {
+			output.Out(output.StdErr).Println(output.Red("Error loading file"), output.Red(aux4File), output.Red(err))
+		}
+	}
 
 	registry := engine.CreateVirtualExecutorRegistry()
 	registry.RegisterExecutor("aux4.version", &executor.Aux4VersionExecutor{})

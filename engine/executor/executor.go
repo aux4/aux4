@@ -106,10 +106,6 @@ type ProfileCommandExecutor struct {
 	Command string
 }
 
-func (executor *ProfileCommandExecutor) GetCommandLine() string {
-	return executor.Command
-}
-
 func (executor *ProfileCommandExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
 	profileNameExpression := strings.TrimPrefix(executor.Command, "profile:")
 	profileName, err := param.InjectParameters(command, profileNameExpression, actions, params)
@@ -122,10 +118,6 @@ func (executor *ProfileCommandExecutor) Execute(env *engine.VirtualEnvironment, 
 
 type DebugCommandExecutor struct {
 	Command string
-}
-
-func (executor *DebugCommandExecutor) GetCommandLine() string {
-	return executor.Command
 }
 
 func (executor *DebugCommandExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
@@ -141,10 +133,6 @@ func (executor *DebugCommandExecutor) Execute(env *engine.VirtualEnvironment, co
 
 type JsonCommandExecutor struct {
 	Command string
-}
-
-func (executor *JsonCommandExecutor) GetCommandLine() string {
-	return executor.Command
 }
 
 func (executor *JsonCommandExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
@@ -173,10 +161,6 @@ func (executor *JsonCommandExecutor) Execute(env *engine.VirtualEnvironment, com
 
 type EachCommandExecutor struct {
 	Command string
-}
-
-func (executor *EachCommandExecutor) GetCommandLine() string {
-	return executor.Command
 }
 
 func (executor *EachCommandExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
@@ -227,10 +211,6 @@ type ConfirmCommandExecutor struct {
 	Command string
 }
 
-func (executor *ConfirmCommandExecutor) GetCommandLine() string {
-	return executor.Command
-}
-
 func (executor *ConfirmCommandExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
 	text := strings.TrimPrefix(executor.Command, "confirm:")
 
@@ -268,10 +248,6 @@ func (executor *LogCommandExecutor) Execute(env *engine.VirtualEnvironment, comm
 
 type SetCommandExecutor struct {
 	Command string
-}
-
-func (executor *SetCommandExecutor) GetCommandLine() string {
-	return executor.Command
 }
 
 func (executor *SetCommandExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
@@ -317,10 +293,6 @@ type AliasCommandExecutor struct {
 	Command string
 }
 
-func (executor *AliasCommandExecutor) GetCommandLine() string {
-	return executor.Command
-}
-
 func (executor *AliasCommandExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
 	expression := strings.TrimPrefix(executor.Command, "alias:")
 
@@ -354,10 +326,6 @@ type NoutCommandExecutor struct {
 	Command string
 }
 
-func (executor *NoutCommandExecutor) GetCommandLine() string {
-	return executor.Command
-}
-
 func (executor *NoutCommandExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
 	expression := strings.TrimPrefix(executor.Command, "nout:")
 
@@ -380,10 +348,6 @@ func (executor *NoutCommandExecutor) Execute(env *engine.VirtualEnvironment, com
 
 type StdinCommandExecutor struct {
 	Command string
-}
-
-func (executor *StdinCommandExecutor) GetCommandLine() string {
-	return executor.Command
 }
 
 func (executor *StdinCommandExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
@@ -411,10 +375,6 @@ func (executor *StdinCommandExecutor) Execute(env *engine.VirtualEnvironment, co
 
 type CommandLineExecutor struct {
 	Command string
-}
-
-func (executor *CommandLineExecutor) GetCommandLine() string {
-	return executor.Command
 }
 
 func (executor *CommandLineExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {

@@ -2,8 +2,8 @@ package engine
 
 import (
 	"aux4/core"
+  "aux4/io"
 	"aux4/engine/param"
-	"aux4/output"
 	"fmt"
 	"strings"
 )
@@ -17,7 +17,6 @@ type VirtualProfile struct {
 func (profile *VirtualProfile) GetProfile() core.Profile {
 	commands := make([]core.Command, 0)
 	for _, command := range profile.Commands {
-    output.Out(output.StdOut).Println("adding command", command.Command.Name)
 		commands = append(commands, command.Command)
 	}
 
@@ -83,6 +82,20 @@ func (env *VirtualEnvironment) SetProfile(profile string) error {
 	env.CurrentProfile = profile
 	return nil
 }
+
+func (env *VirtualEnvironment) Save(path string) error {
+  aux4Package := core.Package{
+    Profiles: []core.Profile{},
+  }
+
+  for _, virtualProfile := range env.profiles {
+    profile := virtualProfile.GetProfile()
+    aux4Package.Profiles = append(aux4Package.Profiles, profile) 
+  }
+
+  return io.WriteAux4File(path, &aux4Package)
+}
+
 func InitializeVirtualEnvironment(library *Library, registry *VirtualExecutorRegisty) (*VirtualEnvironment, error) {
 	env := VirtualEnvironment{
 		CurrentProfile: "main",

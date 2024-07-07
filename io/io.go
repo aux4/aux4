@@ -7,13 +7,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-  "aux4/config"
 )
 
-
-func StoreGlobalAux4(globalPackage any) error {
-	var path = config.GetAux4GlobalPath()
-  var content, err = json.Marshal(globalPackage)
+func WriteAux4File(path string, aux4Package any) error {
+  var content, err = json.Marshal(aux4Package)
 	if err != nil {
 		return err
 	}
