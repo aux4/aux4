@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"regexp"
+	"strings"
 )
 
 func AbortOnCtrlC() {
@@ -28,7 +30,16 @@ func ExecuteCommandLineWithStdIn(instruction string) (string, string, error) {
 }
 
 func executeCommand(instruction string, withStdIn bool) (string, string, error) {
-	cmd := exec.Command("bash", "-c", instruction)
+	isExpression := strings.Contains(instruction, "|") || strings.Contains(instruction, "&") || strings.Contains(instruction, ">") || strings.Contains(instruction, "<")
+
+	var cmd *exec.Cmd
+
+	if isExpression {
+		cmd = exec.Command("bash", "-c", instruction)
+	} else {
+    args := splitCommandLineIntoArgs(instruction)
+		cmd = exec.Command(args[0], args[1:]...)
+	}
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -57,4 +68,22 @@ func executeCommand(instruction string, withStdIn bool) (string, string, error) 
 func IsCommandAvailable(command string) bool {
 	_, err := exec.LookPath(command)
 	return err == nil
+}
+
+func splitCommandLineIntoArgs(instruction string) []string {
+	argsRegex := regexp.MustCompile(`[^\s"']+|"([^"]*)"|'([^']*)'`)
+	instructionArgs := argsRegex.FindAllString(instruction, -1)
+
+	args := []string{}
+
+	for _, arg := range instructionArgs {
+		unquoted := arg
+		if strings.HasPrefix(arg, "\"") || strings.HasPrefix(arg, "'") {
+			unquoted = arg[1 : len(arg)-1]
+		}
+
+		args = append(args, unquoted)
+	}
+
+	return strings.Fields(instruction)
 }

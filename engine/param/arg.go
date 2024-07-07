@@ -11,9 +11,10 @@ import (
 	"github.com/yalp/jsonpath"
 )
 
-func ParseArgs(args []string) ([]string, Parameters) {
+func ParseArgs(args []string) (Aux4Parameters, []string, Parameters) {
 	actions := make([]string, 0)
 	params := make(map[string][]any)
+	aux4Params := make(map[string]string)
 
 	for index := 0; index < len(args); index++ {
 		arg := args[index]
@@ -24,7 +25,7 @@ func ParseArgs(args []string) ([]string, Parameters) {
 				parts := strings.Split(name, "=")
 				name = parts[0]
 				value = parts[1]
-			} else if index+1 >= len(args) || strings.HasPrefix(args[index+1], "--") {
+			} else if index+1 >= len(args) || strings.HasPrefix(args[index+1], "-") {
 				value = "true"
 			} else {
 				value = args[index+1]
@@ -35,16 +36,46 @@ func ParseArgs(args []string) ([]string, Parameters) {
 				params[name] = make([]any, 0)
 			}
 			params[name] = append(params[name], value)
+    } else if strings.HasPrefix(arg, "-") {
+      name := arg[1:]
+      value := ""
+
+      if strings.Contains(name, "=") {
+        parts := strings.Split(name, "=")
+        name = parts[0]
+        value = parts[1]
+      } else if index+1 >= len(args) || strings.HasPrefix(args[index+1], "-") {
+        value = "true"
+      } else {
+        value = args[index+1]
+        index++
+      }
+
+      aux4Params[name] = value
 		} else {
 			actions = append(actions, arg)
 		}
 	}
 
-	return actions, Parameters{params: params, lookups: ParameterLookups()}
+  return Aux4Parameters{ params: aux4Params }, actions, Parameters{params: params, lookups: ParameterLookups()}
 }
 
 type ParameterLookup interface {
 	Get(parameters *Parameters, command core.Command, actions []string, name string) (any, error)
+}
+
+type Aux4Parameters struct{
+  params map[string]string
+}
+
+func (params *Aux4Parameters) Local() bool {
+  value, ok := params.params["local"]
+  return ok && value == "true"
+}
+
+func (params *Aux4Parameters) NoPackages() bool {
+  value, ok := params.params["no-packages"]
+  return ok && value == "true"
 }
 
 type Parameters struct {

@@ -37,7 +37,7 @@ func Execute(env *engine.VirtualEnvironment, actions []string, params *param.Par
 	}
 
 	commandName := actions[0]
-	virtualCommand, exists := virtualProfile.Commands[commandName]
+	command, exists := virtualProfile.Commands[commandName]
 	if !exists {
 		return core.CommandNotFoundError(commandName)
 	}
@@ -49,25 +49,28 @@ func Execute(env *engine.VirtualEnvironment, actions []string, params *param.Par
 		help := params.JustGet("help")
 		isHelp := help == true || help == "true"
 
-		var command = virtualCommand.Command
 		man.HelpCommand(command, isJson, isHelp)
-
 		return nil
-	}
+	} 
 
-	for _, commandLine := range virtualCommand.Command.Execute {
+  if params.Has("show-source") && len(actions) == 1 {
+    man.ShowCommandSource(command)
+    return nil
+  }
+
+	for _, commandLine := range command.Execute {
 		executor := commandExecutorFactory(commandLine)
-		err := executor.Execute(env, virtualCommand.Command, actions, params)
+		err := executor.Execute(env, command, actions, params)
 		if err != nil {
 			return err
 		}
 	}
 
-	if len(virtualCommand.Command.Execute) == 0 {
-		key := fmt.Sprintf("%s.%s", virtualProfile.Name, virtualCommand.Command.Name)
+	if len(command.Execute) == 0 {
+		key := fmt.Sprintf("%s.%s", virtualProfile.Name, command.Name)
 		executor, exists := env.Registry.GetExecutor(key)
 		if exists {
-			err := executor.Execute(env, virtualCommand.Command, actions, params)
+			err := executor.Execute(env, command, actions, params)
 			if err != nil {
 				return err
 			}

@@ -15,6 +15,8 @@ import (
 func main() {
 	cmd.AbortOnCtrlC()
 
+	aux4Params, actions, params := param.ParseArgs(os.Args[1:])
+
 	library := engine.LocalLibrary()
 
 	if err := library.Load("", "aux4", []byte(aux4.DefaultAux4())); err != nil {
@@ -22,7 +24,7 @@ func main() {
 		os.Exit(err.(core.Aux4Error).ExitCode)
 	}
 
-	var aux4Files = config.ListAux4Files(".")
+	var aux4Files = config.ListAux4Files(".", aux4Params)
 
 	for _, aux4File := range aux4Files {
 		if err := library.LoadFile(aux4File); err != nil {
@@ -40,8 +42,6 @@ func main() {
 		output.Out(output.StdErr).Println(err)
 		os.Exit(err.(core.Aux4Error).ExitCode)
 	}
-
-	actions, params := param.ParseArgs(os.Args[1:])
 
 	if err := executor.Execute(env, actions, &params); err != nil {
 		if err, ok := err.(core.Aux4Error); ok {

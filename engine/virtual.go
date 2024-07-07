@@ -11,32 +11,20 @@ import (
 type VirtualProfile struct {
 	Name            string
 	CommandsOrdered []string
-	Commands        map[string]VirtualCommand
+	Commands        map[string]core.Command
 }
 
 func (profile *VirtualProfile) GetProfile() core.Profile {
 	commands := make([]core.Command, 0)
 	for _, commandName := range profile.CommandsOrdered {
     command := profile.Commands[commandName]
-		commands = append(commands, command.Command)
+		commands = append(commands, command)
 	}
 
 	return core.Profile{
 		Name:     profile.Name,
 		Commands: commands,
 	}
-}
-
-type VirtualCommand struct {
-	Command core.Command
-	Ref     VirtualCommandRef
-}
-
-type VirtualCommandRef struct {
-	Path    string
-	Package string
-	Profile string
-	Command string
 }
 
 type VirtualCommandExecutor interface {
@@ -125,7 +113,7 @@ func loadPackage(env *VirtualEnvironment, pack *core.Package) error {
 		if virtualProfile == nil {
 			virtualProfile = &VirtualProfile{
 				Name:     profile.Name,
-				Commands: make(map[string]VirtualCommand),
+				Commands: make(map[string]core.Command),
 			}
 			env.profiles[profile.Name] = virtualProfile
 		}
@@ -135,23 +123,13 @@ func loadPackage(env *VirtualEnvironment, pack *core.Package) error {
 				return core.InternalError(strings.Join([]string{"Command name is required in", profile.Name, "profile. Package:", pack.Name}, " "), nil)
 			}
 
-			virtualCommand, exists := virtualProfile.Commands[command.Name]
+			_, exists := virtualProfile.Commands[command.Name]
 			if exists {
 				continue
 			}
 
-			virtualCommand = VirtualCommand{
-				Command: command,
-				Ref: VirtualCommandRef{
-					Path:    pack.Path,
-					Package: pack.Name,
-					Profile: profile.Name,
-					Command: command.Name,
-				},
-			}
-
 			virtualProfile.CommandsOrdered = append(virtualProfile.CommandsOrdered, command.Name)
-			virtualProfile.Commands[command.Name] = virtualCommand
+			virtualProfile.Commands[command.Name] = command
 		}
 	}
 

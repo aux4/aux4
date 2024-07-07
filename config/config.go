@@ -1,36 +1,39 @@
 package config
 
 import (
+	"aux4/engine/param"
 	"os"
 	"path/filepath"
 )
 
-func GetConfigDirectory() (string) {
+func GetConfigDirectory() string {
 	return filepath.Join(os.Getenv("HOME"), ".aux4.config")
 }
 
-func GetConfigPath(path string) (string) {
-  return filepath.Join(GetConfigDirectory(), path)
+func GetConfigPath(path string) string {
+	return filepath.Join(GetConfigDirectory(), path)
 }
 
-func GetAux4GlobalPath() (string) {
-  return filepath.Join(GetConfigDirectory(), "global.aux4")
+func GetAux4GlobalPath() string {
+	return filepath.Join(GetConfigDirectory(), "global.aux4")
 }
 
-func ListAux4Files(path string) []string {
-  var aux4Files []string
+func ListAux4Files(path string, aux4Params param.Aux4Parameters) []string {
+	var aux4Files []string
 
-  listAux4Files(path, &aux4Files)
+	listAux4Files(path, &aux4Files, !aux4Params.Local())
 
-	var globalAux4 = GetAux4GlobalPath()
-	if _, err := os.Stat(globalAux4); err == nil {
-		aux4Files = append([]string{globalAux4}, aux4Files...)
+	if !aux4Params.NoPackages() {
+		var globalAux4 = GetAux4GlobalPath()
+		if _, err := os.Stat(globalAux4); err == nil {
+			aux4Files = append([]string{globalAux4}, aux4Files...)
+		}
 	}
 
-  return aux4Files
+	return aux4Files
 }
 
-func listAux4Files(path string, list *[]string) {
+func listAux4Files(path string, list *[]string, recursive bool) {
 	dir, err := filepath.Abs(path)
 	if err != nil {
 		dir = path
@@ -41,8 +44,12 @@ func listAux4Files(path string, list *[]string) {
 		*list = append([]string{aux4File}, *list...)
 	}
 
+  if !recursive {
+    return
+  }
+
 	parent := filepath.Dir(dir)
 	if parent != dir {
-		listAux4Files(parent, list)
+		listAux4Files(parent, list, true)
 	}
 }

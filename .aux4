@@ -26,7 +26,7 @@
             "aux4 build $os",
             "log:installing aux4 on /usr/local/bin",
             "sudo cp bin/aux4-${os}-${arch} /usr/local/bin/aux4",
-            "mv version.go.bak version.go"
+            "mv version.go.bak aux4/version.go"
           ],
           "help": {
             "text": "install the app locally"
@@ -36,7 +36,7 @@
           "name": "release",
           "execute": [
             "git pull -r",
-            "set:currentVersion=!tail -n 1 version.go | awk -F '\"' '{print $2}'",
+            "set:currentVersion=!tail -n 1 aux4/version.go | awk -F '\"' '{print $2}'",
             "confirm:Are you sure you want to release a new version?",
             "semver -i ${level} ${currentVersion}",
             "set:version=${response}",
