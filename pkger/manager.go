@@ -3,6 +3,7 @@ package pkger
 import (
 	"aux4/config"
 	"aux4/io"
+	"aux4/output"
 	"os"
 	"strings"
 )
@@ -48,11 +49,11 @@ type PackageManager struct {
 	Dependencies map[string]Dependency `json:"dependencies"`
 }
 
-func (packageManager *PackageManager) Add(owner string, name string, version string, dependencies []string) []string {
-	pack := Package{Owner: owner, Name: name, Version: version}
+func (packageManager *PackageManager) Add(owner string, name string, version string, dependencies []string) []Package {
+	pack := Package{Owner: owner, Name: name, Version: version, Dependencies: dependencies}
 	packageManager.Packages[pack.String()] = pack
 
-	packagesToBeInstalled := []string{pack.String()}
+	packagesToBeInstalled := []Package{pack}
 
 	for _, dependencyReference := range dependencies {
 		dependencyPackage := ParsePackage(dependencyReference)
@@ -62,51 +63,56 @@ func (packageManager *PackageManager) Add(owner string, name string, version str
 			existingDependency = Dependency{Package: dependencyPackage.String(), UsedBy: []string{}}
 			packageManager.Dependencies[dependencyPackage.String()] = existingDependency
 
-			packagesToBeInstalled = append(packagesToBeInstalled, dependencyPackage.String())
+			_, existsAsPackage := packageManager.Packages[dependencyPackage.String()]
+			if !existsAsPackage {
+				packagesToBeInstalled = append(packagesToBeInstalled, dependencyPackage)
+			}
 		}
 
 		existingDependency.UsedBy = append(existingDependency.UsedBy, pack.String())
+		packageManager.Dependencies[dependencyPackage.String()] = existingDependency
 	}
 
 	return packagesToBeInstalled
 }
 
-func (packageManager *PackageManager) Remove(owner string, name string) []string {
-  pack := packageManager.Packages[owner + "/" + name]
-  packageName := pack.String()
+func (packageManager *PackageManager) Remove(owner string, name string) []Package {
+	pack := packageManager.Packages[owner+"/"+name]
+	packageName := pack.String()
 
-	dependenciesToRemove := []string{packageName}
+	dependenciesToRemove := []Package{pack}
 
-	for _, dependency := range packageManager.Dependencies {
-		usedBy := dependency.UsedBy
-		for index, usedByPackage := range usedBy {
-			if usedByPackage == packageName {
-				dependenciesToRemove = append(dependenciesToRemove, dependency.Package)
-				usedBy = append(usedBy[:index], usedBy[index+1:]...)
+  packageAsDependency, existsAsDependency := packageManager.Dependencies[packageName]
+  if existsAsDependency {
+    output.Out(output.StdErr).Println("Package", pack.Owner, pack.Name, pack.Version, "is being used by", packageAsDependency.Package)
+    return []Package{}
+  }
+
+	if len(pack.Dependencies) > 0 {
+		for _, dependencyReference := range pack.Dependencies {
+			dependencyPackage := ParsePackage(dependencyReference)
+
+			existingDependency := packageManager.Dependencies[dependencyPackage.String()]
+			usedBy := existingDependency.UsedBy
+			for index, usedByPackage := range usedBy {
+				if usedByPackage == packageName {
+					usedBy = append(usedBy[:index], usedBy[index+1:]...)
+				}
+			}
+			existingDependency.UsedBy = usedBy
+			packageManager.Dependencies[dependencyPackage.String()] = existingDependency
+
+			if len(existingDependency.UsedBy) == 0 {
+				dependencyPackage := ParsePackage(existingDependency.Package)
+				delete(packageManager.Dependencies, existingDependency.Package)
+
+				_, existsAsPackage := packageManager.Packages[dependencyPackage.String()]
+				if !existsAsPackage {
+					dependenciesToRemove = append(dependenciesToRemove, dependencyPackage)
+				}
 			}
 		}
-		dependency.UsedBy = usedBy
 	}
-
-  if len(pack.Dependencies) > 0 {
-    for _, dependencyReference := range pack.Dependencies {
-      dependencyPackage := ParsePackage(dependencyReference)
-
-      existingDependency := packageManager.Dependencies[dependencyPackage.String()]
-      usedBy := existingDependency.UsedBy
-      for index, usedByPackage := range usedBy {
-        if usedByPackage == packageName {
-          usedBy = append(usedBy[:index], usedBy[index+1:]...)
-        }
-      }
-      existingDependency.UsedBy = usedBy
-
-      if len(existingDependency.UsedBy) == 0 {
-        dependenciesToRemove = append(dependenciesToRemove, existingDependency.Package)
-        delete(packageManager.Dependencies, existingDependency.Package)
-      }
-    }
-  }
 
 	delete(packageManager.Packages, packageName)
 	delete(packageManager.Dependencies, packageName)

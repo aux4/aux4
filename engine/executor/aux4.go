@@ -7,7 +7,6 @@ import (
 	"aux4/engine/param"
 	"aux4/output"
 	"aux4/pkger"
-	"fmt"
 	"strings"
 	"time"
 )
@@ -42,8 +41,6 @@ func (executor *Aux4PkgerInstallExecutor) Execute(env *engine.VirtualEnvironment
 		return err
 	}
 
-	output.Out(output.StdOut).Println("Installing package", output.Yellow(fmt.Sprintf("%s/%s", owner, name)), "version", output.Yellow(version))
-
 	var pkger = &pkger.Pkger{}
 	err = pkger.Install(owner, name, version)
 	if err != nil {
@@ -57,12 +54,10 @@ type Aux4PkgerUninstallExecutor struct {
 }
 
 func (executor *Aux4PkgerUninstallExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
-	var owner, name, version, err = getPackage(command, actions, params)
+	var owner, name, _, err = getPackage(command, actions, params)
 	if err != nil {
 		return err
 	}
-
-	output.Out(output.StdOut).Println("Uninstalling package", output.Yellow(fmt.Sprintf("%s/%s", owner, name)), "version", output.Yellow(version))
 
 	var pkger = &pkger.Pkger{}
 	err = pkger.Uninstall(owner, name)
