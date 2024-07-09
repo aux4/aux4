@@ -33,6 +33,9 @@ func (pkger *Pkger) Uninstall(owner string, name string) error {
 	}
 
   packagesToRemove := packageManager.Remove(owner, name)
+  if len(packagesToRemove) == 0 {
+    return nil
+  }
 
 	err = packageManager.Save()
 	if err != nil {

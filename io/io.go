@@ -28,7 +28,12 @@ func WriteJsonFile(path string, object any) error {
 	if err != nil {
 		return err
 	}
-	os.WriteFile(path, content, 0644)
+
+	err = os.WriteFile(path, content, 0644)
+  if err != nil {
+    return err
+  }
+
 	return nil
 }
 

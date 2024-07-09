@@ -60,7 +60,7 @@ func (packageManager *PackageManager) Add(owner string, name string, version str
 
 		existingDependency, exists := packageManager.Dependencies[dependencyPackage.String()]
 		if !exists {
-			existingDependency = Dependency{Package: dependencyPackage.String(), UsedBy: []string{}}
+			existingDependency = Dependency{Package: dependencyReference, UsedBy: []string{}}
 			packageManager.Dependencies[dependencyPackage.String()] = existingDependency
 
 			_, existsAsPackage := packageManager.Packages[dependencyPackage.String()]
@@ -77,16 +77,19 @@ func (packageManager *PackageManager) Add(owner string, name string, version str
 }
 
 func (packageManager *PackageManager) Remove(owner string, name string) []Package {
-	pack := packageManager.Packages[owner+"/"+name]
-	packageName := pack.String()
+	packageName := owner + "/" + name
+	pack := packageManager.Packages[packageName]
 
 	dependenciesToRemove := []Package{pack}
 
-  packageAsDependency, existsAsDependency := packageManager.Dependencies[packageName]
-  if existsAsDependency {
-    output.Out(output.StdErr).Println("Package", pack.Owner, pack.Name, pack.Version, "is being used by", packageAsDependency.Package)
-    return []Package{}
-  }
+	packageAsDependency, existsAsDependency := packageManager.Dependencies[packageName]
+	if existsAsDependency && len(packageAsDependency.UsedBy) > 0 {
+		output.Out(output.StdErr).Println("Package", output.Cyan(packageName), "is being used by")
+		for _, usedBy := range packageAsDependency.UsedBy {
+			output.Out(output.StdErr).Println("  *", output.Yellow(usedBy))
+		}
+		return []Package{}
+	}
 
 	if len(pack.Dependencies) > 0 {
 		for _, dependencyReference := range pack.Dependencies {
@@ -121,8 +124,11 @@ func (packageManager *PackageManager) Remove(owner string, name string) []Packag
 }
 
 func (packageManager *PackageManager) Save() error {
+	packagesDirectory := config.GetConfigPath("packages")
+	err := os.MkdirAll(packagesDirectory, os.ModePerm)
+
 	configPath := config.GetConfigPath("packages/all.json")
-	err := io.WriteJsonFile(configPath, packageManager)
+	err = io.WriteJsonFile(configPath, packageManager)
 	if err != nil {
 		return err
 	}
