@@ -3,7 +3,6 @@ package pkger
 import (
 	"aux4/config"
 	"aux4/io"
-	"aux4/output"
 	"os"
 	"strings"
 )
@@ -49,11 +48,16 @@ type PackageManager struct {
 	Dependencies map[string]Dependency `json:"dependencies"`
 }
 
-func (packageManager *PackageManager) Add(owner string, name string, version string, dependencies []string) []Package {
+func (packageManager *PackageManager) Add(owner string, name string, version string, dependencies []string) ([]Package, error) {
+  _, exists := packageManager.Packages[owner + "/" + name]
+  if exists {
+    return []Package{}, PackageAlreadyInstalledError(owner, name)
+  }
+
 	pack := Package{Owner: owner, Name: name, Version: version, Dependencies: dependencies}
 	packageManager.Packages[pack.String()] = pack
 
-	packagesToBeInstalled := []Package{pack}
+	packagesToBeInstalled := []Package{}
 
 	for _, dependencyReference := range dependencies {
 		dependencyPackage := ParsePackage(dependencyReference)
@@ -72,23 +76,27 @@ func (packageManager *PackageManager) Add(owner string, name string, version str
 		existingDependency.UsedBy = append(existingDependency.UsedBy, pack.String())
 		packageManager.Dependencies[dependencyPackage.String()] = existingDependency
 	}
+  
+  packagesToBeInstalled = append(packagesToBeInstalled, pack)
 
-	return packagesToBeInstalled
+	return packagesToBeInstalled, nil
 }
 
-func (packageManager *PackageManager) Remove(owner string, name string) []Package {
+func (packageManager *PackageManager) Remove(owner string, name string) ([]Package, error) {
 	packageName := owner + "/" + name
-	pack := packageManager.Packages[packageName]
+  pack, exists := packageManager.Packages[packageName]
 
-	dependenciesToRemove := []Package{pack}
+	dependenciesToRemove := []Package{}
+
+  if exists {
+    dependenciesToRemove = append(dependenciesToRemove, pack)
+  }
 
 	packageAsDependency, existsAsDependency := packageManager.Dependencies[packageName]
 	if existsAsDependency && len(packageAsDependency.UsedBy) > 0 {
-		output.Out(output.StdErr).Println("Package", output.Cyan(packageName), "is being used by")
-		for _, usedBy := range packageAsDependency.UsedBy {
-			output.Out(output.StdErr).Println("  *", output.Yellow(usedBy))
-		}
-		return []Package{}
+    delete(packageManager.Packages, packageName)
+
+		return []Package{}, PackageHasDependenciesError(owner, name, packageAsDependency.UsedBy)
 	}
 
 	if len(pack.Dependencies) > 0 {
@@ -107,7 +115,7 @@ func (packageManager *PackageManager) Remove(owner string, name string) []Packag
 
 			if len(existingDependency.UsedBy) == 0 {
 				dependencyPackage := ParsePackage(existingDependency.Package)
-				delete(packageManager.Dependencies, existingDependency.Package)
+				delete(packageManager.Dependencies, dependencyPackage.String())
 
 				_, existsAsPackage := packageManager.Packages[dependencyPackage.String()]
 				if !existsAsPackage {
@@ -117,10 +125,14 @@ func (packageManager *PackageManager) Remove(owner string, name string) []Packag
 		}
 	}
 
+  if !exists {
+    return []Package{}, PackageNotFoundError(owner, name)
+  }
+
 	delete(packageManager.Packages, packageName)
 	delete(packageManager.Dependencies, packageName)
 
-	return dependenciesToRemove
+	return dependenciesToRemove, nil
 }
 
 func (packageManager *PackageManager) Save() error {

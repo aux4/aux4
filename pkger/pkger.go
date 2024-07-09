@@ -11,7 +11,10 @@ func (pkger *Pkger) Install(owner string, name string, version string) error {
 		return err
 	}
 
-  packagesToInstall := packageManager.Add(spec.Owner, spec.Name, spec.Version, spec.Dependencies)
+  packagesToInstall, err := packageManager.Add(spec.Owner, spec.Name, spec.Version, spec.Dependencies)
+  if err != nil {
+    return err
+  }
 
 	err = packageManager.Save()
 	if err != nil {
@@ -32,15 +35,19 @@ func (pkger *Pkger) Uninstall(owner string, name string) error {
 		return err
 	}
 
-  packagesToRemove := packageManager.Remove(owner, name)
-  if len(packagesToRemove) == 0 {
-    return nil
+  packagesToRemove, err := packageManager.Remove(owner, name)
+  if err != nil {
+    return err
   }
 
 	err = packageManager.Save()
 	if err != nil {
 		return err
 	}
+
+  if len(packagesToRemove) == 0 {
+    return nil
+  }
 
   err = uninstallPackages(packagesToRemove)
   if err != nil {
