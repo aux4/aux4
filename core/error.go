@@ -46,3 +46,10 @@ func CommandNotFoundError(message string) Aux4Error {
     ExitCode: 127,
   }
 }
+
+func PathNotFoundError() Aux4Error {
+  return Aux4Error{
+    Message: "Path not found",
+    ExitCode: 1,
+  }
+}

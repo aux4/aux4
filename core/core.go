@@ -2,6 +2,7 @@ package core
 
 type Package struct {
 	Path        string
+	Owner       string    `json:"owner"`
 	Name        string    `json:"name"`
 	Version     string    `json:"version"`
 	Description string    `json:"description"`
@@ -27,6 +28,21 @@ type Command struct {
 	Name    string       `json:"name"`
 	Execute []string     `json:"execute"`
 	Help    *CommandHelp `json:"help"`
+	Ref     CommandRef   `json:"ref"`
+}
+
+func (command *Command) SetRef(Path string, Package string, Profile string) { 
+  command.Ref = CommandRef{
+    Path: Path,
+    Package: Package,
+    Profile: Profile,
+  }
+}
+
+type CommandRef struct {
+  Path    string `json:"path"`
+  Package string `json:"package"`
+  Profile string `json:"profile"`
 }
 
 type CommandHelp struct {

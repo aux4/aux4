@@ -51,12 +51,28 @@ func Execute(env *engine.VirtualEnvironment, actions []string, params *param.Par
 
 		man.HelpCommand(command, isJson, isHelp)
 		return nil
-	} 
+	}
 
-  if params.Has("show-source") && len(actions) == 1 {
-    man.ShowCommandSource(command)
-    return nil
-  }
+	if params.Has("show-source") && len(actions) == 1 {
+		man.ShowCommandSource(command)
+		return nil
+	}
+
+	if params.Has("where-is-it") && len(actions) == 1 {
+		showPathOnly := params.Has("path")
+
+		if !showPathOnly {
+			output.Out(output.StdOut).Println(output.Yellow(command.Ref.Package), output.Magenta(command.Ref.Profile), "→", output.Cyan(command.Name))
+		}
+
+		if command.Ref.Path != "" {
+			output.Out(output.StdOut).Println(output.Gray(command.Ref.Path))
+		} else if showPathOnly {
+      return core.PathNotFoundError()
+    }
+
+		return nil
+	}
 
 	for _, commandLine := range command.Execute {
 		executor := commandExecutorFactory(commandLine)

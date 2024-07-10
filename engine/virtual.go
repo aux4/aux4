@@ -2,8 +2,8 @@ package engine
 
 import (
 	"aux4/core"
-  "aux4/io"
 	"aux4/engine/param"
+	"aux4/io"
 	"fmt"
 	"strings"
 )
@@ -17,7 +17,7 @@ type VirtualProfile struct {
 func (profile *VirtualProfile) GetProfile() core.Profile {
 	commands := make([]core.Command, 0)
 	for _, commandName := range profile.CommandsOrdered {
-    command := profile.Commands[commandName]
+		command := profile.Commands[commandName]
 		commands = append(commands, command)
 	}
 
@@ -48,9 +48,9 @@ func (registry *VirtualExecutorRegisty) RegisterExecutor(name string, executor V
 }
 
 func CreateVirtualExecutorRegistry() *VirtualExecutorRegisty {
-  return &VirtualExecutorRegisty{
-    executors: make(map[string]VirtualCommandExecutor),
-  }
+	return &VirtualExecutorRegisty{
+		executors: make(map[string]VirtualCommandExecutor),
+	}
 }
 
 type VirtualEnvironment struct {
@@ -73,16 +73,16 @@ func (env *VirtualEnvironment) SetProfile(profile string) error {
 }
 
 func (env *VirtualEnvironment) Save(path string) error {
-  aux4Package := core.Package{
-    Profiles: []core.Profile{},
-  }
+	aux4Package := core.Package{
+		Profiles: []core.Profile{},
+	}
 
-  for _, virtualProfile := range env.profiles {
-    profile := virtualProfile.GetProfile()
-    aux4Package.Profiles = append(aux4Package.Profiles, profile) 
-  }
+	for _, virtualProfile := range env.profiles {
+		profile := virtualProfile.GetProfile()
+		aux4Package.Profiles = append(aux4Package.Profiles, profile)
+	}
 
-  return io.WriteJsonFile(path, &aux4Package)
+	return io.WriteJsonFile(path, &aux4Package)
 }
 
 func InitializeVirtualEnvironment(library *Library, registry *VirtualExecutorRegisty) (*VirtualEnvironment, error) {
@@ -126,6 +126,17 @@ func loadPackage(env *VirtualEnvironment, pack *core.Package) error {
 			_, exists := virtualProfile.Commands[command.Name]
 			if exists {
 				continue
+			}
+
+			if command.Ref.Path == "" {
+        packageName := ".aux4"
+				if pack.Owner != "" && pack.Name != "" {
+					packageName = fmt.Sprintf("%s/%s", pack.Owner, pack.Name)
+					if pack.Version != "" {
+						packageName = fmt.Sprintf("%s@%s", packageName, pack.Version)
+					}
+				}
+				command.SetRef(pack.Path, packageName, profile.Name)
 			}
 
 			virtualProfile.CommandsOrdered = append(virtualProfile.CommandsOrdered, command.Name)

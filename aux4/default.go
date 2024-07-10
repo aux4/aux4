@@ -45,6 +45,26 @@ func DefaultAux4() string {
               "help": {
                 "text": "Display help for a command"
               }
+            },
+            {
+              "name": "source",
+              "execute": [
+                "set:show-source=true",
+                "profile:main"
+              ],
+              "help": {
+                "text": "Show the source code of a command"
+              }
+            },
+            {
+              "name": "which",
+              "execute": [
+                "set:where-is-it=true",
+                "profile:main"
+              ],
+              "help": {
+                "text": "Show the location of a command"
+              }
             }
           ]
         },
