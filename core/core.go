@@ -2,7 +2,7 @@ package core
 
 type Package struct {
 	Path        string
-	Owner       string    `json:"owner"`
+	Scope       string    `json:"scope"`
 	Name        string    `json:"name"`
 	Version     string    `json:"version"`
 	Description string    `json:"description"`

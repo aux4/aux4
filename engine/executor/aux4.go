@@ -36,13 +36,13 @@ type Aux4PkgerInstallExecutor struct {
 }
 
 func (executor *Aux4PkgerInstallExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
-	var owner, name, version, err = getPackage(command, actions, params)
+	var scope, name, version, err = getPackage(command, actions, params)
 	if err != nil {
 		return err
 	}
 
 	var pkger = &pkger.Pkger{}
-	err = pkger.Install(owner, name, version)
+	err = pkger.Install(scope, name, version)
 	if err != nil {
 		output.Out(output.StdErr).Println(err)
 	}
@@ -54,13 +54,13 @@ type Aux4PkgerUninstallExecutor struct {
 }
 
 func (executor *Aux4PkgerUninstallExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
-	var owner, name, _, err = getPackage(command, actions, params)
+	var scope, name, _, err = getPackage(command, actions, params)
 	if err != nil {
 		return err
 	}
 
 	var pkger = &pkger.Pkger{}
-	err = pkger.Uninstall(owner, name)
+	err = pkger.Uninstall(scope, name)
 	if err != nil {
 		output.Out(output.StdErr).Println(err)
 	}
@@ -82,7 +82,7 @@ func getPackage(command core.Command, actions []string, params *param.Parameters
 	if len(pkgParts) != 2 {
 		return "", "", "", core.InternalError("Invalid package name", nil)
 	}
-	var owner = pkgParts[0]
+	var scope = pkgParts[0]
 
 	var nameParts = strings.Split(pkgParts[1], "@")
 	name := nameParts[0]
@@ -91,5 +91,5 @@ func getPackage(command core.Command, actions []string, params *param.Parameters
 		version = nameParts[1]
 	}
 
-	return owner, name, version, nil
+	return scope, name, version, nil
 }

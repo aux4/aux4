@@ -21,21 +21,22 @@ func ParsePackage(definition string) Package {
 	}
 
 	parts = strings.Split(packageName, "/")
-	ownerName := parts[0]
+	scope := parts[0]
 	name := parts[1]
 
-	return Package{Owner: ownerName, Name: name, Version: version}
+	return Package{Scope: scope, Name: name, Version: version}
 }
 
 type Package struct {
-	Owner        string   `json:"owner"`
+	Scope        string   `json:"scope"`
 	Name         string   `json:"name"`
 	Version      string   `json:"version"`
+  Url          string   `json:"url"`
 	Dependencies []string `json:"dependencies"`
 }
 
 func (pack Package) String() string {
-	return pack.Owner + "/" + pack.Name
+	return pack.Scope + "/" + pack.Name
 }
 
 type Dependency struct {
@@ -48,18 +49,17 @@ type PackageManager struct {
 	Dependencies map[string]Dependency `json:"dependencies"`
 }
 
-func (packageManager *PackageManager) Add(owner string, name string, version string, dependencies []string) ([]Package, error) {
-  _, exists := packageManager.Packages[owner + "/" + name]
+func (packageManager *PackageManager) Add(pack Package) ([]Package, error) {
+  _, exists := packageManager.Packages[pack.Scope + "/" + pack.Name]
   if exists {
-    return []Package{}, PackageAlreadyInstalledError(owner, name)
+    return []Package{}, PackageAlreadyInstalledError(pack.Scope, pack.Name)
   }
 
-	pack := Package{Owner: owner, Name: name, Version: version, Dependencies: dependencies}
 	packageManager.Packages[pack.String()] = pack
 
 	packagesToBeInstalled := []Package{}
 
-	for _, dependencyReference := range dependencies {
+	for _, dependencyReference := range pack.Dependencies {
 		dependencyPackage := ParsePackage(dependencyReference)
 
 		existingDependency, exists := packageManager.Dependencies[dependencyPackage.String()]
@@ -82,8 +82,8 @@ func (packageManager *PackageManager) Add(owner string, name string, version str
 	return packagesToBeInstalled, nil
 }
 
-func (packageManager *PackageManager) Remove(owner string, name string) ([]Package, error) {
-	packageName := owner + "/" + name
+func (packageManager *PackageManager) Remove(scope string, name string) ([]Package, error) {
+	packageName := scope + "/" + name
   pack, exists := packageManager.Packages[packageName]
 
 	dependenciesToRemove := []Package{}
@@ -96,7 +96,7 @@ func (packageManager *PackageManager) Remove(owner string, name string) ([]Packa
 	if existsAsDependency && len(packageAsDependency.UsedBy) > 0 {
     delete(packageManager.Packages, packageName)
 
-		return []Package{}, PackageHasDependenciesError(owner, name, packageAsDependency.UsedBy)
+		return []Package{}, PackageHasDependenciesError(scope, name, packageAsDependency.UsedBy)
 	}
 
 	if len(pack.Dependencies) > 0 {
@@ -126,7 +126,7 @@ func (packageManager *PackageManager) Remove(owner string, name string) ([]Packa
 	}
 
   if !exists {
-    return []Package{}, PackageNotFoundError(owner, name)
+    return []Package{}, PackageNotFoundError(scope, name)
   }
 
 	delete(packageManager.Packages, packageName)

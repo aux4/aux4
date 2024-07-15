@@ -130,8 +130,8 @@ func loadPackage(env *VirtualEnvironment, pack *core.Package) error {
 
 			if command.Ref.Path == "" {
         packageName := ".aux4"
-				if pack.Owner != "" && pack.Name != "" {
-					packageName = fmt.Sprintf("%s/%s", pack.Owner, pack.Name)
+				if pack.Scope != "" && pack.Name != "" {
+					packageName = fmt.Sprintf("%s/%s", pack.Scope, pack.Name)
 					if pack.Version != "" {
 						packageName = fmt.Sprintf("%s@%s", packageName, pack.Version)
 					}

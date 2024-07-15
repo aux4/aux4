@@ -5,18 +5,32 @@ import (
 	"aux4/engine"
 	"aux4/io"
 	"aux4/output"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 )
 
-var REPO_URL = "/Users/davidsg/Public/repo"
+var REPO_URL = "https://rv8lme69bi.execute-api.us-east-1.amazonaws.com/dev/v1/packages/public"
 
-func getPackageSpec(owner string, name string, version string) Package {
-  specPath := filepath.Join(REPO_URL, "spec", fmt.Sprintf("%s/%s/%s.json", owner, name, version))
+func getPackageSpec(scope string, name string, version string) (Package, error) {
+  specUrl := fmt.Sprintf("%s/%s/%s/%s",REPO_URL, scope, name, version)
+
+  resp, err := http.Get(specUrl)
+  if err != nil {
+    return Package{}, err
+  }
+
+  defer resp.Body.Close()
+
   spec := Package{}
-  io.ReadJsonFile(specPath, &spec)
-  return spec
+  err = json.NewDecoder(resp.Body).Decode(&spec)
+  if err != nil {
+    return Package{}, err
+  }
+
+  return spec, nil
 }
 
 func installPackages(packages []Package) error {
@@ -39,27 +53,27 @@ func installPackages(packages []Package) error {
 	}
 
 	for _, pack := range packages {
-    output.Out(output.StdOut).Println("Downloading package", pack.Owner, pack.Name, pack.Version)
+    output.Out(output.StdOut).Println("Downloading package", pack.Scope, pack.Name, pack.Version)
 
-		var packageFile = fmt.Sprintf("%s_%s_%s.zip", pack.Owner, pack.Name, pack.Version)
+		var packageFile = fmt.Sprintf("%s_%s_%s.zip", pack.Scope, pack.Name, pack.Version)
 		var packageFileDownloadPath = filepath.Join(temporaryDirectory, packageFile)
 
-		err = io.CopyFile(filepath.Join(REPO_URL, "dist", packageFile), packageFileDownloadPath)
+		err = io.DownloadFile(pack.Url, packageFileDownloadPath)
 
 		if err != nil {
 			return err
 		}
 
-    output.Out(output.StdOut).Println("Unzipping package", pack.Owner, pack.Name, pack.Version)
+    output.Out(output.StdOut).Println("Unzipping package", pack.Scope, pack.Name, pack.Version)
     
 		err = io.UnzipFile(packageFileDownloadPath, packageFolder)
 		if err != nil {
 			return err
 		}
 
-    output.Out(output.StdOut).Println("Loading package", pack.Owner, pack.Name, pack.Version)
+    output.Out(output.StdOut).Println("Loading package", pack.Scope, pack.Name, pack.Version)
 
-		err = library.LoadFile(filepath.Join(packageFolder, pack.Owner, pack.Name, ".aux4"))
+		err = library.LoadFile(filepath.Join(packageFolder, pack.Scope, pack.Name, ".aux4"))
 		if err != nil {
 			return err
 		}
@@ -82,9 +96,9 @@ func installPackages(packages []Package) error {
 
 func uninstallPackages(packages []Package) error {
   for _, pack := range packages {
-    output.Out(output.StdOut).Println("Removing package", pack.Owner, pack.Name, pack.Version)
+    output.Out(output.StdOut).Println("Removing package", pack.Scope, pack.Name, pack.Version)
 
-    packagePath := filepath.Join(config.GetConfigPath("packages"), pack.Owner, pack.Name)
+    packagePath := filepath.Join(config.GetConfigPath("packages"), pack.Scope, pack.Name)
     err := os.RemoveAll(packagePath)
     if err != nil {
       return err
@@ -103,9 +117,9 @@ func reloadGlobalPackages(packageManager *PackageManager) error {
 
 	for _, dependency := range packageManager.Dependencies {
     pack := ParsePackage(dependency.Package)
-    packagePath := filepath.Join(packagesDirectory, pack.Owner, pack.Name, ".aux4")
+    packagePath := filepath.Join(packagesDirectory, pack.Scope, pack.Name, ".aux4")
 
-    output.Out(output.StdOut).Println("Loading dependency", pack.Owner, pack.Name, pack.Version)
+    output.Out(output.StdOut).Println("Loading dependency", pack.Scope, pack.Name, pack.Version)
 
     err := library.LoadFile(packagePath)
     if err != nil {
@@ -120,9 +134,9 @@ func reloadGlobalPackages(packageManager *PackageManager) error {
       continue
     }
 
-		packagePath := filepath.Join(packagesDirectory, pack.Owner, pack.Name, ".aux4")
+		packagePath := filepath.Join(packagesDirectory, pack.Scope, pack.Name, ".aux4")
 
-    output.Out(output.StdOut).Println("Loading package", pack.Owner, pack.Name, pack.Version)
+    output.Out(output.StdOut).Println("Loading package", pack.Scope, pack.Name, pack.Version)
 
     err := library.LoadFile(packagePath)
 		if err != nil {

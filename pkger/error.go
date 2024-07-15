@@ -6,24 +6,24 @@ import (
 	"strings"
 )
 
-func PackageAlreadyInstalledError(owner string, name string) core.Aux4Error {
+func PackageAlreadyInstalledError(scope string, name string) core.Aux4Error {
 	return core.Aux4Error{
-		Message:  "Package " + owner + "/" + name + " already installed",
+		Message:  "Package " + scope + "/" + name + " already installed",
 		ExitCode: 1,
 	}
 }
 
-func PackageNotFoundError(owner string, name string) core.Aux4Error {
+func PackageNotFoundError(scope string, name string) core.Aux4Error {
   return core.Aux4Error{
-    Message:  "Package " + owner + "/" + name + " not found",
+    Message:  "Package " + scope + "/" + name + " not found",
     ExitCode: 1,
   }
 }
 
-func PackageHasDependenciesError(owner string, name string, dependencies []string) core.Aux4Error {
+func PackageHasDependenciesError(scope string, name string, dependencies []string) core.Aux4Error {
 	message := strings.Builder{}
 	message.WriteString("Package ")
-	message.WriteString(output.Cyan(owner))
+	message.WriteString(output.Cyan(scope))
 	message.WriteString("/")
 	message.WriteString(output.Cyan(name))
 	message.WriteString(" is being used by:\n")

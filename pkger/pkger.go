@@ -3,15 +3,18 @@ package pkger
 type Pkger struct {
 }
 
-func (pkger *Pkger) Install(owner string, name string, version string) error {
-  spec := getPackageSpec(owner, name, version)
+func (pkger *Pkger) Install(scope string, name string, version string) error {
+  spec, err := getPackageSpec(scope, name, version)
+  if err != nil {
+    return err
+  }
 
 	packageManager, err := InitPackageManager()
 	if err != nil {
 		return err
 	}
 
-  packagesToInstall, err := packageManager.Add(spec.Owner, spec.Name, spec.Version, spec.Dependencies)
+  packagesToInstall, err := packageManager.Add(spec)
   if err != nil {
     return err
   }
@@ -29,13 +32,13 @@ func (pkger *Pkger) Install(owner string, name string, version string) error {
 	return nil
 }
 
-func (pkger *Pkger) Uninstall(owner string, name string) error {
+func (pkger *Pkger) Uninstall(scope string, name string) error {
 	packageManager, err := InitPackageManager()
 	if err != nil {
 		return err
 	}
 
-  packagesToRemove, err := packageManager.Remove(owner, name)
+  packagesToRemove, err := packageManager.Remove(scope, name)
   if err != nil {
     return err
   }
