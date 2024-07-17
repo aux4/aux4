@@ -14,7 +14,7 @@ func (err Aux4Error) Error() string {
   if err.Cause == nil {
     return err.Message
   }
-  return fmt.Sprintf("%s %v", err.Message, err.Cause)
+  return fmt.Sprintf("%s: %v", err.Message, err.Cause)
 }
 
 func InternalError(message string, cause error) Aux4Error {

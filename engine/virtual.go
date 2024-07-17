@@ -82,7 +82,12 @@ func (env *VirtualEnvironment) Save(path string) error {
 		aux4Package.Profiles = append(aux4Package.Profiles, profile)
 	}
 
-	return io.WriteJsonFile(path, &aux4Package)
+  err := io.WriteJsonFile(path, &aux4Package)
+  if err != nil {
+    return core.InternalError("Error saving virtual environment", err)
+  }
+
+  return nil
 }
 
 func InitializeVirtualEnvironment(library *Library, registry *VirtualExecutorRegisty) (*VirtualEnvironment, error) {

@@ -42,6 +42,8 @@ func Execute(env *engine.VirtualEnvironment, actions []string, params *param.Par
 		return core.CommandNotFoundError(commandName)
 	}
 
+  params.Set("packageDir", command.Ref.Dir)
+
 	if params.Has("help") && len(actions) == 1 {
 		json := params.JustGet("json")
 		isJson := json == true || json == "true"

@@ -2,6 +2,7 @@ package pkger
 
 import (
 	"aux4/config"
+	"aux4/core"
 	"aux4/io"
 	"os"
 	"strings"
@@ -126,7 +127,7 @@ func (packageManager *PackageManager) Remove(scope string, name string) ([]Packa
 	}
 
   if !exists {
-    return []Package{}, PackageNotFoundError(scope, name)
+    return []Package{}, PackageNotFoundError(scope, name, "")
   }
 
 	delete(packageManager.Packages, packageName)
@@ -142,7 +143,7 @@ func (packageManager *PackageManager) Save() error {
 	configPath := config.GetConfigPath("packages/all.json")
 	err = io.WriteJsonFile(configPath, packageManager)
 	if err != nil {
-		return err
+		return core.InternalError("Failed to save package manager configuration", err)
 	}
 
 	return nil
@@ -161,7 +162,7 @@ func InitPackageManager() (*PackageManager, error) {
 	var packageManager PackageManager
 	err := io.ReadJsonFile(configPath, &packageManager)
 	if err != nil {
-		return nil, err
+		return nil, core.InternalError("Failed to read package manager configuration", err)
 	}
 
 	return &packageManager, nil

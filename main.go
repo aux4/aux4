@@ -39,16 +39,16 @@ func main() {
 
 	env, err := engine.InitializeVirtualEnvironment(library, registry)
 	if err != nil {
-		output.Out(output.StdErr).Println(err)
+		output.Out(output.StdErr).Println(output.Red(err))
 		os.Exit(err.(core.Aux4Error).ExitCode)
 	}
 
 	if err := executor.Execute(env, actions, &params); err != nil {
-		if err, ok := err.(core.Aux4Error); ok {
-			output.Out(output.StdErr).Println(err)
-			os.Exit(err.ExitCode)
+		if aux4Err, ok := err.(core.Aux4Error); ok {
+			output.Out(output.StdErr).Println(output.Red(aux4Err))
+			os.Exit(aux4Err.ExitCode)
 		} else {
-			output.Out(output.StdErr).Println(err)
+			output.Out(output.StdErr).Println(output.Red(err))
 			os.Exit(1)
 		}
 	}

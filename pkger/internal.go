@@ -2,6 +2,7 @@ package pkger
 
 import (
 	"aux4/config"
+	"aux4/core"
 	"aux4/engine"
 	"aux4/io"
 	"aux4/output"
@@ -12,35 +13,44 @@ import (
 	"path/filepath"
 )
 
-var REPO_URL = "https://rv8lme69bi.execute-api.us-east-1.amazonaws.com/dev/v1/packages/public"
+var REPO_URL = "https://dev.api.hub.aux4.io/v1/packages/public"
 
 func getPackageSpec(scope string, name string, version string) (Package, error) {
-  specUrl := fmt.Sprintf("%s/%s/%s/%s",REPO_URL, scope, name, version)
+	specUrl := fmt.Sprintf("%s/%s/%s/%s", REPO_URL, scope, name, version)
 
-  resp, err := http.Get(specUrl)
-  if err != nil {
-    return Package{}, err
-  }
+	resp, err := http.Get(specUrl)
+	if err != nil {
+		return Package{}, core.InternalError(fmt.Sprintf("Error getting package spec %s/%s", scope, name), err)
+	}
 
-  defer resp.Body.Close()
+	if resp.StatusCode == 404 {
+		return Package{}, PackageNotFoundError(scope, name, version)
+	} else if resp.StatusCode != 200 {
+		return Package{}, core.InternalError(fmt.Sprintf("Error getting package spec %s/%s", scope, name), nil)
+	}
 
-  spec := Package{}
-  err = json.NewDecoder(resp.Body).Decode(&spec)
-  if err != nil {
-    return Package{}, err
-  }
+	defer resp.Body.Close()
 
-  return spec, nil
+	spec := Package{}
+	err = json.NewDecoder(resp.Body).Decode(&spec)
+	if err != nil {
+		return Package{}, core.InternalError(fmt.Sprintf("Error parsing package spec %s/%s", scope, name), err)
+	}
+
+	return spec, nil
 }
 
 func installPackages(packages []Package) error {
 	temporaryDirectory, err := io.GetTemporaryDirectory("aux4-install")
 	if err != nil {
-		return err
+		return core.InternalError("Error creating temporary directory", err)
 	}
 
 	var packageFolder = config.GetConfigPath("packages")
-	os.MkdirAll(packageFolder, 0755)
+  err = os.MkdirAll(packageFolder, 0755)
+  if err != nil {
+    return core.InternalError("Error creating package directory", err)
+  }
 
 	var library = engine.LocalLibrary()
 
@@ -53,25 +63,24 @@ func installPackages(packages []Package) error {
 	}
 
 	for _, pack := range packages {
-    output.Out(output.StdOut).Println("Downloading package", pack.Scope, pack.Name, pack.Version)
+		output.Out(output.StdOut).Println("Downloading package", pack.Scope, pack.Name, pack.Version)
 
 		var packageFile = fmt.Sprintf("%s_%s_%s.zip", pack.Scope, pack.Name, pack.Version)
 		var packageFileDownloadPath = filepath.Join(temporaryDirectory, packageFile)
 
 		err = io.DownloadFile(pack.Url, packageFileDownloadPath)
-
 		if err != nil {
-			return err
+			return core.InternalError(fmt.Sprintf("Error downloading package %s/%s", pack.Scope, pack.Name), err)
 		}
 
-    output.Out(output.StdOut).Println("Unzipping package", pack.Scope, pack.Name, pack.Version)
-    
+		output.Out(output.StdOut).Println("Unzipping package", pack.Scope, pack.Name, pack.Version)
+
 		err = io.UnzipFile(packageFileDownloadPath, packageFolder)
 		if err != nil {
-			return err
+			return core.InternalError(fmt.Sprintf("Error unzipping package %s/%s", pack.Scope, pack.Name), err)
 		}
 
-    output.Out(output.StdOut).Println("Loading package", pack.Scope, pack.Name, pack.Version)
+		output.Out(output.StdOut).Println("Loading package", pack.Scope, pack.Name, pack.Version)
 
 		err = library.LoadFile(filepath.Join(packageFolder, pack.Scope, pack.Name, ".aux4"))
 		if err != nil {
@@ -95,52 +104,52 @@ func installPackages(packages []Package) error {
 }
 
 func uninstallPackages(packages []Package) error {
-  for _, pack := range packages {
-    output.Out(output.StdOut).Println("Removing package", pack.Scope, pack.Name, pack.Version)
+	for _, pack := range packages {
+		output.Out(output.StdOut).Println("Removing package", pack.Scope, pack.Name, pack.Version)
 
-    packagePath := filepath.Join(config.GetConfigPath("packages"), pack.Scope, pack.Name)
-    err := os.RemoveAll(packagePath)
-    if err != nil {
-      return err
-    }
-  }
+		packagePath := filepath.Join(config.GetConfigPath("packages"), pack.Scope, pack.Name)
+		err := os.RemoveAll(packagePath)
+		if err != nil {
+			return core.InternalError(fmt.Sprintf("Error removing package %s/%s", pack.Scope, pack.Name), err)
+		}
+	}
 
-  return nil
+	return nil
 }
 
 func reloadGlobalPackages(packageManager *PackageManager) error {
 	var library = engine.LocalLibrary()
 
-  packagesDirectory := config.GetConfigPath("packages")
+	packagesDirectory := config.GetConfigPath("packages")
 
-  installedPackages := map[string]bool{}
+	installedPackages := map[string]bool{}
 
 	for _, dependency := range packageManager.Dependencies {
-    pack := ParsePackage(dependency.Package)
-    packagePath := filepath.Join(packagesDirectory, pack.Scope, pack.Name, ".aux4")
+		pack := ParsePackage(dependency.Package)
+		packagePath := filepath.Join(packagesDirectory, pack.Scope, pack.Name, ".aux4")
 
-    output.Out(output.StdOut).Println("Loading dependency", pack.Scope, pack.Name, pack.Version)
+		output.Out(output.StdOut).Println("Loading dependency", pack.Scope, pack.Name, pack.Version)
 
-    err := library.LoadFile(packagePath)
-    if err != nil {
-      return err
-    }
+		err := library.LoadFile(packagePath)
+		if err != nil {
+			return core.InternalError(fmt.Sprintf("Error loading dependency %s/%s", pack.Scope, pack.Name), err)
+		}
 
-    installedPackages[pack.String()] = true
-  }
+		installedPackages[pack.String()] = true
+	}
 
 	for _, pack := range packageManager.Packages {
-    if _, ok := installedPackages[pack.String()]; ok {
-      continue
-    }
+		if _, ok := installedPackages[pack.String()]; ok {
+			continue
+		}
 
 		packagePath := filepath.Join(packagesDirectory, pack.Scope, pack.Name, ".aux4")
 
-    output.Out(output.StdOut).Println("Loading package", pack.Scope, pack.Name, pack.Version)
+		output.Out(output.StdOut).Println("Loading package", pack.Scope, pack.Name, pack.Version)
 
-    err := library.LoadFile(packagePath)
+		err := library.LoadFile(packagePath)
 		if err != nil {
-			return err
+			return core.InternalError(fmt.Sprintf("Error loading package %s/%s", pack.Scope, pack.Name), err)
 		}
 	}
 
@@ -148,13 +157,13 @@ func reloadGlobalPackages(packageManager *PackageManager) error {
 
 	env, err := engine.InitializeVirtualEnvironment(library, &registry)
 	if err != nil {
-		return err
+		return core.InternalError("Error initializing virtual environment", err)
 	}
 
 	err = env.Save(config.GetAux4GlobalPath())
 	if err != nil {
-		return err
+		return core.InternalError("Error saving global environment", err)
 	}
 
-  return nil
+	return nil
 }

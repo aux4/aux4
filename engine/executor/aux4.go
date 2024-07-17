@@ -44,7 +44,7 @@ func (executor *Aux4PkgerInstallExecutor) Execute(env *engine.VirtualEnvironment
 	var pkger = &pkger.Pkger{}
 	err = pkger.Install(scope, name, version)
 	if err != nil {
-		output.Out(output.StdErr).Println(err)
+    return err
 	}
 
 	return nil
@@ -62,7 +62,7 @@ func (executor *Aux4PkgerUninstallExecutor) Execute(env *engine.VirtualEnvironme
 	var pkger = &pkger.Pkger{}
 	err = pkger.Uninstall(scope, name)
 	if err != nil {
-		output.Out(output.StdErr).Println(err)
+    return err
 	}
 
 	return nil

@@ -1,5 +1,7 @@
 package core
 
+import "path/filepath"
+
 type Package struct {
 	Path        string
 	Scope       string    `json:"scope"`
@@ -34,6 +36,7 @@ type Command struct {
 func (command *Command) SetRef(Path string, Package string, Profile string) { 
   command.Ref = CommandRef{
     Path: Path,
+    Dir: filepath.Dir(Path),
     Package: Package,
     Profile: Profile,
   }
@@ -41,6 +44,7 @@ func (command *Command) SetRef(Path string, Package string, Profile string) {
 
 type CommandRef struct {
   Path    string `json:"path"`
+  Dir     string `json:"dir"`
   Package string `json:"package"`
   Profile string `json:"profile"`
 }

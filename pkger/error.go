@@ -13,9 +13,13 @@ func PackageAlreadyInstalledError(scope string, name string) core.Aux4Error {
 	}
 }
 
-func PackageNotFoundError(scope string, name string) core.Aux4Error {
+func PackageNotFoundError(scope string, name string, version string) core.Aux4Error {
+  suffix := ""
+  if version != "" {
+    suffix = "@" + version
+  } 
   return core.Aux4Error{
-    Message:  "Package " + scope + "/" + name + " not found",
+    Message:  "Package " + scope + "/" + name + suffix + " not found",
     ExitCode: 1,
   }
 }
