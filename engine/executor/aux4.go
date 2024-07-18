@@ -43,7 +43,7 @@ func (executor *Aux4PkgerListPackagesExecutor) Execute(env *engine.VirtualEnviro
 	}
 
 	if len(packages) > 0 {
-    output.Out(output.StdOut).Println(output.Gray("Installed packages:"))
+		output.Out(output.StdOut).Println(output.Gray("Installed packages:"))
 
 		for _, pack := range packages {
 			output.Out(output.StdOut).Println(" ", output.Green("✓"), output.Yellow(pack.Scope), output.Yellow(output.Bold(pack.Name)), output.Gray(pack.Version))
@@ -52,7 +52,7 @@ func (executor *Aux4PkgerListPackagesExecutor) Execute(env *engine.VirtualEnviro
 
 	showDependencies := params.JustGet("show-dependencies")
 	if len(dependencies) > 0 && (showDependencies == true || showDependencies == "true") {
-    output.Out(output.StdOut).Println(output.Gray("Installed dependencies:"))
+		output.Out(output.StdOut).Println(output.Gray("Installed dependencies:"))
 
 		for _, pack := range dependencies {
 			output.Out(output.StdOut).Println(" ", output.Cyan("↪"), output.Magenta(pack.Scope), output.Magenta(output.Bold(pack.Name)), output.Gray(pack.Version))
@@ -62,16 +62,40 @@ func (executor *Aux4PkgerListPackagesExecutor) Execute(env *engine.VirtualEnviro
 	return nil
 }
 
+type Aux4PkgerBuildPackageExecutor struct {
+}
+
+func (executor *Aux4PkgerBuildPackageExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
+  pkger := &pkger.Pkger{}
+  err := pkger.Build(actions)
+  if err != nil {
+    return err
+  }
+
+  return nil
+}
+
 type Aux4PkgerInstallExecutor struct {
 }
 
 func (executor *Aux4PkgerInstallExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
-	var scope, name, version, err = getPackage(command, actions, params)
+	var pkger = &pkger.Pkger{}
+
+	fromFile := params.JustGet("from-file")
+	if fromFile != nil {
+		err := pkger.InstallFromFile(fromFile.(string))
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	scope, name, version, err := getPackage(command, actions, params)
 	if err != nil {
 		return err
 	}
 
-	var pkger = &pkger.Pkger{}
 	err = pkger.Install(scope, name, version)
 	if err != nil {
 		return err

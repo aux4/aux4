@@ -11,9 +11,34 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 var REPO_URL = "https://dev.api.hub.aux4.io/v1/packages/public"
+
+func getPackageSpecFromFile(path string) (Package, error) {
+	specFilepath, err := filepath.Abs(path)
+	if err != nil {
+		return Package{}, core.InternalError("Error getting package spec file path", err)
+	}
+
+	reader, err := io.GetFileFromZip(specFilepath, ".aux4")
+	if err != nil {
+		return Package{}, core.InternalError("Error reading package spec", err)
+	}
+
+	spec := Package{}
+	err = json.NewDecoder(reader).Decode(&spec)
+	if err != nil {
+		return Package{}, core.InternalError("Error parsing package spec", err)
+	}
+
+	spec.Url = fmt.Sprintf("file://%s", specFilepath)
+
+  output.Out(output.StdOut).Println("package spec", spec.Scope, spec.Name, spec.Version, spec.Url)
+
+	return spec, nil
+}
 
 func getPackageSpec(scope string, name string, version string) (Package, error) {
 	specUrl := fmt.Sprintf("%s/%s/%s/%s", REPO_URL, scope, name, version)
@@ -47,10 +72,10 @@ func installPackages(packages []Package) error {
 	}
 
 	var packageFolder = config.GetConfigPath("packages")
-  err = os.MkdirAll(packageFolder, 0755)
-  if err != nil {
-    return core.InternalError("Error creating package directory", err)
-  }
+	err = os.MkdirAll(packageFolder, 0755)
+	if err != nil {
+		return core.InternalError("Error creating package directory", err)
+	}
 
 	var library = engine.LocalLibrary()
 
@@ -63,14 +88,20 @@ func installPackages(packages []Package) error {
 	}
 
 	for _, pack := range packages {
-		output.Out(output.StdOut).Println("Downloading package", pack.Scope, pack.Name, pack.Version)
+    var packageFileDownloadPath string
 
-		var packageFile = fmt.Sprintf("%s_%s_%s.zip", pack.Scope, pack.Name, pack.Version)
-		var packageFileDownloadPath = filepath.Join(temporaryDirectory, packageFile)
+		if strings.HasPrefix(pack.Url, "file://") {
+      packageFileDownloadPath = strings.TrimPrefix(pack.Url, "file://")
+    } else {
+			output.Out(output.StdOut).Println("Downloading package", pack.Scope, pack.Name, pack.Version)
 
-		err = io.DownloadFile(pack.Url, packageFileDownloadPath)
-		if err != nil {
-			return core.InternalError(fmt.Sprintf("Error downloading package %s/%s", pack.Scope, pack.Name), err)
+			var packageFile = fmt.Sprintf("%s_%s_%s.zip", pack.Scope, pack.Name, pack.Version)
+			packageFileDownloadPath = filepath.Join(temporaryDirectory, packageFile)
+
+			err = io.DownloadFile(pack.Url, packageFileDownloadPath)
+			if err != nil {
+				return core.InternalError(fmt.Sprintf("Error downloading package %s/%s", pack.Scope, pack.Name), err)
+			}
 		}
 
 		output.Out(output.StdOut).Println("Unzipping package", pack.Scope, pack.Name, pack.Version)

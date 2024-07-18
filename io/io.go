@@ -2,11 +2,13 @@ package io
 
 import (
 	"archive/zip"
+	"bytes"
 	"encoding/json"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func ReadJsonFile(path string, object any) error {
@@ -81,6 +83,36 @@ func CopyFile(source string, target string) error {
 
 	_, err = io.Copy(destinationFile, sourceFile)
 	return err
+}
+
+func GetFileFromZip(zipPath, filename string) (*bytes.Reader, error) {
+  reader, err := zip.OpenReader(zipPath)
+  if err != nil {
+    return nil, err
+  }
+  defer reader.Close()
+
+  for _, file := range reader.File {
+    if strings.HasSuffix(file.Name, filename) {
+      fileContent, err := file.Open()
+      if err != nil {
+        return nil, err
+      }
+
+      destination := &bytes.Buffer{}
+      _, err = io.Copy(destination, fileContent)
+      if err != nil {
+        return nil, err
+      }
+
+      content := destination.Bytes()
+
+      fileReader := bytes.NewReader(content)
+      return fileReader, nil
+    }
+  }
+
+  return nil, os.ErrNotExist
 }
 
 func UnzipFile(zipPath, destDir string) error {
