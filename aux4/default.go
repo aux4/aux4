@@ -72,6 +72,19 @@ func DefaultAux4() string {
           "name": "aux4:pkger",
           "commands": [
             {
+              "name": "list",
+              "help": {
+                "text": "List installed packages",
+                "variables": [
+                  {
+                    "name": "show-dependencies",
+                    "text": "show dependencies",
+                    "default": "false"
+                  }
+                ]
+              }
+            },
+            {
               "name": "install",
               "help": {
                 "text": "Install a package",

@@ -32,6 +32,36 @@ func (executor *Aux4VersionExecutor) Execute(env *engine.VirtualEnvironment, com
 	return nil
 }
 
+type Aux4PkgerListPackagesExecutor struct {
+}
+
+func (executor *Aux4PkgerListPackagesExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
+	var pkger = &pkger.Pkger{}
+	packages, dependencies, err := pkger.ListInstalledPackages()
+	if err != nil {
+		return err
+	}
+
+	if len(packages) > 0 {
+    output.Out(output.StdOut).Println(output.Gray("Installed packages:"))
+
+		for _, pack := range packages {
+			output.Out(output.StdOut).Println(" ", output.Green("✓"), output.Yellow(pack.Scope), output.Yellow(output.Bold(pack.Name)), output.Gray(pack.Version))
+		}
+	}
+
+	showDependencies := params.JustGet("show-dependencies")
+	if len(dependencies) > 0 && (showDependencies == true || showDependencies == "true") {
+    output.Out(output.StdOut).Println(output.Gray("Installed dependencies:"))
+
+		for _, pack := range dependencies {
+			output.Out(output.StdOut).Println(" ", output.Cyan("↪"), output.Magenta(pack.Scope), output.Magenta(output.Bold(pack.Name)), output.Gray(pack.Version))
+		}
+	}
+
+	return nil
+}
+
 type Aux4PkgerInstallExecutor struct {
 }
 
@@ -44,7 +74,7 @@ func (executor *Aux4PkgerInstallExecutor) Execute(env *engine.VirtualEnvironment
 	var pkger = &pkger.Pkger{}
 	err = pkger.Install(scope, name, version)
 	if err != nil {
-    return err
+		return err
 	}
 
 	return nil
@@ -62,7 +92,7 @@ func (executor *Aux4PkgerUninstallExecutor) Execute(env *engine.VirtualEnvironme
 	var pkger = &pkger.Pkger{}
 	err = pkger.Uninstall(scope, name)
 	if err != nil {
-    return err
+		return err
 	}
 
 	return nil
