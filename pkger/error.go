@@ -27,14 +27,13 @@ func PackageNotFoundError(scope string, name string, version string) core.Aux4Er
 func PackageHasDependenciesError(scope string, name string, dependencies []string) core.Aux4Error {
 	message := strings.Builder{}
 	message.WriteString("Package ")
-	message.WriteString(output.Cyan(scope))
+	message.WriteString(scope)
 	message.WriteString("/")
-	message.WriteString(output.Cyan(name))
+	message.WriteString(name)
 	message.WriteString(" is being used by:\n")
 
 	for _, dependency := range dependencies {
-		message.WriteString(" * ")
-		message.WriteString(output.Yellow(dependency))
+		message.WriteString(output.Yellow(" · ", dependency))
 	}
 
 	return core.Aux4Error{

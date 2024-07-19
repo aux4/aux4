@@ -55,7 +55,7 @@ func (executor *Aux4PkgerListPackagesExecutor) Execute(env *engine.VirtualEnviro
 		output.Out(output.StdOut).Println(output.Gray("Installed dependencies:"))
 
 		for _, pack := range dependencies {
-			output.Out(output.StdOut).Println(" ", output.Cyan("↪"), output.Magenta(pack.Scope, "/", output.Bold(pack.Name)), output.Gray(pack.Version))
+			output.Out(output.StdOut).Println(output.Cyan(" ↪"), output.Magenta(pack.Scope, "/", output.Bold(pack.Name)), output.Gray(pack.Version))
 		}
 	}
 
@@ -162,7 +162,11 @@ func printInstalledPackages(installedPackages []pkger.Package) {
 	output.Out(output.StdOut).Println(output.Gray("Installed packages:"))
 
 	for _, pack := range installedPackages {
-		output.Out(output.StdOut).Println(output.Green(" ✓"), output.Yellow(pack.Scope, "/", output.Bold(pack.Name)), output.Magenta(pack.Version))
+    symbol := output.Green(" ✓")
+    if pack.Dependency {
+      symbol += output.Cyan(" ↪")
+    }
+		output.Out(output.StdOut).Println(symbol, output.Yellow(pack.Scope, "/", output.Bold(pack.Name)), output.Magenta(pack.Version))
 	}
 }
 
@@ -170,6 +174,10 @@ func printUninstalledPackages(uninstalledPackages []pkger.Package) {
 	output.Out(output.StdOut).Println(output.Gray("Uninstalled packages:"))
 
 	for _, pack := range uninstalledPackages {
-		output.Out(output.StdOut).Println(output.Red(" x"), output.Yellow(pack.Scope, "/", output.Bold(pack.Name)), output.Magenta(pack.Version))
+    symbol := output.Red(" x")
+    if pack.Dependency {
+      symbol += output.Cyan(" ↪")
+    }
+		output.Out(output.StdOut).Println(symbol, output.Yellow(pack.Scope, "/", output.Bold(pack.Name)), output.Magenta(pack.Version))
 	}
 }

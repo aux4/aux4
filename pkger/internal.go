@@ -106,7 +106,7 @@ func installPackages(packages []Package) error {
 			downloaded = true
 		}
 
-		output.Out(output.StdOut).Println("Unzipping package", pack.Scope, pack.Name, pack.Version, "at", packageFileDownloadPath)
+		output.Out(output.StdOut).Println("Unzipping package", pack.Scope, pack.Name, pack.Version)
 
 		err = io.UnzipFile(packageFileDownloadPath, packageFolder)
 		if err != nil {

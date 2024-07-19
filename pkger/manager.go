@@ -37,10 +37,15 @@ type Package struct {
 	Version      string   `json:"version"`
 	Url          string   `json:"url"`
 	Dependencies []string `json:"dependencies"`
+	Dependency   bool
 }
 
 func (pack Package) String() string {
 	return pack.Scope + "/" + pack.Name
+}
+
+func (pack Package) FullString() string {
+	return pack.Scope + "/" + pack.Name + "@" + pack.Version
 }
 
 type Dependency struct {
@@ -54,23 +59,31 @@ type PackageManager struct {
 }
 
 func (packageManager *PackageManager) Add(pack Package) ([]Package, error) {
+	packagesToBeInstalled := []Package{}
+
+	err := packageManager.add(pack, &packagesToBeInstalled)
+
+	return packagesToBeInstalled, err
+}
+
+func (packageManager *PackageManager) add(pack Package, packagesToBeInstalled *[]Package) error {
 	existingPackage, exists := packageManager.Packages[pack.Scope+"/"+pack.Name]
 	if exists {
 		if existingPackage.Version == pack.Version {
-			return []Package{}, PackageAlreadyInstalledError(pack.Scope, pack.Name)
+			return PackageAlreadyInstalledError(pack.Scope, pack.Name)
 		} else {
-      currentVersion, _ := semver.Parse(existingPackage.Version)
-      newVersion, _ := semver.Parse(pack.Version)
+			currentVersion, _ := semver.Parse(existingPackage.Version)
+			newVersion, _ := semver.Parse(pack.Version)
 
-      if currentVersion.GT(newVersion) {
-        return []Package{}, core.InternalError(fmt.Sprintf("The version of %s/%s you are trying to install is older than the current version %s", pack.Scope, pack.Name, existingPackage.Version), nil)
-      }
-    }
+			if currentVersion.GT(newVersion) {
+				return core.InternalError(fmt.Sprintf("The version of %s/%s you are trying to install is older than the current version %s", pack.Scope, pack.Name, existingPackage.Version), nil)
+			}
+		}
 	}
 
-	packageManager.Packages[pack.String()] = pack
-
-	packagesToBeInstalled := []Package{}
+	if !pack.Dependency {
+		packageManager.Packages[pack.String()] = pack
+	}
 
 	for _, dependencyReference := range pack.Dependencies {
 		dependencyPackage := ParsePackage(dependencyReference)
@@ -82,7 +95,17 @@ func (packageManager *PackageManager) Add(pack Package) ([]Package, error) {
 
 			_, existsAsPackage := packageManager.Packages[dependencyPackage.String()]
 			if !existsAsPackage {
-				packagesToBeInstalled = append(packagesToBeInstalled, dependencyPackage)
+				dependencySpec, err := getPackageSpec(dependencyPackage.Scope, dependencyPackage.Name, dependencyPackage.Version)
+				if err != nil {
+					return err
+				}
+
+				dependencySpec.Dependency = true
+        existingDependency.Package = dependencySpec.FullString()
+				err = packageManager.add(dependencySpec, packagesToBeInstalled)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
@@ -90,26 +113,39 @@ func (packageManager *PackageManager) Add(pack Package) ([]Package, error) {
 		packageManager.Dependencies[dependencyPackage.String()] = existingDependency
 	}
 
-	packagesToBeInstalled = append(packagesToBeInstalled, pack)
+	*packagesToBeInstalled = append(*packagesToBeInstalled, pack)
 
-	return packagesToBeInstalled, nil
+	return nil
 }
 
 func (packageManager *PackageManager) Remove(scope string, name string) ([]Package, error) {
-	packageName := scope + "/" + name
+	packagesToRemove := []Package{}
+
+	pack := Package{Scope: scope, Name: name}
+	err := packageManager.remove(pack, &packagesToRemove)
+
+	return packagesToRemove, err
+}
+
+func (packageManager *PackageManager) remove(pack Package, packagesToRemove *[]Package) error {
+	packageName := pack.String()
+
 	pack, exists := packageManager.Packages[packageName]
-
-	dependenciesToRemove := []Package{}
-
 	if exists {
-		dependenciesToRemove = append(dependenciesToRemove, pack)
+		*packagesToRemove = append(*packagesToRemove, pack)
 	}
 
 	packageAsDependency, existsAsDependency := packageManager.Dependencies[packageName]
-	if existsAsDependency && len(packageAsDependency.UsedBy) > 0 {
-		delete(packageManager.Packages, packageName)
+	if existsAsDependency {
+		if len(packageAsDependency.UsedBy) > 0 {
+			delete(packageManager.Packages, packageName)
 
-		return []Package{}, PackageHasDependenciesError(scope, name, packageAsDependency.UsedBy)
+			return PackageHasDependenciesError(pack.Scope, pack.Name, packageAsDependency.UsedBy)
+		} else {
+      dependencyPackage := ParsePackage(packageAsDependency.Package)
+      dependencyPackage.Dependency = true
+      *packagesToRemove = append(*packagesToRemove, dependencyPackage)
+		}
 	}
 
 	if len(pack.Dependencies) > 0 {
@@ -128,24 +164,23 @@ func (packageManager *PackageManager) Remove(scope string, name string) ([]Packa
 
 			if len(existingDependency.UsedBy) == 0 {
 				dependencyPackage := ParsePackage(existingDependency.Package)
-				delete(packageManager.Dependencies, dependencyPackage.String())
 
 				_, existsAsPackage := packageManager.Packages[dependencyPackage.String()]
 				if !existsAsPackage {
-					dependenciesToRemove = append(dependenciesToRemove, dependencyPackage)
+					dependencyPackage.Dependency = true
+					err := packageManager.remove(dependencyPackage, packagesToRemove)
+					if err != nil {
+						return err
+					}
 				}
 			}
 		}
 	}
 
-	if !exists {
-		return []Package{}, PackageNotFoundError(scope, name, "")
-	}
-
 	delete(packageManager.Packages, packageName)
 	delete(packageManager.Dependencies, packageName)
 
-	return dependenciesToRemove, nil
+	return nil
 }
 
 func (packageManager *PackageManager) Save() error {

@@ -116,12 +116,12 @@ func installFromSpec(spec Package) ([]Package, error) {
 		return []Package{}, err
 	}
 
-	err = packageManager.Save()
+	err = installPackages(packagesToInstall)
 	if err != nil {
 		return []Package{}, err
 	}
 
-	err = installPackages(packagesToInstall)
+	err = packageManager.Save()
 	if err != nil {
 		return []Package{}, err
 	}
