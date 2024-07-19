@@ -35,8 +35,6 @@ func getPackageSpecFromFile(path string) (Package, error) {
 
 	spec.Url = fmt.Sprintf("file://%s", specFilepath)
 
-  output.Out(output.StdOut).Println("package spec", spec.Scope, spec.Name, spec.Version, spec.Url)
-
 	return spec, nil
 }
 
@@ -88,11 +86,13 @@ func installPackages(packages []Package) error {
 	}
 
 	for _, pack := range packages {
-    var packageFileDownloadPath string
+		var packageFileDownloadPath string
+		var downloaded bool
 
 		if strings.HasPrefix(pack.Url, "file://") {
-      packageFileDownloadPath = strings.TrimPrefix(pack.Url, "file://")
-    } else {
+			packageFileDownloadPath = strings.TrimPrefix(pack.Url, "file://")
+			downloaded = false
+		} else {
 			output.Out(output.StdOut).Println("Downloading package", pack.Scope, pack.Name, pack.Version)
 
 			var packageFile = fmt.Sprintf("%s_%s_%s.zip", pack.Scope, pack.Name, pack.Version)
@@ -102,6 +102,8 @@ func installPackages(packages []Package) error {
 			if err != nil {
 				return core.InternalError(fmt.Sprintf("Error downloading package %s/%s", pack.Scope, pack.Name), err)
 			}
+
+			downloaded = true
 		}
 
 		output.Out(output.StdOut).Println("Unzipping package", pack.Scope, pack.Name, pack.Version, "at", packageFileDownloadPath)
@@ -118,7 +120,9 @@ func installPackages(packages []Package) error {
 			return err
 		}
 
-    os.RemoveAll(packageFileDownloadPath)
+		if downloaded {
+			os.RemoveAll(packageFileDownloadPath)
+		}
 	}
 
 	registry := engine.VirtualExecutorRegisty{}
