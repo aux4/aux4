@@ -104,7 +104,7 @@ func installPackages(packages []Package) error {
 			}
 		}
 
-		output.Out(output.StdOut).Println("Unzipping package", pack.Scope, pack.Name, pack.Version)
+		output.Out(output.StdOut).Println("Unzipping package", pack.Scope, pack.Name, pack.Version, "at", packageFileDownloadPath)
 
 		err = io.UnzipFile(packageFileDownloadPath, packageFolder)
 		if err != nil {
@@ -117,6 +117,8 @@ func installPackages(packages []Package) error {
 		if err != nil {
 			return err
 		}
+
+    os.RemoveAll(packageFileDownloadPath)
 	}
 
 	registry := engine.VirtualExecutorRegisty{}
@@ -136,8 +138,6 @@ func installPackages(packages []Package) error {
 
 func uninstallPackages(packages []Package) error {
 	for _, pack := range packages {
-		output.Out(output.StdOut).Println("Removing package", pack.Scope, pack.Name, pack.Version)
-
 		packagePath := filepath.Join(config.GetConfigPath("packages"), pack.Scope, pack.Name)
 		err := os.RemoveAll(packagePath)
 		if err != nil {

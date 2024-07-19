@@ -2,7 +2,6 @@ package pkger
 
 import (
 	"aux4/core"
-	"aux4/output"
 )
 
 type Pkger struct {
@@ -39,96 +38,94 @@ func (pkger *Pkger) Build(files []string) error {
   return nil
 }
 
-func (pkger *Pkger) Install(scope string, name string, version string) error {
+func (pkger *Pkger) Install(scope string, name string, version string) ([]Package, error) {
 	spec, err := getPackageSpec(scope, name, version)
 	if err != nil {
-		return err
+		return []Package{}, err
 	}
 
   return installFromSpec(spec)
 }
 
-func (pkger *Pkger) InstallFromFile(filepath string) error {
+func (pkger *Pkger) InstallFromFile(filepath string) ([]Package, error) {
   spec, err := getPackageSpecFromFile(filepath)
   if err != nil {
-    return err
+    return []Package{}, err
   } 
-
-  output.Out(output.StdOut).Println("Installing package", spec.Scope, spec.Name, spec.Version, spec.Url)
 
   return installFromSpec(spec)
 }
 
-func (pkger *Pkger) Uninstall(scope string, name string) error {
+func (pkger *Pkger) Uninstall(scope string, name string) ([]Package, error) {
 	packageManager, err := InitPackageManager()
 	if err != nil {
-		return err
+    return []Package{}, err
 	}
 
 	packagesToRemove, err := packageManager.Remove(scope, name)
 	if err != nil {
-		return err
+    return []Package{}, err
 	}
 
 	err = packageManager.Save()
 	if err != nil {
-		return err
+    return []Package{}, err
 	}
 
 	if len(packagesToRemove) == 0 {
-		return nil
+    return []Package{}, err
 	}
 
 	err = uninstallPackages(packagesToRemove)
 	if err != nil {
-		return err
+    return []Package{}, err
 	}
 
 	err = reloadGlobalPackages(packageManager)
 	if err != nil {
-		return err
+    return []Package{}, err
 	}
 
-	return nil
+	return packagesToRemove, nil
 }
 
-func installFromSpec(spec Package) error {
+func installFromSpec(spec Package) ([]Package, error) {
   if spec.Scope == "" {
-    return core.InternalError("scope is not defined in the package", nil)
+    return []Package{}, core.InternalError("scope is not defined in the package", nil)
   }
 
   if spec.Name == "" {
-    return core.InternalError("name is not defined in the package", nil)
+    return []Package{}, core.InternalError("name is not defined in the package", nil)
   }
 
   if spec.Version == "" {
-    return core.InternalError("version is not defined in the package", nil)
+    return []Package{}, core.InternalError("version is not defined in the package", nil)
   }
 
   if spec.Url == "" {
-    return core.InternalError("url is not defined in the package", nil)
+    return []Package{}, core.InternalError("url is not defined in the package", nil)
   }
 
 	packageManager, err := InitPackageManager()
 	if err != nil {
-		return err
+		return []Package{}, err
 	}
 
 	packagesToInstall, err := packageManager.Add(spec)
 	if err != nil {
-		return err
+		return []Package{}, err
 	}
 
 	err = packageManager.Save()
 	if err != nil {
-		return err
+		return []Package{}, err
 	}
 
 	err = installPackages(packagesToInstall)
 	if err != nil {
-		return err
+		return []Package{}, err
 	}
 
-	return nil
+	return packagesToInstall, nil
 }
 

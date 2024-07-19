@@ -16,8 +16,6 @@ func build(paths []string) error {
 	packageFiles := &[]string{}
 	listAllFiles(paths, packageFiles)
 
-	output.Out(output.StdOut).Println("Files", packageFiles)
-
 	aux4Path := getAux4Path(packageFiles)
 	if aux4Path == "" {
 		return core.InternalError(".aux4 file not found", nil)
@@ -29,7 +27,19 @@ func build(paths []string) error {
 		return core.InternalError("Error parsing .aux4 file", err)
 	}
 
-	output.Out(output.StdOut).Println("Building", aux4Path, pack.Scope, pack.Name, pack.Version)
+  if pack.Scope == "" {
+    return core.InternalError("scope is required", nil)
+  }
+
+  if pack.Name == "" {
+    return core.InternalError("name is required", nil)
+  }
+
+  if pack.Version == "" {
+    return core.InternalError("version is required", nil)
+  }
+
+	output.Out(output.StdOut).Println("Building aux4 package", output.Cyan(pack.Scope, "/", pack.Name), output.Magenta(pack.Version))
 
 	err = zipPackage(pack, packageFiles)
 
@@ -78,7 +88,7 @@ func addFileToZip(zipWriter *zip.Writer, prefix string, filePath string) error {
 	header.Name = filepath.Join(prefix, filepath.Base(filePath))
 	header.Method = zip.Deflate
 
-  output.Out(output.StdOut).Println("Adding file", header.Name)
+  output.Out(output.StdOut).Println(output.Green(" +"), "adding file", output.Yellow(header.Name))
 
 	writer, err := zipWriter.CreateHeader(header)
 	if err != nil {
