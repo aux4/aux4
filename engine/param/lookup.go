@@ -1,8 +1,8 @@
 package param
 
 import (
-	"aux4/core"
 	"aux4/cmd"
+	"aux4/core"
 	"aux4/output"
 	"fmt"
 	"os"
@@ -81,7 +81,19 @@ func (l EncryptedParameterLookup) Get(parameters *Parameters, command core.Comma
 	}
 
 	if encryptedParameter == nil {
-		return nil, nil
+		variable, exists := command.Help.GetVariable(name)
+		if !exists {
+			return nil, nil
+		}
+
+		if variable.Encrypt {
+			encryptedParameter = parameters.JustGet(name)
+			if encryptedParameter == nil {
+				return nil, nil
+			}
+		} else {
+			return nil, nil
+		}
 	}
 
 	if !cmd.IsCommandAvailable("aux4-encrypt") {
@@ -90,7 +102,7 @@ func (l EncryptedParameterLookup) Get(parameters *Parameters, command core.Comma
 
 	stdout, _, err := cmd.ExecuteCommandLine(fmt.Sprintf("aux4-encrypt decrypt %s", encryptedParameter.(string)))
 	if err != nil {
-		return nil, err
+		return nil, core.InternalError("Error decrypting the value of '"+name+"' (it may not be encrypted)", nil)
 	}
 
 	return strings.TrimSpace(stdout), nil
@@ -125,7 +137,16 @@ func (l DefaultLookup) Get(parameters *Parameters, command core.Command, actions
 		return nil, nil
 	}
 
-	return *variable.Default, nil
+	value := *variable.Default
+	if variable.Encrypt && cmd.IsCommandAvailable("aux4-encrypt") {
+		stdout, _, err := cmd.ExecuteCommandLine(fmt.Sprintf("aux4-encrypt decrypt %s", value))
+		if err != nil {
+			return nil, core.InternalError("Error decrypting the value of '"+name+"' (it may not be encrypted)", nil)
+		}
+		value = strings.TrimSpace(stdout)
+	}
+
+	return value, nil
 }
 
 type ArgLookup struct {
@@ -182,7 +203,7 @@ func promptText(variable core.CommandHelpVariable) (string, error) {
 
 	var text = fmt.Sprintf("%s %s", variable.Name, output.Gray(variable.Text))
 
-	if variable.Hide {
+	if variable.Hide || variable.Encrypt {
 		prompt = promptui.Prompt{Label: text, Mask: '*'}
 	} else {
 		prompt = promptui.Prompt{Label: text}
@@ -194,19 +215,6 @@ func promptText(variable core.CommandHelpVariable) (string, error) {
 			return "", core.UserAbortedError()
 		}
 		return "", core.InternalError("Error to enter the value of "+variable.Name, err)
-	}
-
-	if variable.Encrypt {
-		if !cmd.IsCommandAvailable("aux4-encrypt") {
-			return text, nil
-		}
-
-		stdout, _, err := cmd.ExecuteCommandLine(fmt.Sprintf("aux4-encrypt encrypt %s", text))
-		if err != nil {
-			return text, err
-		}
-
-		text = strings.TrimSpace(stdout)
 	}
 
 	return text, nil

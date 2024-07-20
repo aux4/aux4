@@ -114,7 +114,10 @@ func (p *Parameters) JustGet(name string) any {
 
 func (p *Parameters) Get(command core.Command, actions []string, name string) (any, error) {
 	if p.params[name] != nil {
-		return p.params[name][(len(p.params[name]) - 1)], nil
+    variable, exists := command.Help.GetVariable(name)
+    if !exists || !variable.Encrypt {
+      return p.params[name][(len(p.params[name]) - 1)], nil
+    }
 	}
 
 	value := any(nil)

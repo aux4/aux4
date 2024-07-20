@@ -11,6 +11,8 @@ import (
 	"strings"
 )
 
+var commandsAvailable = map[string]bool{}
+
 func AbortOnCtrlC() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
@@ -66,8 +68,11 @@ func executeCommand(instruction string, withStdIn bool) (string, string, error) 
 }
 
 func IsCommandAvailable(command string) bool {
-	_, err := exec.LookPath(command)
-	return err == nil
+  if _, exists := commandsAvailable[command]; !exists {
+  	_, err := exec.LookPath(command)
+	  commandsAvailable[command] = err == nil
+  }
+  return commandsAvailable[command]
 }
 
 func splitCommandLineIntoArgs(instruction string) []string {
