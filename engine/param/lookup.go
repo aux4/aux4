@@ -204,9 +204,9 @@ func promptText(variable core.CommandHelpVariable) (string, error) {
 	var text = fmt.Sprintf("%s %s", variable.Name, output.Gray(variable.Text))
 
 	if variable.Hide || variable.Encrypt {
-		prompt = promptui.Prompt{Label: text, Mask: '*'}
+		prompt = promptui.Prompt{Label: text, HideEntered: true, Mask: '*'}
 	} else {
-		prompt = promptui.Prompt{Label: text}
+    prompt = promptui.Prompt{Label: text, HideEntered: true}
 	}
 
 	text, err := prompt.Run()
@@ -223,7 +223,7 @@ func promptText(variable core.CommandHelpVariable) (string, error) {
 func promptSelect(variable core.CommandHelpVariable) (string, error) {
 	var text = fmt.Sprintf("%s %s", variable.Name, output.Gray(variable.Text))
 
-	prompt := promptui.Select{Label: text, Items: variable.Options}
+	prompt := promptui.Select{Label: text, HideSelected: true, Items: variable.Options}
 
 	_, text, err := prompt.Run()
 	if err != nil {
