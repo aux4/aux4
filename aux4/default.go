@@ -60,7 +60,7 @@ func DefaultAux4() string {
               "name": "which",
               "execute": [
                 "set:where-is-it=true",
- "profile:main"
+                "profile:main"
               ],
               "help": {
                 "text": "Show the location of a command"
@@ -114,6 +114,15 @@ func DefaultAux4() string {
               "name": "build",
               "help": {
                 "text": "Build a package"
+              }
+            },
+            {
+              "name": "system",
+              "execute": [
+                "profile:aux4:pkger:system"
+              ],
+              "help": {
+                "text": "manage system packages"
               }
             }
           ]

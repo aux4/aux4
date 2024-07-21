@@ -37,6 +37,7 @@ type Package struct {
 	Version      string   `json:"version"`
 	Url          string   `json:"url"`
 	Dependencies []string `json:"dependencies"`
+	System       []string `json:"system"`
 	Dependency   bool
 }
 
@@ -53,20 +54,37 @@ type Dependency struct {
 	UsedBy  []string `json:"usedBy"`
 }
 
+type System struct {
+	PackageManager string   `json:"packageManager"`
+	Package        string   `json:"package"`
+	UsedBy         []string `json:"usedBy"`
+}
+
+func (system System) String() string {
+  return system.PackageManager + ":" + system.Package
+}
+
+func ParseSystem(system string) System {
+	parts := strings.Split(system, ":")
+	return System{PackageManager: parts[0], Package: parts[1]}
+}
+
 type PackageManager struct {
-	Packages     map[string]Package    `json:"packages"`
-	Dependencies map[string]Dependency `json:"dependencies"`
+	Packages           map[string]Package    `json:"packages"`
+	Dependencies       map[string]Dependency `json:"dependencies"`
+	SystemDependencies map[string]System     `json:"systemDependencies"`
 }
 
-func (packageManager *PackageManager) Add(pack Package) ([]Package, error) {
+func (packageManager *PackageManager) Add(pack Package) ([]Package, []System, error) {
 	packagesToBeInstalled := []Package{}
+  systemDependenciesToBeInstalled := []System{}
 
-	err := packageManager.add(pack, &packagesToBeInstalled)
+	err := packageManager.add(pack, &packagesToBeInstalled, &systemDependenciesToBeInstalled)
 
-	return packagesToBeInstalled, err
+	return packagesToBeInstalled, systemDependenciesToBeInstalled, err
 }
 
-func (packageManager *PackageManager) add(pack Package, packagesToBeInstalled *[]Package) error {
+func (packageManager *PackageManager) add(pack Package, packagesToBeInstalled *[]Package, systemDependenciesToBeInstalled *[]System) error {
 	existingPackage, exists := packageManager.Packages[pack.Scope+"/"+pack.Name]
 	if exists {
 		if existingPackage.Version == pack.Version {
@@ -101,8 +119,8 @@ func (packageManager *PackageManager) add(pack Package, packagesToBeInstalled *[
 				}
 
 				dependencySpec.Dependency = true
-        existingDependency.Package = dependencySpec.FullString()
-				err = packageManager.add(dependencySpec, packagesToBeInstalled)
+				existingDependency.Package = dependencySpec.FullString()
+				err = packageManager.add(dependencySpec, packagesToBeInstalled, systemDependenciesToBeInstalled)
 				if err != nil {
 					return err
 				}
@@ -113,21 +131,36 @@ func (packageManager *PackageManager) add(pack Package, packagesToBeInstalled *[
 		packageManager.Dependencies[dependencyPackage.String()] = existingDependency
 	}
 
+  for _, systemReference := range pack.System {
+    system := ParseSystem(systemReference)
+
+    existingSystem, exists := packageManager.SystemDependencies[system.String()]
+    if !exists {
+      existingSystem = system
+      *systemDependenciesToBeInstalled = append(*systemDependenciesToBeInstalled, existingSystem)
+      packageManager.SystemDependencies[system.String()] = existingSystem
+    }
+
+    existingSystem.UsedBy = append(existingSystem.UsedBy, pack.String())
+    packageManager.SystemDependencies[system.String()] = existingSystem
+  }
+
 	*packagesToBeInstalled = append(*packagesToBeInstalled, pack)
 
 	return nil
 }
 
-func (packageManager *PackageManager) Remove(scope string, name string) ([]Package, error) {
+func (packageManager *PackageManager) Remove(scope string, name string) ([]Package, []System, error) {
 	packagesToRemove := []Package{}
+  systemDependenciesToBeRemoved := []System{}
 
 	pack := Package{Scope: scope, Name: name}
-	err := packageManager.remove(pack, &packagesToRemove)
+	err := packageManager.remove(pack, &packagesToRemove, &systemDependenciesToBeRemoved)
 
-	return packagesToRemove, err
+	return packagesToRemove, systemDependenciesToBeRemoved, err
 }
 
-func (packageManager *PackageManager) remove(pack Package, packagesToRemove *[]Package) error {
+func (packageManager *PackageManager) remove(pack Package, packagesToRemove *[]Package, systemDependenciesToBeRemoved *[]System) error {
 	packageName := pack.String()
 
 	pack, exists := packageManager.Packages[packageName]
@@ -142,9 +175,9 @@ func (packageManager *PackageManager) remove(pack Package, packagesToRemove *[]P
 
 			return PackageHasDependenciesError(pack.Scope, pack.Name, packageAsDependency.UsedBy)
 		} else {
-      dependencyPackage := ParsePackage(packageAsDependency.Package)
-      dependencyPackage.Dependency = true
-      *packagesToRemove = append(*packagesToRemove, dependencyPackage)
+			dependencyPackage := ParsePackage(packageAsDependency.Package)
+			dependencyPackage.Dependency = true
+			*packagesToRemove = append(*packagesToRemove, dependencyPackage)
 		}
 	}
 
@@ -168,7 +201,7 @@ func (packageManager *PackageManager) remove(pack Package, packagesToRemove *[]P
 				_, existsAsPackage := packageManager.Packages[dependencyPackage.String()]
 				if !existsAsPackage {
 					dependencyPackage.Dependency = true
-					err := packageManager.remove(dependencyPackage, packagesToRemove)
+					err := packageManager.remove(dependencyPackage, packagesToRemove, systemDependenciesToBeRemoved)
 					if err != nil {
 						return err
 					}
@@ -176,6 +209,27 @@ func (packageManager *PackageManager) remove(pack Package, packagesToRemove *[]P
 			}
 		}
 	}
+
+  for _, systemReference := range pack.System {
+    system := ParseSystem(systemReference)
+
+    existingSystem := packageManager.SystemDependencies[system.String()]
+    usedBy := existingSystem.UsedBy
+
+    for index, usedByPackage := range usedBy {
+      if usedByPackage == packageName {
+        usedBy = append(usedBy[:index], usedBy[index+1:]...)
+      }
+    }
+
+    existingSystem.UsedBy = usedBy
+    packageManager.SystemDependencies[system.String()] = existingSystem
+
+    if len(existingSystem.UsedBy) == 0 {
+      delete(packageManager.SystemDependencies, system.String())
+      *systemDependenciesToBeRemoved = append(*systemDependenciesToBeRemoved, system)
+    }
+  }
 
 	delete(packageManager.Packages, packageName)
 	delete(packageManager.Dependencies, packageName)
@@ -203,6 +257,7 @@ func InitPackageManager() (*PackageManager, error) {
 		return &PackageManager{
 			Packages:     make(map[string]Package),
 			Dependencies: make(map[string]Dependency),
+      SystemDependencies: make(map[string]System),
 		}, nil
 	}
 

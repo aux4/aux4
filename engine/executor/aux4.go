@@ -37,7 +37,7 @@ type Aux4PkgerListPackagesExecutor struct {
 
 func (executor *Aux4PkgerListPackagesExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
 	var pkger = &pkger.Pkger{}
-	packages, dependencies, err := pkger.ListInstalledPackages()
+	packages, dependencies, systemDependencies, err := pkger.ListInstalledPackages()
 	if err != nil {
 		return err
 	}
@@ -51,12 +51,22 @@ func (executor *Aux4PkgerListPackagesExecutor) Execute(env *engine.VirtualEnviro
 	}
 
 	showDependencies := params.JustGet("show-dependencies")
-	if len(dependencies) > 0 && (showDependencies == true || showDependencies == "true") {
-		output.Out(output.StdOut).Println(output.Gray("Installed dependencies:"))
+	if showDependencies == true || showDependencies == "true" {
+		if len(dependencies) > 0 {
+			output.Out(output.StdOut).Println(output.Gray("Installed dependencies:"))
 
-		for _, pack := range dependencies {
-			output.Out(output.StdOut).Println(output.Cyan(" ↪"), output.Magenta(pack.Scope, "/", output.Bold(pack.Name)), output.Gray(pack.Version))
+			for _, pack := range dependencies {
+				output.Out(output.StdOut).Println(output.Cyan(" ↪"), output.Magenta(pack.Scope, "/", output.Bold(pack.Name)), output.Gray(pack.Version))
+			}
 		}
+
+    if len(systemDependencies) > 0 {
+      output.Out(output.StdOut).Println(output.Gray("Installed system dependencies:"))
+
+      for _, systemDependency := range systemDependencies {
+        output.Out(output.StdOut).Println(output.Cyan(" ⬇"), output.Magenta(systemDependency.PackageManager), output.Blue(systemDependency.Package))
+      }
+    }
 	}
 
 	return nil
@@ -122,12 +132,12 @@ func (executor *Aux4PkgerUninstallExecutor) Execute(env *engine.VirtualEnvironme
 	}
 
 	var pkger = &pkger.Pkger{}
-  uninstalledPackages, err := pkger.Uninstall(scope, name)
+	uninstalledPackages, err := pkger.Uninstall(scope, name)
 	if err != nil {
 		return err
 	}
 
-  printUninstalledPackages(uninstalledPackages)
+	printUninstalledPackages(uninstalledPackages)
 
 	return nil
 }
@@ -162,10 +172,10 @@ func printInstalledPackages(installedPackages []pkger.Package) {
 	output.Out(output.StdOut).Println(output.Gray("Installed packages:"))
 
 	for _, pack := range installedPackages {
-    symbol := output.Green(" ✓")
-    if pack.Dependency {
-      symbol += output.Cyan(" ↪")
-    }
+		symbol := output.Green(" ✓")
+		if pack.Dependency {
+			symbol += output.Cyan(" ↪")
+		}
 		output.Out(output.StdOut).Println(symbol, output.Yellow(pack.Scope, "/", output.Bold(pack.Name)), output.Magenta(pack.Version))
 	}
 }
@@ -174,10 +184,10 @@ func printUninstalledPackages(uninstalledPackages []pkger.Package) {
 	output.Out(output.StdOut).Println(output.Gray("Uninstalled packages:"))
 
 	for _, pack := range uninstalledPackages {
-    symbol := output.Red(" x")
-    if pack.Dependency {
-      symbol += output.Cyan(" ↪")
-    }
+		symbol := output.Red(" x")
+		if pack.Dependency {
+			symbol += output.Cyan(" ↪")
+		}
 		output.Out(output.StdOut).Println(symbol, output.Yellow(pack.Scope, "/", output.Bold(pack.Name)), output.Magenta(pack.Version))
 	}
 }
