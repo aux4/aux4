@@ -3,6 +3,9 @@ package aux4
 func DefaultAux4() string {
 	return `
     {
+      "scope": "aux4",
+      "name": "aux4",
+      "version": "` + Version + `",
       "profiles": [
         {
           "name": "main",
@@ -122,7 +125,7 @@ func DefaultAux4() string {
                 "profile:aux4:pkger:system"
               ],
               "help": {
-                "text": "manage system packages"
+                "text": "Manage system packages"
               }
             }
           ]

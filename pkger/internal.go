@@ -1,6 +1,7 @@
 package pkger
 
 import (
+	"aux4/aux4"
 	"aux4/config"
 	"aux4/core"
 	"aux4/engine"
@@ -11,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -41,21 +43,34 @@ func getPackageSpecFromFile(path string) (Package, error) {
 func getPackageSpec(scope string, name string, version string) (Package, error) {
 	specUrl := fmt.Sprintf("%s/%s/%s/%s", REPO_URL, scope, name, version)
 
-	resp, err := http.Get(specUrl)
+  client := &http.Client{}
+
+  request, err := http.NewRequest("GET", specUrl, nil)
+  if err != nil {
+    return Package{}, core.InternalError(fmt.Sprintf("Error getting package spec %s/%s", scope, name), err)
+  }
+
+  request.Header.Set("User-Agent", getUserAgent())
+
+	response, err := client.Do(request)
 	if err != nil {
 		return Package{}, core.InternalError(fmt.Sprintf("Error getting package spec %s/%s", scope, name), err)
 	}
 
-	if resp.StatusCode == 404 {
+	if response.StatusCode == 404 {
 		return Package{}, PackageNotFoundError(scope, name, version)
-	} else if resp.StatusCode != 200 {
+  } else if response.StatusCode == 409 {
+    return Package{}, core.InternalError(fmt.Sprintf("The package %s/%s is not compatible with your platform", scope, name), nil)
+  } else if response.StatusCode == 426 {
+    return Package{}, core.InternalError("Please upgrade aux4 before installing this package", nil)
+	} else if response.StatusCode != 200 {
 		return Package{}, core.InternalError(fmt.Sprintf("Error getting package spec %s/%s", scope, name), nil)
 	}
 
-	defer resp.Body.Close()
+	defer response.Body.Close()
 
 	spec := Package{}
-	err = json.NewDecoder(resp.Body).Decode(&spec)
+	err = json.NewDecoder(response.Body).Decode(&spec)
 	if err != nil {
 		return Package{}, core.InternalError(fmt.Sprintf("Error parsing package spec %s/%s", scope, name), err)
 	}
@@ -201,4 +216,8 @@ func reloadGlobalPackages(packageManager *PackageManager) error {
 	}
 
 	return nil
+}
+
+func getUserAgent() string {
+  return fmt.Sprintf("aux4/%s (%s; %s)", aux4.Version, runtime.GOOS, runtime.GOARCH)
 }

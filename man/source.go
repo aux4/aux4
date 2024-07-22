@@ -22,7 +22,7 @@ func ShowCommandSource(command core.Command) {
 func formatCommandLine(commandLine string) string {
 	formatted := commandLine
 
-	executorPrefixRegex := regexp.MustCompile(`^(\S*):(.+)`)
+  executorPrefixRegex := regexp.MustCompile(`^([^:]+):(.+)`)
 	executorPrefixMatch := executorPrefixRegex.FindStringSubmatch(formatted)
 	if len(executorPrefixMatch) > 0 {
 		prefix := executorPrefixMatch[1]
@@ -32,6 +32,8 @@ func formatCommandLine(commandLine string) string {
 
 		if prefix == "log" || prefix == "debug" || prefix == "confirm" {
 			formatted += output.Green(command)
+		} else if prefix == "profile" {
+			formatted += output.Cyan(command)
 		} else if prefix == "set" {
 			declarations := strings.Split(command, ";")
       for i, declaration := range declarations {
