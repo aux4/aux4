@@ -37,18 +37,19 @@ rm -rf test
 ```
 
 ```execute
-aux4 aux4 pkger build test/package/.aux4
+cd test/package && aux4 aux4 pkger build .aux4
 ```
 
 ```expect
 Building aux4 package aux4/hello 0.0.1
+Creating zip file aux4_hello_0.0.1.zip
  + adding file aux4/hello/.aux4
 ```
 
 ### Install
 
 ```execute
-aux4 aux4 pkger install --from-file aux4_hello_0.0.1.zip
+aux4 aux4 pkger install --from-file test/package/aux4_hello_0.0.1.zip
 ```
 
 ```expect

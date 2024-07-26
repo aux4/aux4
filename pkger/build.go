@@ -40,7 +40,7 @@ func build(paths []string) error {
 	distributionPath := findDistributionPath(packageFiles)
 
 	if len(aux4Paths) == 1 {
-		pack, err := createPackage(aux4Paths[0])
+		pack, err := createPackage(*aux4Paths[0])
 		if err != nil {
 			return err
 		}
@@ -54,7 +54,7 @@ func build(paths []string) error {
 		return core.InternalError("dist path not found", nil)
 	}
 
-	err := buildDistributionPackages(distributionPath, &aux4Paths, packageFiles)
+	err := buildDistributionPackages(distributionPath, aux4Paths, packageFiles)
 	if err != nil {
 		return err
 	}
@@ -62,12 +62,12 @@ func build(paths []string) error {
 	return nil
 }
 
-func buildDistributionPackages(distributionPath string, aux4Paths *[]packageFile, packageFiles *[]packageFile) error {
+func buildDistributionPackages(distributionPath string, aux4Paths []*packageFile, packageFiles *[]packageFile) error {
 	var globalPackage *Package
 	var globalPackagePath *packageFile
 
-	if len(*aux4Paths) == 1 {
-		globalPackagePath = &(*aux4Paths)[0]
+	if len(aux4Paths) == 1 {
+		globalPackagePath = aux4Paths[0]
 		pack, err := createPackage(*globalPackagePath)
 		if err != nil {
 			return err
@@ -91,14 +91,17 @@ func buildDistributionPackages(distributionPath string, aux4Paths *[]packageFile
 
 	mergedPlatformFiles := mergePlatformFiles(platformFiles, extraFiles)
 
+  platformPackageFiles := []packageFile{}
+
 	for platform, files := range mergedPlatformFiles {
 		distAux4Paths := getAux4Paths(&files)
+
 		if len(distAux4Paths) == 0 {
 			if globalPackagePath != nil {
 				files = append(files, *globalPackagePath)
 				mergedPlatformFiles[platform] = files
 
-				distAux4Paths = []packageFile{*globalPackagePath}
+				distAux4Paths = []*packageFile{globalPackagePath}
 			} else {
 				return core.InternalError("No .aux4 file found for platform "+platform, nil)
 			}
@@ -108,7 +111,7 @@ func buildDistributionPackages(distributionPath string, aux4Paths *[]packageFile
 			return core.InternalError("Multiple .aux4 files found for platform "+platform, nil)
 		}
 
-		pack, err := createPackage(distAux4Paths[0])
+		pack, err := createPackage(*distAux4Paths[0])
 		if err != nil {
 			return err
 		}
@@ -124,19 +127,78 @@ func buildDistributionPackages(distributionPath string, aux4Paths *[]packageFile
 		globalPackage.Platforms = append(globalPackage.Platforms, platform)
 		globalPackage.Distribution = append(globalPackage.Distribution, platform)
 
-		err = zipPackage(platform+"_", pack, &files)
+		tmpDirectory, tmpAux4Path, err := overrideAux4File(*distAux4Paths[0], platform)
 		if err != nil {
 			return err
 		}
+
+    zipFiles := replaceAux4File(files, tmpAux4Path)
+
+    zipFileName, err := zipPackage(platform+"_", pack, &zipFiles)
+		if err != nil {
+			return err
+		}
+
+    platformPackageFiles = append(platformPackageFiles, packageFile{absolute: zipFileName, relative: filepath.Base(zipFileName)})
+
+		os.RemoveAll(tmpDirectory)
 	}
 
+	tmpDirectory, err := aux4IO.GetTemporaryDirectory(fmt.Sprintf("%s_%s_%s", globalPackage.Scope, globalPackage.Name, globalPackage.Version))
+	if err != nil {
+		return err
+	}
+
+  globalAux4 := core.Package{Scope: globalPackage.Scope, Name: globalPackage.Name, Version: globalPackage.Version, Platforms: globalPackage.Platforms, Distribution: globalPackage.Distribution}
+  tmpAux4Path := filepath.Join(tmpDirectory, ".aux4")
+  core.WritePackage(tmpAux4Path, globalAux4)
+
+  platformPackageFiles = append(platformPackageFiles, packageFile{absolute: tmpAux4Path, relative: ".aux4"})
+
+  _, err = zipPackage("", *globalPackage, &platformPackageFiles)
+  if err != nil {
+    return err
+  }
+
 	return nil
+}
+
+func replaceAux4File(files []packageFile, aux4FilePath string) []packageFile {
+	zipFiles := []packageFile{}
+	for _, file := range files {
+		if strings.HasSuffix(file.absolute, ".aux4") {
+			file.absolute = aux4FilePath
+		}
+		zipFiles = append(zipFiles, file)
+	}
+	return zipFiles
+}
+
+func overrideAux4File(aux4FilePath packageFile, platform string) (string, string, error) {
+	aux4Package, err := core.ReadPackage(aux4FilePath.absolute)
+	if err != nil {
+		return "", "", err
+	}
+
+	tmpDirectory, err := aux4IO.GetTemporaryDirectory(fmt.Sprintf("%s_%s_%s", aux4Package.Scope, aux4Package.Name, aux4Package.Version))
+	if err != nil {
+		return "", "", err
+	}
+
+	aux4Package.Platforms = []string{platform}
+	aux4Package.Distribution = []string{}
+
+	tmpAux4Path := filepath.Join(tmpDirectory, ".aux4")
+	core.WritePackage(tmpAux4Path, aux4Package)
+
+	return tmpDirectory, tmpAux4Path, nil
 }
 
 func buildSimplePackage(pack Package, packageFiles *[]packageFile) error {
 	output.Out(output.StdOut).Println("Building aux4 package", output.Cyan(pack.Scope, "/", pack.Name), output.Magenta(pack.Version))
 
-	return zipPackage("", pack, packageFiles)
+  _, err := zipPackage("", pack, packageFiles)
+  return err
 }
 
 func mergePlatformFiles(platformFiles map[string][]packageFile, extraFiles []packageFile) map[string][]packageFile {
@@ -204,7 +266,7 @@ func groupFilesByPlatform(distributionPath string, packageFiles *[]packageFile) 
 			arch := parts[1]
 
 			if _, ok := supportedOS[os]; !ok {
-        output.Out(output.StdErr).Println(output.Red("Unsupported OS ", os))
+				output.Out(output.StdErr).Println(output.Red("Unsupported OS ", os))
 				continue
 			}
 
@@ -246,7 +308,7 @@ func createPackage(aux4Path packageFile) (Package, error) {
 	pack := Package{}
 	err := aux4IO.ReadJsonFile(aux4Path.absolute, &pack)
 	if err != nil {
-		return pack, core.InternalError("Error parsing .aux4 file", err)
+		return pack, core.InternalError("Error parsing .aux4 file: "+aux4Path.relative, err)
 	}
 
 	if pack.Scope == "" {
@@ -264,7 +326,7 @@ func createPackage(aux4Path packageFile) (Package, error) {
 	return pack, nil
 }
 
-func zipPackage(fileNamePrefix string, pack Package, packageFiles *[]packageFile) error {
+func zipPackage(fileNamePrefix string, pack Package, packageFiles *[]packageFile) (string, error) {
 	zipFileName := fmt.Sprintf("%s%s_%s_%s.zip", fileNamePrefix, pack.Scope, pack.Name, pack.Version)
 
 	output.Out(output.StdOut).Println(output.Gray("Creating zip file ", zipFileName))
@@ -273,7 +335,7 @@ func zipPackage(fileNamePrefix string, pack Package, packageFiles *[]packageFile
 
 	zipFile, err := os.Create(zipFileName)
 	if err != nil {
-		return err
+		return zipFileName, err
 	}
 	defer zipFile.Close()
 
@@ -283,11 +345,11 @@ func zipPackage(fileNamePrefix string, pack Package, packageFiles *[]packageFile
 	for _, filePath := range *packageFiles {
 		err := addFileToZip(zipWriter, prefix, filePath)
 		if err != nil {
-			return err
+			return zipFileName, err
 		}
 	}
 
-	return nil
+	return zipFileName, nil
 }
 
 func addFileToZip(zipWriter *zip.Writer, prefix string, filePath packageFile) error {
@@ -324,12 +386,13 @@ func addFileToZip(zipWriter *zip.Writer, prefix string, filePath packageFile) er
 	return nil
 }
 
-func getAux4Paths(paths *[]packageFile) []packageFile {
-	aux4Paths := []packageFile{}
+func getAux4Paths(paths *[]packageFile) []*packageFile {
+	aux4Paths := []*packageFile{}
 
 	for _, path := range *paths {
 		if strings.HasSuffix(path.absolute, ".aux4") {
-			aux4Paths = append(aux4Paths, path)
+			aux4Path := path
+			aux4Paths = append(aux4Paths, &aux4Path)
 		}
 	}
 
