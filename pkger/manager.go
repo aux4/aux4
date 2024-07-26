@@ -40,7 +40,7 @@ type Package struct {
 	System       []string `json:"system"`
 	Platforms    []string `json:"platforms"`
 	Distribution []string `json:"dist"`
-	Dependency   bool
+	Dependency   bool     `json:"-"`
 }
 
 func (pack Package) String() string {
