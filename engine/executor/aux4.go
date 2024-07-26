@@ -64,7 +64,7 @@ func (executor *Aux4PkgerListPackagesExecutor) Execute(env *engine.VirtualEnviro
       output.Out(output.StdOut).Println(output.Gray("Installed system dependencies:"))
 
       for _, systemDependency := range systemDependencies {
-        output.Out(output.StdOut).Println(output.Cyan(" ⬇"), output.Magenta(systemDependency.PackageManager), output.Blue(systemDependency.Package))
+        output.Out(output.StdOut).Println(output.Cyan(" ⬇"), output.Magenta(systemDependency.Id))
       }
     }
 	}
@@ -93,7 +93,7 @@ func (executor *Aux4PkgerInstallExecutor) Execute(env *engine.VirtualEnvironment
 
 	fromFile := params.JustGet("from-file")
 	if fromFile != nil {
-		installedPackages, err := pkger.InstallFromFile(fromFile.(string))
+		installedPackages, err := pkger.InstallFromFile(env, fromFile.(string))
 		if err != nil {
 			return err
 		}
@@ -112,7 +112,7 @@ func (executor *Aux4PkgerInstallExecutor) Execute(env *engine.VirtualEnvironment
 		return err
 	}
 
-	installedPackages, err := pkger.Install(scope, name, version)
+	installedPackages, err := pkger.Install(env, scope, name, version)
 	if err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func (executor *Aux4PkgerUninstallExecutor) Execute(env *engine.VirtualEnvironme
 	}
 
 	var pkger = &pkger.Pkger{}
-	uninstalledPackages, err := pkger.Uninstall(scope, name)
+	uninstalledPackages, err := pkger.Uninstall(env, scope, name)
 	if err != nil {
 		return err
 	}

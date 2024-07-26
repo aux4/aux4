@@ -2,6 +2,7 @@ package pkger
 
 import (
 	"aux4/core"
+	"aux4/engine"
 )
 
 type Pkger struct {
@@ -44,25 +45,25 @@ func (pkger *Pkger) Build(files []string) error {
 	return nil
 }
 
-func (pkger *Pkger) Install(scope string, name string, version string) ([]Package, error) {
+func (pkger *Pkger) Install(env *engine.VirtualEnvironment, scope string, name string, version string) ([]Package, error) {
 	spec, err := getPackageSpec(scope, name, version)
 	if err != nil {
 		return []Package{}, err
 	}
 
-	return installFromSpec(spec)
+	return installFromSpec(env, spec)
 }
 
-func (pkger *Pkger) InstallFromFile(filepath string) ([]Package, error) {
+func (pkger *Pkger) InstallFromFile(env *engine.VirtualEnvironment, filepath string) ([]Package, error) {
 	spec, err := getPackageSpecFromFile(filepath)
 	if err != nil {
 		return []Package{}, err
 	}
 
-	return installFromSpec(spec)
+	return installFromSpec(env, spec)
 }
 
-func (pkger *Pkger) Uninstall(scope string, name string) ([]Package, error) {
+func (pkger *Pkger) Uninstall(env *engine.VirtualEnvironment, scope string, name string) ([]Package, error) {
 	packageManager, err := InitPackageManager()
 	if err != nil {
 		return []Package{}, err
@@ -82,7 +83,7 @@ func (pkger *Pkger) Uninstall(scope string, name string) ([]Package, error) {
 		return []Package{}, err
 	}
 
-  err = uninstallSystems(systemDependenciesToRemove)
+  err = uninstallSystems(env, systemDependenciesToRemove)
   if err != nil {
     return []Package{}, err
   }
@@ -100,7 +101,7 @@ func (pkger *Pkger) Uninstall(scope string, name string) ([]Package, error) {
 	return packagesToRemove, nil
 }
 
-func installFromSpec(spec Package) ([]Package, error) {
+func installFromSpec(env *engine.VirtualEnvironment, spec Package) ([]Package, error) {
 	if spec.Scope == "" {
 		return []Package{}, core.InternalError("scope is not defined in the package", nil)
 	}
@@ -132,7 +133,7 @@ func installFromSpec(spec Package) ([]Package, error) {
 		return []Package{}, err
 	}
 
-	err = installSystems(systemDependenciesToInstall)
+	err = installSystems(env, systemDependenciesToInstall)
 	if err != nil {
 		return []Package{}, err
 	}

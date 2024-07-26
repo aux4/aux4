@@ -32,15 +32,15 @@ func ParsePackage(definition string) Package {
 }
 
 type Package struct {
-	Scope        string   `json:"scope"`
-	Name         string   `json:"name"`
-	Version      string   `json:"version"`
-	Url          string   `json:"url"`
-	Dependencies []string `json:"dependencies"`
-	System       []string `json:"system"`
-	Platforms    []string `json:"platforms"`
-	Distribution []string `json:"dist"`
-	Dependency   bool     `json:"-"`
+	Scope        string     `json:"scope"`
+	Name         string     `json:"name"`
+	Version      string     `json:"version"`
+	Url          string     `json:"url"`
+	Dependencies []string   `json:"dependencies"`
+	System       [][]string `json:"system"`
+	Platforms    []string   `json:"platforms"`
+	Distribution []string   `json:"dist"`
+	Dependency   bool       `json:"-"`
 }
 
 func (pack Package) String() string {
@@ -57,18 +57,34 @@ type Dependency struct {
 }
 
 type System struct {
-	PackageManager string   `json:"packageManager"`
-	Package        string   `json:"package"`
-	UsedBy         []string `json:"usedBy"`
+	Id       string          `json:"id"`
+	Packages []SystemPackage `json:"packages"`
+	UsedBy   []string        `json:"usedBy"`
 }
 
-func (system System) String() string {
-	return system.PackageManager + ":" + system.Package
+type SystemPackage struct {
+	PackageManager string `json:"packageManager"`
+	Package        string `json:"package"`
 }
 
-func ParseSystem(system string) System {
-	parts := strings.Split(system, ":")
-	return System{PackageManager: parts[0], Package: parts[1]}
+func ParseSystem(systemReference []string) System {
+	packages := []SystemPackage{}
+	if len(systemReference) == 0 {
+		return System{}
+	}
+
+	id := systemReference[0]
+
+	for _, systemReference := range systemReference {
+		parts := strings.Split(systemReference, ":")
+		packages = append(packages, SystemPackage{PackageManager: parts[0], Package: parts[1]})
+
+		if len(parts[1]) < len(id) {
+			id = parts[1]
+		}
+	}
+
+	return System{Id: id, Packages: packages}
 }
 
 type PackageManager struct {
@@ -136,15 +152,15 @@ func (packageManager *PackageManager) add(pack Package, packagesToBeInstalled *[
 	for _, systemReference := range pack.System {
 		system := ParseSystem(systemReference)
 
-		existingSystem, exists := packageManager.SystemDependencies[system.String()]
+		existingSystem, exists := packageManager.SystemDependencies[system.Id]
 		if !exists {
 			existingSystem = system
 			*systemDependenciesToBeInstalled = append(*systemDependenciesToBeInstalled, existingSystem)
-			packageManager.SystemDependencies[system.String()] = existingSystem
+			packageManager.SystemDependencies[system.Id] = existingSystem
 		}
 
 		existingSystem.UsedBy = append(existingSystem.UsedBy, pack.String())
-		packageManager.SystemDependencies[system.String()] = existingSystem
+		packageManager.SystemDependencies[system.Id] = existingSystem
 	}
 
 	*packagesToBeInstalled = append(*packagesToBeInstalled, pack)
@@ -215,7 +231,7 @@ func (packageManager *PackageManager) remove(pack Package, packagesToRemove *[]P
 	for _, systemReference := range pack.System {
 		system := ParseSystem(systemReference)
 
-		existingSystem := packageManager.SystemDependencies[system.String()]
+		existingSystem := packageManager.SystemDependencies[system.Id]
 		usedBy := existingSystem.UsedBy
 
 		for index, usedByPackage := range usedBy {
@@ -225,10 +241,10 @@ func (packageManager *PackageManager) remove(pack Package, packagesToRemove *[]P
 		}
 
 		existingSystem.UsedBy = usedBy
-		packageManager.SystemDependencies[system.String()] = existingSystem
+		packageManager.SystemDependencies[system.Id] = existingSystem
 
 		if len(existingSystem.UsedBy) == 0 {
-			delete(packageManager.SystemDependencies, system.String())
+			delete(packageManager.SystemDependencies, system.Id)
 			*systemDependenciesToBeRemoved = append(*systemDependenciesToBeRemoved, system)
 		}
 	}

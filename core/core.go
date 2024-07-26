@@ -11,7 +11,7 @@ func ReadPackage(path string) (Package, error) {
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return pack, InternalError("Error loading aux4 file " + path, err)
+		return pack, InternalError("Error loading aux4 file "+path, err)
 	}
 
 	err = json.Unmarshal(data, &pack)
@@ -37,16 +37,16 @@ func WritePackage(path string, pack Package) error {
 }
 
 type Package struct {
-  Path         string    `json:"-"`
-	Scope        string    `json:"scope"`
-	Name         string    `json:"name"`
-  Version      string    `json:"version"`
-  Description  string    `json:"description"`
-	Dependencies []string  `json:"dependencies"`
-	System       []string  `json:"system"`
-	Platforms    []string  `json:"platforms"`
-	Distribution []string  `json:"dist"`
-	Profiles     []Profile `json:"profiles"`
+	Path         string     `json:"-"`
+	Scope        string     `json:"scope"`
+	Name         string     `json:"name"`
+	Version      string     `json:"version"`
+	Description  string     `json:"description"`
+	Dependencies []string   `json:"dependencies"`
+	System       [][]string `json:"system"`
+	Platforms    []string   `json:"platforms"`
+	Distribution []string   `json:"dist"`
+	Profiles     []Profile  `json:"profiles"`
 }
 
 func (pack *Package) GetProfile(name string) (*Profile, bool) {

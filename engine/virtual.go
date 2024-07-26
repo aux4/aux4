@@ -59,6 +59,20 @@ type VirtualEnvironment struct {
 	profiles       map[string]*VirtualProfile
 }
 
+func (env *VirtualEnvironment) ListCommandsAvailable(profileName string) []string {
+  profile := env.profiles[profileName]
+  if profile == nil {
+    return []string{}
+  }
+
+  commands := make([]string, 0)
+  for commandName := range profile.Commands {
+    commands = append(commands, commandName)
+  }
+
+  return commands
+}
+
 func (env *VirtualEnvironment) GetProfile(name string) *VirtualProfile {
 	return env.profiles[name]
 }
