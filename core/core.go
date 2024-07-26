@@ -1,6 +1,40 @@
 package core
 
-import "path/filepath"
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+)
+
+func ReadPackage(path string) (Package, error) {
+	var pack Package
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return pack, InternalError("Error loading aux4 file", err)
+	}
+
+	err = json.Unmarshal(data, &pack)
+	if err != nil {
+		return pack, InternalError("Error parsing aux4 file", err)
+	}
+
+  return pack, nil
+}
+
+func WritePackage(path string, pack Package) error {
+  data, err := json.Marshal(pack)
+  if err != nil {
+    return InternalError("Error marshalling package", err)
+  }
+
+  err = os.WriteFile(path, data, 0644)
+  if err != nil {
+    return InternalError("Error writing package", err)
+  }
+
+  return nil
+}
 
 type Package struct {
 	Path        string

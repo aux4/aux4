@@ -38,6 +38,8 @@ type Package struct {
 	Url          string   `json:"url"`
 	Dependencies []string `json:"dependencies"`
 	System       []string `json:"system"`
+	Platforms    []string `json:"platforms"`
+	Distribution []string `json:"dist"`
 	Dependency   bool
 }
 
@@ -61,7 +63,7 @@ type System struct {
 }
 
 func (system System) String() string {
-  return system.PackageManager + ":" + system.Package
+	return system.PackageManager + ":" + system.Package
 }
 
 func ParseSystem(system string) System {
@@ -77,7 +79,7 @@ type PackageManager struct {
 
 func (packageManager *PackageManager) Add(pack Package) ([]Package, []System, error) {
 	packagesToBeInstalled := []Package{}
-  systemDependenciesToBeInstalled := []System{}
+	systemDependenciesToBeInstalled := []System{}
 
 	err := packageManager.add(pack, &packagesToBeInstalled, &systemDependenciesToBeInstalled)
 
@@ -131,19 +133,19 @@ func (packageManager *PackageManager) add(pack Package, packagesToBeInstalled *[
 		packageManager.Dependencies[dependencyPackage.String()] = existingDependency
 	}
 
-  for _, systemReference := range pack.System {
-    system := ParseSystem(systemReference)
+	for _, systemReference := range pack.System {
+		system := ParseSystem(systemReference)
 
-    existingSystem, exists := packageManager.SystemDependencies[system.String()]
-    if !exists {
-      existingSystem = system
-      *systemDependenciesToBeInstalled = append(*systemDependenciesToBeInstalled, existingSystem)
-      packageManager.SystemDependencies[system.String()] = existingSystem
-    }
+		existingSystem, exists := packageManager.SystemDependencies[system.String()]
+		if !exists {
+			existingSystem = system
+			*systemDependenciesToBeInstalled = append(*systemDependenciesToBeInstalled, existingSystem)
+			packageManager.SystemDependencies[system.String()] = existingSystem
+		}
 
-    existingSystem.UsedBy = append(existingSystem.UsedBy, pack.String())
-    packageManager.SystemDependencies[system.String()] = existingSystem
-  }
+		existingSystem.UsedBy = append(existingSystem.UsedBy, pack.String())
+		packageManager.SystemDependencies[system.String()] = existingSystem
+	}
 
 	*packagesToBeInstalled = append(*packagesToBeInstalled, pack)
 
@@ -152,7 +154,7 @@ func (packageManager *PackageManager) add(pack Package, packagesToBeInstalled *[
 
 func (packageManager *PackageManager) Remove(scope string, name string) ([]Package, []System, error) {
 	packagesToRemove := []Package{}
-  systemDependenciesToBeRemoved := []System{}
+	systemDependenciesToBeRemoved := []System{}
 
 	pack := Package{Scope: scope, Name: name}
 	err := packageManager.remove(pack, &packagesToRemove, &systemDependenciesToBeRemoved)
@@ -210,26 +212,26 @@ func (packageManager *PackageManager) remove(pack Package, packagesToRemove *[]P
 		}
 	}
 
-  for _, systemReference := range pack.System {
-    system := ParseSystem(systemReference)
+	for _, systemReference := range pack.System {
+		system := ParseSystem(systemReference)
 
-    existingSystem := packageManager.SystemDependencies[system.String()]
-    usedBy := existingSystem.UsedBy
+		existingSystem := packageManager.SystemDependencies[system.String()]
+		usedBy := existingSystem.UsedBy
 
-    for index, usedByPackage := range usedBy {
-      if usedByPackage == packageName {
-        usedBy = append(usedBy[:index], usedBy[index+1:]...)
-      }
-    }
+		for index, usedByPackage := range usedBy {
+			if usedByPackage == packageName {
+				usedBy = append(usedBy[:index], usedBy[index+1:]...)
+			}
+		}
 
-    existingSystem.UsedBy = usedBy
-    packageManager.SystemDependencies[system.String()] = existingSystem
+		existingSystem.UsedBy = usedBy
+		packageManager.SystemDependencies[system.String()] = existingSystem
 
-    if len(existingSystem.UsedBy) == 0 {
-      delete(packageManager.SystemDependencies, system.String())
-      *systemDependenciesToBeRemoved = append(*systemDependenciesToBeRemoved, system)
-    }
-  }
+		if len(existingSystem.UsedBy) == 0 {
+			delete(packageManager.SystemDependencies, system.String())
+			*systemDependenciesToBeRemoved = append(*systemDependenciesToBeRemoved, system)
+		}
+	}
 
 	delete(packageManager.Packages, packageName)
 	delete(packageManager.Dependencies, packageName)
@@ -255,9 +257,9 @@ func InitPackageManager() (*PackageManager, error) {
 
 	if _, err := os.Stat(configPath); err != nil {
 		return &PackageManager{
-			Packages:     make(map[string]Package),
-			Dependencies: make(map[string]Dependency),
-      SystemDependencies: make(map[string]System),
+			Packages:           make(map[string]Package),
+			Dependencies:       make(map[string]Dependency),
+			SystemDependencies: make(map[string]System),
 		}, nil
 	}
 
