@@ -21,16 +21,8 @@ var (
 func build(paths []string) error {
 	packageFiles := &[]packageFile{}
 
-	packageFilePaths := &[]packageFile{}
-	for _, path := range paths {
-		packageFile, err := toPackageFile(path)
-		if err != nil {
-			continue
-		}
-		*packageFilePaths = append(*packageFilePaths, packageFile)
-	}
-
-	listAllFiles(packageFilePaths, packageFiles)
+  packageFilePaths := convertPaths(paths)
+	listAllFiles(&packageFilePaths, packageFiles)
 
 	aux4Paths := getAux4Paths(packageFiles)
 	if len(aux4Paths) == 0 {
@@ -426,6 +418,19 @@ func listAllFiles(paths *[]packageFile, allFiles *[]packageFile) {
 			*allFiles = append(*allFiles, packageFile{absolute: path.absolute, relative: path.relative})
 		}
 	}
+}
+
+func convertPaths(paths []string) []packageFile {
+	packageFilePaths := []packageFile{}
+	for _, path := range paths {
+		packageFile, err := toPackageFile(path)
+		if err != nil {
+			continue
+		}
+		packageFilePaths = append(packageFilePaths, packageFile)
+	}
+
+  return packageFilePaths
 }
 
 func toPackageFile(path string) (packageFile, error) {
