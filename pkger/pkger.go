@@ -3,6 +3,10 @@ package pkger
 import (
 	"aux4/core"
 	"aux4/engine"
+	"aux4/io"
+	"fmt"
+	"path/filepath"
+	"runtime"
 )
 
 type Pkger struct {
@@ -54,10 +58,14 @@ func (pkger *Pkger) Install(env *engine.VirtualEnvironment, scope string, name s
 	return installFromSpec(env, spec)
 }
 
-func (pkger *Pkger) InstallFromFile(env *engine.VirtualEnvironment, filepath string) ([]Package, error) {
-	spec, err := getPackageSpecFromFile(filepath)
+func (pkger *Pkger) InstallFromFile(env *engine.VirtualEnvironment, packageFilePath string) ([]Package, error) {
+	spec, err := getPackageSpecFromFile(packageFilePath)
 	if err != nil {
 		return []Package{}, err
+	}
+
+	if len(spec.Distribution) > 0 {
+		spec, err = getPackageSpecFromDistribution(spec, packageFilePath)
 	}
 
 	return installFromSpec(env, spec)
@@ -83,10 +91,10 @@ func (pkger *Pkger) Uninstall(env *engine.VirtualEnvironment, scope string, name
 		return []Package{}, err
 	}
 
-  err = uninstallSystems(env, systemDependenciesToRemove)
-  if err != nil {
-    return []Package{}, err
-  }
+	err = uninstallSystems(env, systemDependenciesToRemove)
+	if err != nil {
+		return []Package{}, err
+	}
 
 	err = packageManager.Save()
 	if err != nil {
@@ -99,6 +107,45 @@ func (pkger *Pkger) Uninstall(env *engine.VirtualEnvironment, scope string, name
 	}
 
 	return packagesToRemove, nil
+}
+
+func getPackageSpecFromDistribution(spec Package, packageFilePath string) (Package, error) {
+	var platform string
+
+	currentOS := runtime.GOOS
+	currentArch := runtime.GOARCH
+	currentPlatform := fmt.Sprintf("%s_%s", currentOS, currentArch)
+
+	for _, dist := range spec.Distribution {
+		if dist == currentPlatform {
+			platform = currentPlatform
+			break
+		} else if dist == currentOS {
+			platform = currentOS
+		}
+	}
+
+	if platform == "" {
+		return Package{}, core.InternalError("No distribution for current platform", nil)
+	}
+
+	tmpDir, err := io.GetTemporaryDirectory(fmt.Sprintf("aux4_%s_%s", spec.Scope, spec.Name))
+	if err != nil {
+		return Package{}, err
+	}
+
+	err = io.UnzipFile(packageFilePath, tmpDir)
+	if err != nil {
+		return Package{}, err
+	}
+
+	packagePlatformFileName := fmt.Sprintf("%s/%s/%s_%s_%s_%s.zip", spec.Scope, spec.Name, platform, spec.Scope, spec.Name, spec.Version)
+  platformSpec, err := getPackageSpecFromFile(filepath.Join(tmpDir, packagePlatformFileName))
+	if err != nil {
+		return Package{}, err
+	}
+
+	return platformSpec, nil
 }
 
 func installFromSpec(env *engine.VirtualEnvironment, spec Package) ([]Package, error) {
