@@ -21,7 +21,7 @@ var (
 func build(paths []string) error {
 	packageFiles := &[]packageFile{}
 
-  packageFilePaths := convertPaths(paths)
+	packageFilePaths := convertPaths(paths)
 	listAllFiles(&packageFilePaths, packageFiles)
 
 	aux4Paths := getAux4Paths(packageFiles)
@@ -38,7 +38,7 @@ func build(paths []string) error {
 		}
 
 		if distributionPath == "" {
-			return buildSimplePackage(pack, packageFiles)
+			return buildSimplePackage(pack, aux4Paths[0], packageFiles)
 		}
 	}
 
@@ -83,7 +83,7 @@ func buildDistributionPackages(distributionPath string, aux4Paths []*packageFile
 
 	mergedPlatformFiles := mergePlatformFiles(platformFiles, extraFiles)
 
-  platformPackageFiles := []packageFile{}
+	platformPackageFiles := []packageFile{}
 
 	for platform, files := range mergedPlatformFiles {
 		distAux4Paths := getAux4Paths(&files)
@@ -124,14 +124,14 @@ func buildDistributionPackages(distributionPath string, aux4Paths []*packageFile
 			return err
 		}
 
-    zipFiles := replaceAux4File(files, tmpAux4Path)
+		zipFiles := replaceAux4File(files, tmpAux4Path)
 
-    zipFileName, err := zipPackage(platform+"_", pack, &zipFiles)
+		zipFileName, err := zipPackage(platform+"_", pack, &zipFiles)
 		if err != nil {
 			return err
 		}
 
-    platformPackageFiles = append(platformPackageFiles, packageFile{absolute: zipFileName, relative: filepath.Base(zipFileName)})
+		platformPackageFiles = append(platformPackageFiles, packageFile{absolute: zipFileName, relative: filepath.Base(zipFileName)})
 
 		os.RemoveAll(tmpDirectory)
 	}
@@ -141,16 +141,16 @@ func buildDistributionPackages(distributionPath string, aux4Paths []*packageFile
 		return err
 	}
 
-  globalAux4 := core.Package{Scope: globalPackage.Scope, Name: globalPackage.Name, Version: globalPackage.Version, Platforms: globalPackage.Platforms, Distribution: globalPackage.Distribution}
-  tmpAux4Path := filepath.Join(tmpDirectory, ".aux4")
-  core.WritePackage(tmpAux4Path, globalAux4)
+	globalAux4 := core.Package{Scope: globalPackage.Scope, Name: globalPackage.Name, Version: globalPackage.Version, Platforms: globalPackage.Platforms, Distribution: globalPackage.Distribution}
+	tmpAux4Path := filepath.Join(tmpDirectory, ".aux4")
+	core.WritePackage(tmpAux4Path, globalAux4)
 
-  platformPackageFiles = append(platformPackageFiles, packageFile{absolute: tmpAux4Path, relative: ".aux4"})
+	platformPackageFiles = append(platformPackageFiles, packageFile{absolute: tmpAux4Path, relative: ".aux4"})
 
-  _, err = zipPackage("", *globalPackage, &platformPackageFiles)
-  if err != nil {
-    return err
-  }
+	_, err = zipPackage("", *globalPackage, &platformPackageFiles)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -177,7 +177,12 @@ func overrideAux4File(aux4FilePath packageFile, platform string) (string, string
 		return "", "", err
 	}
 
-	aux4Package.Platforms = []string{platform}
+	if platform == "" {
+		aux4Package.Platforms = []string{}
+	} else {
+		aux4Package.Platforms = []string{platform}
+	}
+
 	aux4Package.Distribution = []string{}
 
 	tmpAux4Path := filepath.Join(tmpDirectory, ".aux4")
@@ -186,11 +191,21 @@ func overrideAux4File(aux4FilePath packageFile, platform string) (string, string
 	return tmpDirectory, tmpAux4Path, nil
 }
 
-func buildSimplePackage(pack Package, packageFiles *[]packageFile) error {
+func buildSimplePackage(pack Package, aux4Path *packageFile, packageFiles *[]packageFile) error {
 	output.Out(output.StdOut).Println("Building aux4 package", output.Cyan(pack.Scope, "/", pack.Name), output.Magenta(pack.Version))
 
-  _, err := zipPackage("", pack, packageFiles)
-  return err
+	tmpDirectory, tmpAux4Path, err := overrideAux4File(*aux4Path, "")
+	if err != nil {
+		return err
+	}
+
+	zipFiles := replaceAux4File(*packageFiles, tmpAux4Path)
+
+	_, err = zipPackage("", pack, &zipFiles)
+
+  os.RemoveAll(tmpDirectory)
+
+	return err
 }
 
 func mergePlatformFiles(platformFiles map[string][]packageFile, extraFiles []packageFile) map[string][]packageFile {
@@ -430,7 +445,7 @@ func convertPaths(paths []string) []packageFile {
 		packageFilePaths = append(packageFilePaths, packageFile)
 	}
 
-  return packageFilePaths
+	return packageFilePaths
 }
 
 func toPackageFile(path string) (packageFile, error) {
