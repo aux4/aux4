@@ -59,3 +59,37 @@ aux4 show --help
 show
 print show
 ```
+
+## Using man command
+
+### Print help with documentation
+
+```file:.aux4
+{
+    "profiles": [
+        {
+            "name": "main",
+            "commands": [
+                {
+                    "name": "show",
+                    "execute": [
+                        "echo show"
+                    ],
+                    "help": {
+                        "text": "print show"
+                    }
+                }
+            ]
+        }
+    ]
+}
+```
+
+```execute
+aux4 aux4 man show
+```
+
+```expect
+show
+print show
+```

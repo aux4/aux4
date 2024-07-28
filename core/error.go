@@ -1,4 +1,4 @@
-package main
+package core
 
 import (
   "fmt"
@@ -14,7 +14,7 @@ func (err Aux4Error) Error() string {
   if err.Cause == nil {
     return err.Message
   }
-  return fmt.Sprintf("%s %v", err.Message, err.Cause)
+  return fmt.Sprintf("%s: %v", err.Message, err.Cause)
 }
 
 func InternalError(message string, cause error) Aux4Error {
@@ -44,5 +44,12 @@ func CommandNotFoundError(message string) Aux4Error {
   return Aux4Error{
     Message: fmt.Sprintf("Command not found: %s", message),
     ExitCode: 127,
+  }
+}
+
+func PathNotFoundError() Aux4Error {
+  return Aux4Error{
+    Message: "Path not found",
+    ExitCode: 1,
   }
 }

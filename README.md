@@ -5,16 +5,16 @@ aux4 is a CLI (Command-line Interface) generator, used to create high-level scri
 ## Install
 
 ```bash
-curl -Ssf https://aux4.sh | sh
+curl https://aux4.sh | sh
 ```
 
 ## Getting Started
 
 Check out the [Getting Started](https://aux4.io/getting-started) on our website.
 
-## Documentation
+## Docs
 
-Full [documentation](https://aux4.io/documentation).
+Full [documentation](https://aux4.io/docs).
 
 ## Links
 

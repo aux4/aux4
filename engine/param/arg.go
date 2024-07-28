@@ -1,17 +1,20 @@
-package main
+package param
 
 import (
+  "aux4/core"
 	"fmt"
-	"github.com/yalp/jsonpath"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/yalp/jsonpath"
 )
 
-func ParseArgs(args []string) ([]string, Parameters) {
+func ParseArgs(args []string) (Aux4Parameters, []string, Parameters) {
 	actions := make([]string, 0)
 	params := make(map[string][]any)
+	aux4Params := make(map[string]string)
 
 	for index := 0; index < len(args); index++ {
 		arg := args[index]
@@ -22,7 +25,7 @@ func ParseArgs(args []string) ([]string, Parameters) {
 				parts := strings.Split(name, "=")
 				name = parts[0]
 				value = parts[1]
-			} else if index+1 >= len(args) || strings.HasPrefix(args[index+1], "--") {
+			} else if index+1 >= len(args) || strings.HasPrefix(args[index+1], "-") {
 				value = "true"
 			} else {
 				value = args[index+1]
@@ -33,16 +36,46 @@ func ParseArgs(args []string) ([]string, Parameters) {
 				params[name] = make([]any, 0)
 			}
 			params[name] = append(params[name], value)
+    } else if strings.HasPrefix(arg, "-") {
+      name := arg[1:]
+      value := ""
+
+      if strings.Contains(name, "=") {
+        parts := strings.Split(name, "=")
+        name = parts[0]
+        value = parts[1]
+      } else if index+1 >= len(args) || strings.HasPrefix(args[index+1], "-") {
+        value = "true"
+      } else {
+        value = args[index+1]
+        index++
+      }
+
+      aux4Params[name] = value
 		} else {
 			actions = append(actions, arg)
 		}
 	}
 
-	return actions, Parameters{params: params, lookups: ParameterLookups()}
+  return Aux4Parameters{ params: aux4Params }, actions, Parameters{params: params, lookups: ParameterLookups()}
 }
 
 type ParameterLookup interface {
-	Get(parameters *Parameters, command *VirtualCommand, actions []string, name string) (any, error)
+	Get(parameters *Parameters, command core.Command, actions []string, name string) (any, error)
+}
+
+type Aux4Parameters struct{
+  params map[string]string
+}
+
+func (params *Aux4Parameters) Local() bool {
+  value, ok := params.params["local"]
+  return ok && value == "true"
+}
+
+func (params *Aux4Parameters) NoPackages() bool {
+  value, ok := params.params["no-packages"]
+  return ok && value == "true"
 }
 
 type Parameters struct {
@@ -79,9 +112,12 @@ func (p *Parameters) JustGet(name string) any {
 	return nil
 }
 
-func (p *Parameters) Get(command *VirtualCommand, actions []string, name string) (any, error) {
+func (p *Parameters) Get(command core.Command, actions []string, name string) (any, error) {
 	if p.params[name] != nil {
-		return p.params[name][(len(p.params[name]) - 1)], nil
+    variable, exists := command.Help.GetVariable(name)
+    if !exists || !variable.Encrypt {
+      return p.params[name][(len(p.params[name]) - 1)], nil
+    }
 	}
 
 	value := any(nil)
@@ -102,20 +138,20 @@ func (p *Parameters) Get(command *VirtualCommand, actions []string, name string)
 	return value, nil
 }
 
-func (p *Parameters) GetMultiple(command *VirtualCommand, actions []string, name string) ([]any, error) {
+func (p *Parameters) GetMultiple(command core.Command, actions []string, name string) ([]any, error) {
 	if p.params[name] == nil {
 		return make([]any, 0), nil
 	}
 	return p.params[name], nil
 }
 
-func (p *Parameters) Expr(command *VirtualCommand, actions []string, originalExpression string) (any, error) {
+func (p *Parameters) Expr(command core.Command, actions []string, originalExpression string) (any, error) {
 	var name string
 	var value any
 	index := -1
 	jsonExpr := ""
 
-  var expression = strings.TrimSpace(originalExpression)
+	var expression = strings.TrimSpace(originalExpression)
 
 	if strings.HasPrefix(expression, "$") {
 		expression = strings.TrimPrefix(expression, "$")
@@ -167,7 +203,7 @@ func (p *Parameters) Expr(command *VirtualCommand, actions []string, originalExp
 			if len(value.([]any)) > index {
 				value = value.([]any)[index]
 			} else {
-				return "", InternalError("Index out of range: "+expression, nil)
+				return "", core.InternalError("Index out of range: "+expression, nil)
 			}
 		}
 	}
@@ -201,7 +237,7 @@ func (p *Parameters) String() string {
 	return builder.String()
 }
 
-func InjectParameters(command *VirtualCommand, instruction string, actions []string, params *Parameters) (string, error) {
+func InjectParameters(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
 	const variableRegex = "\\$([a-zA-Z0-9]+)|\\$\\{([^}\\s]+)\\}"
 	expr := regexp.MustCompile(variableRegex)
 	matches := expr.FindAllSubmatch([]byte(instruction), -1)
@@ -209,11 +245,11 @@ func InjectParameters(command *VirtualCommand, instruction string, actions []str
 	variables := map[string]any{}
 	for _, match := range matches {
 		variableExpression := string(match[0])
-    variablePath := string(match[1])
+		variablePath := string(match[1])
 
-    if variablePath == "" {
-      variablePath = string(match[2])
-    }
+		if variablePath == "" {
+			variablePath = string(match[2])
+		}
 
 		value, err := params.Expr(command, actions, variablePath)
 		if err != nil {
