@@ -178,9 +178,7 @@ func overrideAux4File(aux4FilePath packageFile, platform string) (string, string
 		return "", "", err
 	}
 
-	if platform == "" {
-		aux4Package.Platforms = []string{}
-	} else {
+	if platform != "" {
 		aux4Package.Platforms = []string{platform}
 	}
 

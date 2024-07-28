@@ -60,13 +60,13 @@ func (executor *Aux4PkgerListPackagesExecutor) Execute(env *engine.VirtualEnviro
 			}
 		}
 
-    if len(systemDependencies) > 0 {
-      output.Out(output.StdOut).Println(output.Gray("Installed system dependencies:"))
+		if len(systemDependencies) > 0 {
+			output.Out(output.StdOut).Println(output.Gray("Installed system dependencies:"))
 
-      for _, systemDependency := range systemDependencies {
-        output.Out(output.StdOut).Println(output.Cyan(" ⬇"), output.Magenta(systemDependency.Id))
-      }
-    }
+			for _, systemDependency := range systemDependencies {
+				output.Out(output.StdOut).Println(output.Cyan(" ⬇"), output.Magenta(systemDependency.Id))
+			}
+		}
 	}
 
 	return nil
@@ -89,18 +89,20 @@ type Aux4PkgerPublishPackageExecutor struct {
 }
 
 func (executor *Aux4PkgerPublishPackageExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
-  file, err := params.Get(command, actions, "file")
-  if err != nil {
-    return err
-  }
+	file, err := params.Get(command, actions, "file")
+	if err != nil {
+		return err
+	}
 
-  pkger := &pkger.Pkger{}
-  err = pkger.Publish(file.(string))
-  if err != nil {
-    return err
-  }
+	pkger := &pkger.Pkger{}
+  spec, err := pkger.Publish(file.(string))
+	if err != nil {
+		return err
+	}
 
-  return nil
+  printPublishedPackage(spec)
+
+	return nil
 }
 
 type Aux4PkgerInstallExecutor struct {
@@ -184,6 +186,11 @@ func getPackage(command core.Command, actions []string, params *param.Parameters
 	}
 
 	return scope, name, version, nil
+}
+
+func printPublishedPackage(pack core.Package) {
+	output.Out(output.StdOut).Println(output.Gray("Published package:"))
+	output.Out(output.StdOut).Println(output.Green(" ✓"), output.Yellow(pack.Scope, "/", output.Bold(pack.Name)), output.Magenta(pack.Version))
 }
 
 func printInstalledPackages(installedPackages []pkger.Package) {

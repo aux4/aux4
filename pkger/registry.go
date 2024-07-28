@@ -56,19 +56,21 @@ func getPackageSpec(scope string, name string, version string) (Package, error) 
 	return spec, nil
 }
 
-func publish(file string) error {
+func publish(file string) (core.Package, error) {
   aux4File, err := aux4IO.GetFileFromZip(file, ".aux4")
   if err != nil {
-    return core.InternalError(fmt.Sprintf("Error reading package spec %s", file), err)
+    return core.Package{}, core.InternalError(fmt.Sprintf("Error reading package spec %s", file), err)
   }
 
   spec := core.Package{}
   err = json.NewDecoder(aux4File).Decode(&spec)
   if err != nil {
-    return core.InternalError(fmt.Sprintf("Error parsing package spec %s", file), err)
+    return spec, core.InternalError(fmt.Sprintf("Error parsing package spec %s", file), err)
   }
 
-  return uploadPackage(spec, file)
+  err = uploadPackage(spec, file)
+
+  return spec, err
 }
 
 func uploadPackage(spec core.Package, file string) error {
