@@ -125,8 +125,9 @@ func buildDistributionPackages(distributionPath string, aux4Paths []*packageFile
 		}
 
 		zipFiles := replaceAux4File(files, tmpAux4Path)
+    prefix := strings.Replace(platform, "/", "_", 1)
 
-		zipFileName, err := zipPackage(platform+"_", pack, &zipFiles)
+		zipFileName, err := zipPackage(prefix+"_", pack, &zipFiles)
 		if err != nil {
 			return err
 		}
@@ -211,11 +212,11 @@ func buildSimplePackage(pack Package, aux4Path *packageFile, packageFiles *[]pac
 func mergePlatformFiles(platformFiles map[string][]packageFile, extraFiles []packageFile) map[string][]packageFile {
 	mergedFiles := map[string][]packageFile{}
 
-	usedKeys := map[string]bool{}
+	usedPlatforms := map[string]bool{}
 
-	for key, files := range platformFiles {
-		if strings.Contains(key, "_") {
-			keyParts := strings.Split(key, "_")
+	for platform, files := range platformFiles {
+		if strings.Contains(platform, "/") {
+			keyParts := strings.Split(platform, "/")
 			os := keyParts[0]
 
 			osFiles, ok := mergedFiles[os]
@@ -226,18 +227,18 @@ func mergePlatformFiles(platformFiles map[string][]packageFile, extraFiles []pac
 			groupFiles := append(files, extraFiles...)
 			groupFiles = append(groupFiles, osFiles...)
 
-			usedKeys[os] = true
-			mergedFiles[key] = groupFiles
+			usedPlatforms[os] = true
+			mergedFiles[platform] = groupFiles
 		} else {
-			if _, ok := usedKeys[key]; !ok {
-				usedKeys[key] = false
+			if _, ok := usedPlatforms[platform]; !ok {
+				usedPlatforms[platform] = false
 			}
 		}
 	}
 
-	for key, used := range usedKeys {
+	for platform, used := range usedPlatforms {
 		if !used {
-			mergedFiles[key] = append(platformFiles[key], extraFiles...)
+			mergedFiles[platform] = append(platformFiles[platform], extraFiles...)
 		}
 	}
 
@@ -280,7 +281,7 @@ func groupFilesByPlatform(distributionPath string, packageFiles *[]packageFile) 
 			if _, ok := supportedArch[arch]; !ok {
 				key = os
 			} else {
-				key = fmt.Sprintf("%s_%s", os, arch)
+				key = fmt.Sprintf("%s/%s", os, arch)
 			}
 		}
 
@@ -288,13 +289,7 @@ func groupFilesByPlatform(distributionPath string, packageFiles *[]packageFile) 
 			platformFiles[key] = []packageFile{}
 		}
 
-		var prefix string
-
-		if strings.Contains(key, "_") {
-			prefix = fmt.Sprintf("dist/%s/%s", parts[0], parts[1])
-		} else {
-			prefix = fmt.Sprintf("dist/%s", parts[0])
-		}
+    prefix := fmt.Sprintf("dist/%s", key)
 
 		platformFiles[key] = append(platformFiles[key], packageFile{absolute: file.absolute, relative: strings.Replace(file.relative, prefix, "", 1)})
 	}

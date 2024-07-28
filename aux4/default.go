@@ -120,6 +120,19 @@ func DefaultAux4() string {
               }
             },
             {
+              "name": "publish",
+              "help": {
+                "text": "Publish a package",
+                "variables": [
+                  {
+                    "name": "file",
+                    "text": "the package file to publish",
+                    "arg": true
+                  }
+                ]
+              }
+            },
+            {
               "name": "system",
               "execute": [
                 "profile:aux4:pkger:system"

@@ -9,14 +9,11 @@ import (
 	"aux4/output"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 )
-
-var REPO_URL = "https://dev.api.hub.aux4.io/v1/packages/public"
 
 func getPackageSpecFromFile(path string) (Package, error) {
 	specFilepath, err := filepath.Abs(path)
@@ -36,44 +33,6 @@ func getPackageSpecFromFile(path string) (Package, error) {
 	}
 
 	spec.Url = fmt.Sprintf("file://%s", specFilepath)
-
-	return spec, nil
-}
-
-func getPackageSpec(scope string, name string, version string) (Package, error) {
-	specUrl := fmt.Sprintf("%s/%s/%s/%s", REPO_URL, scope, name, version)
-
-  client := &http.Client{}
-
-  request, err := http.NewRequest("GET", specUrl, nil)
-  if err != nil {
-    return Package{}, core.InternalError(fmt.Sprintf("Error getting package spec %s/%s", scope, name), err)
-  }
-
-  request.Header.Set("User-Agent", getUserAgent())
-
-	response, err := client.Do(request)
-	if err != nil {
-		return Package{}, core.InternalError(fmt.Sprintf("Error getting package spec %s/%s", scope, name), err)
-	}
-
-	if response.StatusCode == 404 {
-		return Package{}, PackageNotFoundError(scope, name, version)
-  } else if response.StatusCode == 409 {
-    return Package{}, core.InternalError(fmt.Sprintf("The package %s/%s is not compatible with your platform", scope, name), nil)
-  } else if response.StatusCode == 426 {
-    return Package{}, core.InternalError("Please upgrade aux4 before installing this package", nil)
-	} else if response.StatusCode != 200 {
-		return Package{}, core.InternalError(fmt.Sprintf("Error getting package spec %s/%s", scope, name), nil)
-	}
-
-	defer response.Body.Close()
-
-	spec := Package{}
-	err = json.NewDecoder(response.Body).Decode(&spec)
-	if err != nil {
-		return Package{}, core.InternalError(fmt.Sprintf("Error parsing package spec %s/%s", scope, name), err)
-	}
 
 	return spec, nil
 }
@@ -219,5 +178,5 @@ func reloadGlobalPackages(packageManager *PackageManager) error {
 }
 
 func getUserAgent() string {
-  return fmt.Sprintf("aux4/%s (%s; %s)", aux4.Version, runtime.GOOS, runtime.GOARCH)
+	return fmt.Sprintf("aux4/%s (%s; %s)", aux4.Version, runtime.GOOS, runtime.GOARCH)
 }

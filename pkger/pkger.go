@@ -49,6 +49,15 @@ func (pkger *Pkger) Build(files []string) error {
 	return nil
 }
 
+func (pkger *Pkger) Publish(file string) error {
+  err := publish(file)
+  if err != nil {
+    return err
+  }
+
+  return nil
+}
+
 func (pkger *Pkger) Install(env *engine.VirtualEnvironment, scope string, name string, version string) ([]Package, error) {
 	spec, err := getPackageSpec(scope, name, version)
 	if err != nil {

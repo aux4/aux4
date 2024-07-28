@@ -2,6 +2,7 @@ package io
 
 import (
 	"archive/zip"
+	"aux4/core"
 	"bytes"
 	"encoding/json"
 	"io"
@@ -53,6 +54,10 @@ func DownloadFile(url, filepath string) error {
 		return err
 	}
 	defer resp.Body.Close()
+
+  if resp.StatusCode != http.StatusOK {
+    return core.InternalError(resp.Status, nil)
+  }
 
 	out, err := os.Create(filepath)
 	if err != nil {

@@ -3,6 +3,8 @@ package pkger
 import (
 	"aux4/core"
 	"aux4/output"
+	"encoding/json"
+	"net/http"
 	"strings"
 )
 
@@ -14,14 +16,14 @@ func PackageAlreadyInstalledError(scope string, name string) core.Aux4Error {
 }
 
 func PackageNotFoundError(scope string, name string, version string) core.Aux4Error {
-  suffix := ""
-  if version != "" {
-    suffix = "@" + version
-  } 
-  return core.Aux4Error{
-    Message:  "Package " + scope + "/" + name + suffix + " not found",
-    ExitCode: 1,
-  }
+	suffix := ""
+	if version != "" {
+		suffix = "@" + version
+	}
+	return core.Aux4Error{
+		Message:  "Package " + scope + "/" + name + suffix + " not found",
+		ExitCode: 1,
+	}
 }
 
 func PackageHasDependenciesError(scope string, name string, dependencies []string) core.Aux4Error {
@@ -40,4 +42,27 @@ func PackageHasDependenciesError(scope string, name string, dependencies []strin
 		Message:  message.String(),
 		ExitCode: 1,
 	}
+}
+
+type HttpResponseError struct {
+	StatusCode int    `json:"statusCode"`
+	Message    string `json:"message"`
+}
+
+func ParseHttpResponseError(response *http.Response) HttpResponseError {
+  var responseError HttpResponseError
+
+  body := response.Body
+
+  err := json.NewDecoder(body).Decode(&responseError)
+  if err != nil {
+    return HttpResponseError{
+      StatusCode: response.StatusCode,
+      Message:    "Error parsing response",
+    }
+  }
+
+  defer body.Close()
+
+  return responseError
 }

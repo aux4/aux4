@@ -85,6 +85,24 @@ func (executor *Aux4PkgerBuildPackageExecutor) Execute(env *engine.VirtualEnviro
 	return nil
 }
 
+type Aux4PkgerPublishPackageExecutor struct {
+}
+
+func (executor *Aux4PkgerPublishPackageExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
+  file, err := params.Get(command, actions, "file")
+  if err != nil {
+    return err
+  }
+
+  pkger := &pkger.Pkger{}
+  err = pkger.Publish(file.(string))
+  if err != nil {
+    return err
+  }
+
+  return nil
+}
+
 type Aux4PkgerInstallExecutor struct {
 }
 
