@@ -2,6 +2,7 @@ package executor
 
 import (
 	"aux4/aux4"
+	"aux4/cloud"
 	"aux4/core"
 	"aux4/engine"
 	"aux4/engine/param"
@@ -30,6 +31,49 @@ func (executor *Aux4VersionExecutor) Execute(env *engine.VirtualEnvironment, com
 	}
 
 	return nil
+}
+
+type Aux4LoginExecutor struct {
+}
+
+func (executor *Aux4LoginExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
+  email, err := params.Get(command, actions, "email")
+  if err != nil {
+    return core.InternalError("Email is required", err)
+  }
+
+  password, err := params.Get(command, actions, "password")
+  if err != nil {
+    return core.InternalError("Password is required", err)
+  }
+
+  otp, err := params.Get(command, actions, "otp")
+  if err != nil {
+    return core.InternalError("OTP is required", err)
+  }
+
+  _, err = cloud.Login(email.(string), password.(string), otp.(string))
+  if err != nil {
+    return err
+  }
+
+  output.Out(output.StdOut).Println(output.Green(" ✓"), output.Gray("Logged in successfully"))
+
+  return nil
+}
+
+type Aux4LogoutExecutor struct {
+}
+
+func (executor *Aux4LogoutExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
+  err := cloud.Logout()
+  if err != nil {
+    return err
+  }
+
+  output.Out(output.StdOut).Println(output.Green(" ✓"), output.Gray("Logged out"))
+
+  return nil
 }
 
 type Aux4PkgerListPackagesExecutor struct {

@@ -22,12 +22,12 @@ type Library struct {
 func (library *Library) LoadFile(filename string) error {
 	path, err := filepath.Abs(filename)
   if err != nil {
-    return core.InternalError("Error loading aux4 file", err)
+    return core.InternalError("Error loading aux4 file: " + filename, err)
   }
 
 	file, err := os.ReadFile(path)
 	if err != nil {
-		return core.InternalError("Error loading aux4 file", err)
+    return core.InternalError("Error loading aux4 file: " + path, err)
 	}
 
 	return library.Load(path, path, file)
@@ -38,7 +38,7 @@ func (library *Library) Load(path string, name string, data []byte) error {
 
 	err := json.Unmarshal(data, &pack)
 	if err != nil {
-		return core.InternalError("Error parsing aux4 file", err)
+    return core.InternalError("Error parsing aux4 file: " + path, err)
 	}
 
 	pack.Path = path

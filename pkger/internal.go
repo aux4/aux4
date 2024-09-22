@@ -1,7 +1,6 @@
 package pkger
 
 import (
-	"aux4/aux4"
 	"aux4/config"
 	"aux4/core"
 	"aux4/engine"
@@ -11,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 )
 
@@ -177,6 +175,3 @@ func reloadGlobalPackages(packageManager *PackageManager) error {
 	return nil
 }
 
-func getUserAgent() string {
-	return fmt.Sprintf("aux4/%s (%s; %s)", aux4.Version, runtime.GOOS, runtime.GOARCH)
-}

@@ -1,6 +1,8 @@
 package pkger
 
 import (
+	"aux4/aux4"
+	"aux4/cloud"
 	"aux4/core"
 	aux4IO "aux4/io"
 	"bytes"
@@ -28,7 +30,7 @@ func getPackageSpec(scope string, name string, version string) (Package, error) 
 		return Package{}, core.InternalError(fmt.Sprintf("Error getting package spec %s/%s", scope, name), err)
 	}
 
-	request.Header.Set("User-Agent", getUserAgent())
+	request.Header.Set("User-Agent", aux4.GetUserAgent())
 
 	response, err := client.Do(request)
 	if err != nil {
@@ -90,7 +92,13 @@ func uploadPackage(spec core.Package, file string) error {
     return core.InternalError(fmt.Sprintf("Error publishing package %s: %s", file, err.Error()), err)
 	}
 
-	request.Header.Set("User-Agent", getUserAgent())
+  session, err := cloud.GetSession()
+  if err != nil {
+    return core.InternalError("not logged in", err)
+  }
+
+  request.Header.Set("Authorization", "Bearer " + session.AccessToken)
+	request.Header.Set("User-Agent", aux4.GetUserAgent())
   request.Header.Set("Content-Type", contentType)
 
 	response, err := client.Do(request)

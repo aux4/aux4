@@ -83,10 +83,60 @@ func buildDistributionPackages(distributionPath string, aux4Paths []*packageFile
 
 	mergedPlatformFiles := mergePlatformFiles(platformFiles, extraFiles)
 
+	var globalLicense string
+	var globalReadme string
+
+	for _, file := range extraFiles {
+		filename := filepath.Base(file.absolute)
+		if strings.HasSuffix(filename, "LICENSE") {
+			globalLicense = file.absolute
+		} else if strings.HasPrefix(filename, "README.md") {
+			globalReadme = file.absolute
+		}
+	}
+
 	platformPackageFiles := []packageFile{}
 
 	for platform, files := range mergedPlatformFiles {
 		distAux4Paths := getAux4Paths(&files)
+
+		var platformLicense string
+		var platformReadme string
+
+		for _, file := range files {
+			filename := filepath.Base(file.absolute)
+			if strings.HasSuffix(filename, "LICENSE") {
+				platformLicense = file.absolute
+			} else if strings.HasPrefix(filename, "README.md") {
+				platformReadme = file.absolute
+			}
+		}
+
+		if platformLicense == "" {
+			if globalLicense == "" {
+				return core.InternalError("LICENSE file not found for platform "+platform, nil)
+			}
+
+			packageLicense, err := toPackageFile(platformLicense)
+			if err != nil {
+				return err
+			}
+
+			files = append(files, packageLicense)
+		}
+
+		if platformReadme == "" {
+			if globalReadme == "" {
+				return core.InternalError("README.md file not found for platform "+platform, nil)
+			}
+
+			packageReadme, err := toPackageFile(platformReadme)
+			if err != nil {
+				return err
+			}
+
+			files = append(files, packageReadme)
+		}
 
 		if len(distAux4Paths) == 0 {
 			if globalPackagePath != nil {
@@ -119,13 +169,16 @@ func buildDistributionPackages(distributionPath string, aux4Paths []*packageFile
 		globalPackage.Platforms = append(globalPackage.Platforms, platform)
 		globalPackage.Distribution = append(globalPackage.Distribution, platform)
 
-		tmpDirectory, tmpAux4Path, err := overrideAux4File(*distAux4Paths[0], platform)
+		tmpDirectory, tmpAux4Path, err := overrideAux4File(*distAux4Paths[0], func(pack *core.Package) {
+			addPlatformToAux4(pack, platform)
+		})
+
 		if err != nil {
 			return err
 		}
 
 		zipFiles := replaceAux4File(files, tmpAux4Path)
-    prefix := strings.Replace(platform, "/", "_", 1)
+		prefix := strings.Replace(platform, "/", "_", 1)
 
 		zipFileName, err := zipPackage(prefix+"_", pack, &zipFiles)
 		if err != nil {
@@ -156,6 +209,57 @@ func buildDistributionPackages(distributionPath string, aux4Paths []*packageFile
 	return nil
 }
 
+func defineManAndExamples(pack *core.Package, packageFiles *[]packageFile) error {
+	for _, file := range *packageFiles {
+		packFile := file.relative
+		filename := filepath.Base(packFile)
+
+		if strings.HasPrefix(packFile, "man/") && strings.HasSuffix(packFile, ".md") && strings.Contains(filename, "_") {
+			filenameParts := strings.Split(strings.TrimSuffix(filename, ".md"), "_")
+			profileName := filenameParts[0]
+			commandName := filenameParts[1]
+
+			flagMan(pack, profileName, commandName)
+		} else if strings.HasPrefix(packFile, "test/") && strings.HasSuffix(packFile, ".test.md") && strings.Contains(filename, "_") {
+			filenameParts := strings.Split(strings.TrimSuffix(filename, ".test.md"), "_")
+			profileName := filenameParts[0]
+			commandName := filenameParts[1]
+
+			flagExample(pack, profileName, commandName)
+		}
+	}
+
+	return nil
+}
+
+func flagMan(pack *core.Package, profileName string, commandName string) {
+	profile, hasProfile := pack.GetProfile(profileName)
+	if !hasProfile {
+		return
+	}
+
+	command, hasCommand := profile.GetCommand(commandName)
+	if !hasCommand {
+		return
+	}
+
+	command.Help.HasMan = true
+}
+
+func flagExample(pack *core.Package, profileName string, commandName string) {
+	profile, hasProfile := pack.GetProfile(profileName)
+	if !hasProfile {
+		return
+	}
+
+	command, hasCommand := profile.GetCommand(commandName)
+	if !hasCommand {
+		return
+	}
+
+	command.Help.HasExample = true
+}
+
 func replaceAux4File(files []packageFile, aux4FilePath string) []packageFile {
 	zipFiles := []packageFile{}
 	for _, file := range files {
@@ -167,7 +271,15 @@ func replaceAux4File(files []packageFile, aux4FilePath string) []packageFile {
 	return zipFiles
 }
 
-func overrideAux4File(aux4FilePath packageFile, platform string) (string, string, error) {
+func addPlatformToAux4(pack *core.Package, platform string) {
+	if platform != "" {
+		pack.Platforms = []string{platform}
+	}
+
+	pack.Distribution = []string{}
+}
+
+func overrideAux4File(aux4FilePath packageFile, transformer func(*core.Package)) (string, string, error) {
 	aux4Package, err := core.ReadPackage(aux4FilePath.absolute)
 	if err != nil {
 		return "", "", err
@@ -178,11 +290,7 @@ func overrideAux4File(aux4FilePath packageFile, platform string) (string, string
 		return "", "", err
 	}
 
-	if platform != "" {
-		aux4Package.Platforms = []string{platform}
-	}
-
-	aux4Package.Distribution = []string{}
+	transformer(&aux4Package)
 
 	tmpAux4Path := filepath.Join(tmpDirectory, ".aux4")
 	core.WritePackage(tmpAux4Path, aux4Package)
@@ -191,9 +299,32 @@ func overrideAux4File(aux4FilePath packageFile, platform string) (string, string
 }
 
 func buildSimplePackage(pack Package, aux4Path *packageFile, packageFiles *[]packageFile) error {
+	license := false
+	readme := false
+
+	for _, file := range *packageFiles {
+		filename := filepath.Base(file.absolute)
+		if strings.HasSuffix(filename, "LICENSE") {
+			license = true
+		} else if strings.HasPrefix(filename, "README.md") {
+			readme = true
+		}
+	}
+
+	if !license {
+		return core.InternalError("LICENSE file not found", nil)
+	}
+
+	if !readme {
+		return core.InternalError("README.md file not found", nil)
+	}
+
 	output.Out(output.StdOut).Println("Building aux4 package", output.Cyan(pack.Scope, "/", pack.Name), output.Magenta(pack.Version))
 
-	tmpDirectory, tmpAux4Path, err := overrideAux4File(*aux4Path, "")
+	tmpDirectory, tmpAux4Path, err := overrideAux4File(*aux4Path, func(pack *core.Package) {
+		addPlatformToAux4(pack, "")
+	})
+
 	if err != nil {
 		return err
 	}
@@ -202,7 +333,7 @@ func buildSimplePackage(pack Package, aux4Path *packageFile, packageFiles *[]pac
 
 	_, err = zipPackage("", pack, &zipFiles)
 
-  os.RemoveAll(tmpDirectory)
+	os.RemoveAll(tmpDirectory)
 
 	return err
 }
@@ -287,7 +418,7 @@ func groupFilesByPlatform(distributionPath string, packageFiles *[]packageFile) 
 			platformFiles[key] = []packageFile{}
 		}
 
-    prefix := fmt.Sprintf("dist/%s", key)
+		prefix := fmt.Sprintf("dist/%s", key)
 
 		platformFiles[key] = append(platformFiles[key], packageFile{absolute: file.absolute, relative: strings.Replace(file.relative, prefix, "", 1)})
 	}

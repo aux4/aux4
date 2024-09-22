@@ -31,6 +31,33 @@ func DefaultAux4() string {
               }
             },
             {
+              "name": "login",
+              "help": {
+                "text": "Login to aux4",
+                "variables": [
+                  {
+                    "name": "email",
+                    "text": "the email"
+                  },
+                  {
+                    "name": "password",
+                    "text": "the password",
+                    "hide": true
+                  },
+                  {
+                    "name": "otp",
+                    "text": "the one-time code"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "logout",
+              "help": {
+                "text": "Logout from aux4"
+              }
+            },
+            {
               "name": "pkger",
               "execute": [
                 "profile:aux4:pkger"

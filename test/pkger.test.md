@@ -12,6 +12,14 @@ rm -rf test
 
 ### Build
 
+```file:test/package/LICENSE
+MIT License
+```
+
+```file:test/package/README.md
+Hello
+```
+
 ```file:test/package/.aux4
 {
   "scope": "aux4",
@@ -37,13 +45,15 @@ rm -rf test
 ```
 
 ```execute
-cd test/package && aux4 aux4 pkger build .aux4
+cd test/package && aux4 aux4 pkger build .aux4 LICENSE README.md
 ```
 
 ```expect
 Building aux4 package aux4/hello 0.0.1
 Creating zip file aux4_hello_0.0.1.zip
  + adding file aux4/hello/.aux4
+ + adding file aux4/hello/LICENSE
+ + adding file aux4/hello/README.md
 ```
 
 ### Install

@@ -34,6 +34,8 @@ func main() {
 
 	registry := engine.CreateVirtualExecutorRegistry()
 	registry.RegisterExecutor("aux4.version", &executor.Aux4VersionExecutor{})
+	registry.RegisterExecutor("aux4.login", &executor.Aux4LoginExecutor{})
+	registry.RegisterExecutor("aux4.logout", &executor.Aux4LogoutExecutor{})
 	registry.RegisterExecutor("aux4:pkger.list", &executor.Aux4PkgerListPackagesExecutor{})
 	registry.RegisterExecutor("aux4:pkger.build", &executor.Aux4PkgerBuildPackageExecutor{})
 	registry.RegisterExecutor("aux4:pkger.publish", &executor.Aux4PkgerPublishPackageExecutor{})

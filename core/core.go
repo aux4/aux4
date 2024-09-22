@@ -42,6 +42,8 @@ type Package struct {
 	Name         string     `json:"name"`
 	Version      string     `json:"version"`
 	Description  string     `json:"description"`
+	Git          string     `json:"git"`
+	Website      string     `json:"website"`
 	Dependencies []string   `json:"dependencies"`
 	System       [][]string `json:"system"`
 	Platforms    []string   `json:"platforms"`
@@ -61,6 +63,15 @@ func (pack *Package) GetProfile(name string) (*Profile, bool) {
 type Profile struct {
 	Name     string    `json:"name"`
 	Commands []Command `json:"commands"`
+}
+
+func (profile *Profile) GetCommand(name string) (*Command, bool) {
+  for _, command := range profile.Commands {
+    if command.Name == name {
+      return &command, true
+    }
+  }
+  return nil, false
 }
 
 type Command struct {
@@ -87,8 +98,10 @@ type CommandRef struct {
 }
 
 type CommandHelp struct {
-	Text      string                 `json:"text"`
-	Variables []*CommandHelpVariable `json:"variables"`
+	Text       string                 `json:"text"`
+  Variables  []*CommandHelpVariable `json:"variables"`
+	HasMan     bool                   `json:"hasMan"`
+	HasExample bool                   `json:"hasExample"`
 }
 
 func (help *CommandHelp) GetVariable(name string) (*CommandHelpVariable, bool) {
