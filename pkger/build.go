@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -23,6 +24,10 @@ func build(paths []string) error {
 
 	packageFilePaths := convertPaths(paths)
 	listAllFiles(&packageFilePaths, packageFiles)
+
+  sort.Slice(*packageFiles, func(i, j int) bool {
+    return (*packageFiles)[i].relative < (*packageFiles)[j].relative
+  })
 
 	aux4Paths := getAux4Paths(packageFiles)
 	if len(aux4Paths) == 0 {
@@ -96,6 +101,10 @@ func buildDistributionPackages(distributionPath string, aux4Paths []*packageFile
 	}
 
 	platformPackageFiles := []packageFile{}
+
+  sort.Slice(*&platformPackageFiles, func(i, j int) bool {
+    return (*&platformPackageFiles)[i].relative < (*&platformPackageFiles)[j].relative
+  })
 
 	for platform, files := range mergedPlatformFiles {
 		distAux4Paths := getAux4Paths(&files)
