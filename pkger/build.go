@@ -69,7 +69,7 @@ func buildDistributionPackages(distributionPath string, aux4Paths []*packageFile
 		if err != nil {
 			return err
 		}
-		globalPackage = &Package{Scope: pack.Scope, Name: pack.Name, Version: pack.Version, Platforms: []string{}, Distribution: []string{}}
+    globalPackage = &Package{Scope: pack.Scope, Name: pack.Name, Version: pack.Version, Platforms: []string{}, Distribution: []string{}, Tags: pack.Tags}
 	}
 
 	if globalPackagePath == nil {

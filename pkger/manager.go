@@ -40,6 +40,7 @@ type Package struct {
 	System       [][]string `json:"system"`
 	Platforms    []string   `json:"platforms"`
 	Distribution []string   `json:"dist"`
+	Tags         []string   `json:"tags"`
 	Dependency   bool       `json:"-"`
 }
 

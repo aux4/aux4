@@ -48,6 +48,7 @@ type Package struct {
 	System       [][]string `json:"system"`
 	Platforms    []string   `json:"platforms"`
 	Distribution []string   `json:"dist"`
+	Tags         []string   `json:"tags"`
 	Profiles     []Profile  `json:"profiles"`
 }
 
@@ -66,12 +67,12 @@ type Profile struct {
 }
 
 func (profile *Profile) GetCommand(name string) (*Command, bool) {
-  for _, command := range profile.Commands {
-    if command.Name == name {
-      return &command, true
-    }
-  }
-  return nil, false
+	for _, command := range profile.Commands {
+		if command.Name == name {
+			return &command, true
+		}
+	}
+	return nil, false
 }
 
 type Command struct {
@@ -99,7 +100,7 @@ type CommandRef struct {
 
 type CommandHelp struct {
 	Text       string                 `json:"text"`
-  Variables  []*CommandHelpVariable `json:"variables"`
+	Variables  []*CommandHelpVariable `json:"variables"`
 	HasMan     bool                   `json:"hasMan"`
 	HasExample bool                   `json:"hasExample"`
 }
