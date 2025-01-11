@@ -1,9 +1,9 @@
 package engine
 
 import (
-	"aux4/core"
-	"aux4/engine/param"
-	"aux4/io"
+	"aux4.dev/aux4/core"
+	"aux4.dev/aux4/engine/param"
+	"aux4.dev/aux4/io"
 	"fmt"
 	"strings"
 )

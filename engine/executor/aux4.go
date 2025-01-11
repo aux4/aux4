@@ -1,13 +1,13 @@
 package executor
 
 import (
-	"aux4/aux4"
-	"aux4/cloud"
-	"aux4/core"
-	"aux4/engine"
-	"aux4/engine/param"
-	"aux4/output"
-	"aux4/pkger"
+	"aux4.dev/aux4/aux4"
+	"aux4.dev/aux4/cloud"
+	"aux4.dev/aux4/core"
+	"aux4.dev/aux4/engine"
+	"aux4.dev/aux4/engine/param"
+	"aux4.dev/aux4/output"
+	"aux4.dev/aux4/pkger"
 	"strings"
 	"time"
 )

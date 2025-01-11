@@ -2,9 +2,9 @@ package pkger
 
 import (
 	"archive/zip"
-	"aux4/core"
-	aux4IO "aux4/io"
-	"aux4/output"
+	"aux4.dev/aux4/core"
+	aux4IO "aux4.dev/aux4/io"
+	"aux4.dev/aux4/output"
 	"fmt"
 	"io"
 	"os"

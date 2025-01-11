@@ -1,4 +1,4 @@
-module aux4
+module aux4.dev/aux4
 
 go 1.21.5
 

@@ -1,12 +1,12 @@
 package executor
 
 import (
-	"aux4/cmd"
-	"aux4/core"
-	"aux4/engine"
-	"aux4/engine/param"
-	"aux4/man"
-	"aux4/output"
+	"aux4.dev/aux4/cmd"
+	"aux4.dev/aux4/core"
+	"aux4.dev/aux4/engine"
+	"aux4.dev/aux4/engine/param"
+	"aux4.dev/aux4/man"
+	"aux4.dev/aux4/output"
 	"encoding/json"
 	"fmt"
 	"os"

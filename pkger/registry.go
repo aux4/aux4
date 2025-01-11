@@ -1,10 +1,10 @@
 package pkger
 
 import (
-	"aux4/aux4"
-	"aux4/cloud"
-	"aux4/core"
-	aux4IO "aux4/io"
+	"aux4.dev/aux4/aux4"
+	"aux4.dev/aux4/cloud"
+	"aux4.dev/aux4/core"
+	aux4IO "aux4.dev/aux4/io"
 	"bytes"
 	"encoding/base64"
 	"encoding/json"

@@ -1,10 +1,10 @@
 package pkger
 
 import (
-	"aux4/cmd"
-	"aux4/core"
-	"aux4/engine"
-	"aux4/output"
+	"aux4.dev/aux4/cmd"
+	"aux4.dev/aux4/core"
+	"aux4.dev/aux4/engine"
+	"aux4.dev/aux4/output"
 )
 
 func installSystems(env *engine.VirtualEnvironment, systems []System) error {

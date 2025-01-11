@@ -2,7 +2,7 @@ package io
 
 import (
 	"archive/zip"
-	"aux4/core"
+	"aux4.dev/aux4/core"
 	"bytes"
 	"encoding/json"
 	"io"

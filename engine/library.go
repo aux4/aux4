@@ -1,7 +1,7 @@
 package engine
 
 import (
-	"aux4/core"
+	"aux4.dev/aux4/core"
 	"encoding/json"
 	"fmt"
 	"os"

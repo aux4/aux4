@@ -1,8 +1,8 @@
 package pkger
 
 import (
-	"aux4/core"
-	"aux4/output"
+	"aux4.dev/aux4/core"
+	"aux4.dev/aux4/output"
 	"encoding/json"
 	"net/http"
 	"strings"

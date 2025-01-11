@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"aux4/core"
-	"aux4/output"
+	"aux4.dev/aux4/core"
+	"aux4.dev/aux4/output"
 	"bytes"
 	"os"
 	"os/exec"

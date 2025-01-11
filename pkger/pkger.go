@@ -1,9 +1,9 @@
 package pkger
 
 import (
-	"aux4/core"
-	"aux4/engine"
-	"aux4/io"
+	"aux4.dev/aux4/engine"
+  "aux4.dev/aux4/core"
+	"aux4.dev/aux4/io"
 	"fmt"
 	"path/filepath"
 	"runtime"

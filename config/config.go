@@ -1,7 +1,7 @@
 package config
 
 import (
-	"aux4/engine/param"
+	"aux4.dev/aux4/engine/param"
 	"os"
 	"path/filepath"
 )

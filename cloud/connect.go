@@ -1,10 +1,10 @@
 package cloud
 
 import (
-	"aux4/aux4"
-	"aux4/config"
-	"aux4/core"
-	aux4IO "aux4/io"
+	"aux4.dev/aux4/aux4"
+	"aux4.dev/aux4/config"
+	"aux4.dev/aux4/core"
+	aux4IO "aux4.dev/aux4/io"
 	"bytes"
 	"encoding/base64"
 	"encoding/json"

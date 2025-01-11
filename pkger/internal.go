@@ -1,11 +1,11 @@
 package pkger
 
 import (
-	"aux4/config"
-	"aux4/core"
-	"aux4/engine"
-	"aux4/io"
-	"aux4/output"
+	"aux4.dev/aux4/config"
+	"aux4.dev/aux4/core"
+	"aux4.dev/aux4/engine"
+	"aux4.dev/aux4/io"
+	"aux4.dev/aux4/output"
 	"encoding/json"
 	"fmt"
 	"os"
