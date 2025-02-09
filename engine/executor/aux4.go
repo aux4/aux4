@@ -1,9 +1,6 @@
 package executor
 
 import (
-	"fmt"
-	"os"
-	"runtime"
 	"time"
 
 	"aux4.dev/aux4/aux4"
@@ -25,8 +22,7 @@ func (executor *Aux4VersionExecutor) Execute(env *engine.VirtualEnvironment, com
 
 	system := params.JustGet("system")
 	if system == "true" {
-		name, _ := os.Hostname()
-		output.Out(output.StdOut).Println(fmt.Sprintf("aux4/%s (%s; %s; %s)", aux4.Version, runtime.GOOS, runtime.GOARCH, name))
+		output.Out(output.StdOut).Println(aux4.GetUserAgent())
 		return nil
 	}
 

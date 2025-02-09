@@ -7,6 +7,9 @@ import (
 )
 
 func GetUserAgent() string {
-  name, _ := os.Hostname()
+  name := os.Getenv("AUX4_HOSTNAME") 
+  if name == "" {
+    name, _ = os.Hostname()
+  }
 	return fmt.Sprintf("aux4/%s (%s; %s; %s)", Version, runtime.GOOS, runtime.GOARCH, name)
 }
