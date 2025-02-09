@@ -25,12 +25,24 @@ func (library *Library) LoadFile(filename string) error {
     return core.InternalError("Error loading aux4 file: " + filename, err)
   }
 
-	file, err := os.ReadFile(path)
+  file, err := os.Open(path)
 	if err != nil {
-    return core.InternalError("Error loading aux4 file: " + path, err)
+    return core.InternalError("Error reading aux4 file: " + path, err)
 	}
 
-	return library.Load(path, path, file)
+  var pack core.Package
+	err = json.NewDecoder(file).Decode(&pack)
+	if err != nil {
+    return core.InternalError("Error parsing aux4 file: " + path, err)
+	}
+
+	pack.Path = path
+
+  if pack.Name == "" {
+    pack.Name = path
+  }
+
+	return library.load(pack)
 }
 
 func (library *Library) Load(path string, name string, data []byte) error {
@@ -43,10 +55,14 @@ func (library *Library) Load(path string, name string, data []byte) error {
 
 	pack.Path = path
 
-	if pack.Name == "" {
-		pack.Name = name
-	}
+  if pack.Name == "" {
+    pack.Name = name
+  }
 
+  return library.load(pack)
+}
+
+func (library *Library) load(pack core.Package) error {
 	_, ok := library.packages[pack.Name]
 	if ok {
 		return core.InternalError(fmt.Sprintf("Package %s already exists", pack.Name), nil)
