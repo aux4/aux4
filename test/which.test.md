@@ -26,9 +26,9 @@
 aux4 aux4 which print
 ```
 
-### using where-is-it parameter
+### using whereIsIt parameter
 
 ```execute
-aux4 print --where-is-it
+aux4 print --whereIsIt
 ```
 

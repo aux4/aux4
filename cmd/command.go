@@ -37,22 +37,26 @@ func ExecuteCommandLineWithStdIn(instruction string) (string, string, error) {
 	return executeCommand(instruction, true, true)
 }
 
-func executeCommand(instruction string, withStdOut, withStdIn bool) (string, string, error) {
-	var cmd *exec.Cmd
+func executeCommand(instruction string, withStdOut bool, withStdIn bool) (string, string, error) {
+	// isExpression := strings.Contains(instruction, "|") || strings.Contains(instruction, "&") || strings.Contains(instruction, ">") || strings.Contains(instruction, "<") || strings.Contains(instruction, "=")
 
+	var cmd *exec.Cmd
+	// if isExpression {
 	cmd = exec.Command("bash", "-c", instruction)
+	// } else {
+	// 	args := splitCommandLineIntoArgs(instruction)
+	//    cmd = exec.Command(args[0], args[1:]...)
+	// }
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	cmd.Env = os.Environ()
-
 	if withStdOut {
 		cmd.Stdout = io.MultiWriter(&stdout, os.Stdout)
-    cmd.Stderr = io.MultiWriter(&stderr, os.Stderr)
+		cmd.Stderr = io.MultiWriter(&stderr, os.Stderr)
 	} else {
 		cmd.Stdout = &stdout
-    cmd.Stderr = &stderr
+		cmd.Stderr = &stderr
 	}
 
 	if withStdIn {
@@ -97,5 +101,5 @@ func splitCommandLineIntoArgs(instruction string) []string {
 		args = append(args, unquoted)
 	}
 
-	return strings.Fields(instruction)
+	return args
 }

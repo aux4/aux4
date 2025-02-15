@@ -55,12 +55,12 @@ func Execute(env *engine.VirtualEnvironment, actions []string, params *param.Par
 		return nil
 	}
 
-	if params.Has("show-source") && len(actions) == 1 {
+	if params.Has("showSource") && len(actions) == 1 {
 		man.ShowCommandSource(command)
 		return nil
 	}
 
-	if params.Has("where-is-it") && len(actions) == 1 {
+	if params.Has("whereIsIt") && len(actions) == 1 {
 		showPathOnly := params.Has("path")
 
 		if !showPathOnly {

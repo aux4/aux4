@@ -32,10 +32,10 @@ aux4 aux4 source print
 2 log:hello world
 ```
 
-### using show-source parameter
+### using showSource parameter
 
 ```execute
-aux4 print --show-source
+aux4 print --showSource
 ```
 
 ```expect

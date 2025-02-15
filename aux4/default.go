@@ -50,7 +50,7 @@ func DefaultAux4() string {
             {
               "name": "source",
               "execute": [
-                "set:show-source=true",
+                "set:showSource=true",
                 "profile:main"
               ],
               "help": {
@@ -60,7 +60,7 @@ func DefaultAux4() string {
             {
               "name": "which",
               "execute": [
-                "set:where-is-it=true",
+                "set:whereIsIt=true",
                 "profile:main"
               ],
               "help": {

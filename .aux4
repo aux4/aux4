@@ -6,9 +6,7 @@
         {
           "name": "test",
           "execute": [
-            "ls --color=always",
-            "aux4-otp",
-            "FORCE_COLOR=1 ~/.aux4.config/packages/aux4/pkger/aux4-pkger list-packages"
+            "~/.aux4.config/packages/aux4/pkger/aux4-pkger list-packages"
           ],
           "help": {
             "text": "test color"
@@ -33,7 +31,7 @@
             "cat aux4/version.go | sed 's/${version}/${version}-local/g' > version.txt",
             "mv version.txt aux4/version.go",
             "log:building aux4 for $os $arch",
-            "aux4 build $os",
+            "go run . build $os",
             "log:installing aux4 on /usr/local/bin",
             "sudo cp bin/aux4-${os}-${arch} /usr/local/bin/aux4",
             "mv version.go.bak aux4/version.go"
