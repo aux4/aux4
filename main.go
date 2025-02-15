@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+
 	"aux4.dev/aux4/aux4"
 	"aux4.dev/aux4/cmd"
 	"aux4.dev/aux4/config"
@@ -9,11 +11,13 @@ import (
 	"aux4.dev/aux4/engine/executor"
 	"aux4.dev/aux4/engine/param"
 	"aux4.dev/aux4/output"
-	"os"
+	"github.com/fatih/color"
 )
 
 func main() {
 	cmd.AbortOnCtrlC()
+
+	color.NoColor = false
 
 	aux4Params, actions, params := param.ParseArgs(os.Args[1:])
 
@@ -34,6 +38,7 @@ func main() {
 
 	registry := engine.CreateVirtualExecutorRegistry()
 	registry.RegisterExecutor("aux4.version", &executor.Aux4VersionExecutor{})
+	registry.RegisterExecutor("aux4.autoinstall", &executor.Aux4AutoInstallExecutor{})
 
 	env, err := engine.InitializeVirtualEnvironment(library, registry)
 	if err != nil {

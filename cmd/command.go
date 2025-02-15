@@ -1,14 +1,16 @@
 package cmd
 
 import (
-	"aux4.dev/aux4/core"
-	"aux4.dev/aux4/output"
 	"bytes"
+	"io"
 	"os"
 	"os/exec"
 	"os/signal"
 	"regexp"
 	"strings"
+
+	"aux4.dev/aux4/core"
+	"aux4.dev/aux4/output"
 )
 
 var commandsAvailable = map[string]bool{}
@@ -24,30 +26,34 @@ func AbortOnCtrlC() {
 }
 
 func ExecuteCommandLine(instruction string) (string, string, error) {
-	return executeCommand(instruction, false)
+	return executeCommand(instruction, true, false)
+}
+
+func ExecuteCommandLineNoOutput(instruction string) (string, string, error) {
+	return executeCommand(instruction, false, false)
 }
 
 func ExecuteCommandLineWithStdIn(instruction string) (string, string, error) {
-	return executeCommand(instruction, true)
+	return executeCommand(instruction, true, true)
 }
 
-func executeCommand(instruction string, withStdIn bool) (string, string, error) {
-	//isExpression := strings.Contains(instruction, "|") || strings.Contains(instruction, "&") || strings.Contains(instruction, ">") || strings.Contains(instruction, "<")
-
+func executeCommand(instruction string, withStdOut, withStdIn bool) (string, string, error) {
 	var cmd *exec.Cmd
 
-	//if isExpression {
-		cmd = exec.Command("bash", "-c", instruction)
-	//} else {
-  //  args := splitCommandLineIntoArgs(instruction)
-	//	cmd = exec.Command(args[0], args[1:]...)
-	//}
+	cmd = exec.Command("bash", "-c", instruction)
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	cmd.Env = os.Environ()
+
+	if withStdOut {
+		cmd.Stdout = io.MultiWriter(&stdout, os.Stdout)
+    cmd.Stderr = io.MultiWriter(&stderr, os.Stderr)
+	} else {
+		cmd.Stdout = &stdout
+    cmd.Stderr = &stderr
+	}
 
 	if withStdIn {
 		cmd.Stdin = os.Stdin
@@ -64,15 +70,16 @@ func executeCommand(instruction string, withStdIn bool) (string, string, error) 
 		}
 		return stdout.String(), stderr.String(), core.InternalError("Error waiting the command execute", err)
 	}
+
 	return stdout.String(), stderr.String(), nil
 }
 
 func IsCommandAvailable(command string) bool {
-  if _, exists := commandsAvailable[command]; !exists {
-  	_, err := exec.LookPath(command)
-	  commandsAvailable[command] = err == nil
-  }
-  return commandsAvailable[command]
+	if _, exists := commandsAvailable[command]; !exists {
+		_, err := exec.LookPath(command)
+		commandsAvailable[command] = err == nil
+	}
+	return commandsAvailable[command]
 }
 
 func splitCommandLineIntoArgs(instruction string) []string {

@@ -25,6 +25,13 @@ func DefaultAux4() string {
           "name": "aux4",
           "commands": [
             {
+              "name": "autoinstall",
+              "private": true,
+              "help": {
+                "text": "Auto install aux4"
+              }
+            },
+            {
               "name": "version",
               "help": {
                 "text": "Display the version of aux4"
@@ -63,6 +70,25 @@ func DefaultAux4() string {
           ]
         }
       ]
+    }
+  `
+}
+
+
+func DefaultAux4Package() string {
+  return `
+    {
+      "packages": {
+        "aux4/aux4": {
+          "scope": "aux4",
+          "name": "aux4",
+          "version": "` + Version + `"
+        }
+      },
+      "dependencies": {
+      },
+      "systemDependencies": {
+      }
     }
   `
 }

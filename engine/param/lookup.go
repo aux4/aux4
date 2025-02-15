@@ -52,7 +52,7 @@ func (l ConfigLookup) Get(parameters *Parameters, command core.Command, actions 
 		args = append(args, "--name ")
 	}
 
-	stdout, _, err := cmd.ExecuteCommandLine(fmt.Sprintf("aux4-config get %s%s", strings.Join(args, " "), name))
+	stdout, _, err := cmd.ExecuteCommandLineNoOutput(fmt.Sprintf("aux4-config get %s%s", strings.Join(args, " "), name))
 	if err != nil {
 		return nil, nil
 	}
@@ -100,7 +100,7 @@ func (l EncryptedParameterLookup) Get(parameters *Parameters, command core.Comma
 		return nil, nil
 	}
 
-	stdout, _, err := cmd.ExecuteCommandLine(fmt.Sprintf("aux4-encrypt decrypt %s", encryptedParameter.(string)))
+	stdout, _, err := cmd.ExecuteCommandLineNoOutput(fmt.Sprintf("aux4-encrypt decrypt %s", encryptedParameter.(string)))
 	if err != nil {
 		return nil, core.InternalError("Error decrypting the value of '"+name+"' (it may not be encrypted)", nil)
 	}
@@ -139,7 +139,7 @@ func (l DefaultLookup) Get(parameters *Parameters, command core.Command, actions
 
 	value := *variable.Default
 	if variable.Encrypt && cmd.IsCommandAvailable("aux4-encrypt") {
-		stdout, _, err := cmd.ExecuteCommandLine(fmt.Sprintf("aux4-encrypt decrypt %s", value))
+		stdout, _, err := cmd.ExecuteCommandLineNoOutput(fmt.Sprintf("aux4-encrypt decrypt %s", value))
 		if err != nil {
 			return nil, core.InternalError("Error decrypting the value of '"+name+"' (it may not be encrypted)", nil)
 		}

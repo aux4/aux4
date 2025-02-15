@@ -79,6 +79,7 @@ type Command struct {
 	Name    string       `json:"name"`
 	Execute []string     `json:"execute"`
 	Help    *CommandHelp `json:"help"`
+  Private bool         `json:"private"`
 	Ref     CommandRef   `json:"ref"`
 }
 

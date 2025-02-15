@@ -42,7 +42,7 @@ func Execute(env *engine.VirtualEnvironment, actions []string, params *param.Par
 		return core.CommandNotFoundError(commandName)
 	}
 
-  params.Set("packageDir", command.Ref.Dir)
+	params.Set("packageDir", command.Ref.Dir)
 
 	if params.Has("help") && len(actions) == 1 {
 		json := params.JustGet("json")
@@ -70,8 +70,8 @@ func Execute(env *engine.VirtualEnvironment, actions []string, params *param.Par
 		if command.Ref.Path != "" {
 			output.Out(output.StdOut).Println(output.Gray(command.Ref.Path))
 		} else if showPathOnly {
-      return core.PathNotFoundError()
-    }
+			return core.PathNotFoundError()
+		}
 
 		return nil
 	}
@@ -164,7 +164,7 @@ func (executor *JsonCommandExecutor) Execute(env *engine.VirtualEnvironment, com
 		return err
 	}
 
-	stdout, _, err := cmd.ExecuteCommandLine(instruction)
+	stdout, _, err := cmd.ExecuteCommandLineNoOutput(instruction)
 	if err != nil {
 		return err
 	}
@@ -188,6 +188,8 @@ func (executor *EachCommandExecutor) Execute(env *engine.VirtualEnvironment, com
 	expression := strings.TrimPrefix(executor.Command, "each:")
 
 	response := params.JustGet("response")
+	ignoreErrorsParam := params.JustGet("ignoreErrors")
+  ignoreErrors := ignoreErrorsParam == "true" || ignoreErrorsParam == true
 
 	var list []any
 
@@ -217,12 +219,10 @@ func (executor *EachCommandExecutor) Execute(env *engine.VirtualEnvironment, com
 			return err
 		}
 
-		stdout, _, err := cmd.ExecuteCommandLine(instruction)
-		if err != nil {
+		_, _, err = cmd.ExecuteCommandLine(instruction)
+		if err != nil && !ignoreErrors {
 			return err
 		}
-
-		output.Out(output.StdOut).Print(stdout)
 	}
 
 	return nil
@@ -287,7 +287,7 @@ func (executor *SetCommandExecutor) Execute(env *engine.VirtualEnvironment, comm
 				return err
 			}
 
-			stdout, _, err := cmd.ExecuteCommandLine(instruction)
+			stdout, _, err := cmd.ExecuteCommandLineNoOutput(instruction)
 			if err != nil {
 				return err
 			}
@@ -355,7 +355,7 @@ func (executor *NoutCommandExecutor) Execute(env *engine.VirtualEnvironment, com
 		return err
 	}
 
-	stdout, stderr, err := cmd.ExecuteCommandLine(instruction)
+	stdout, stderr, err := cmd.ExecuteCommandLineNoOutput(instruction)
 	if err != nil {
 		output.Out(output.StdErr).Print(stderr)
 		output.Out(output.StdOut).Print(stdout)
@@ -386,10 +386,7 @@ func (executor *StdinCommandExecutor) Execute(env *engine.VirtualEnvironment, co
 		return err
 	}
 
-	output.Out(output.StdErr).Print(stderr)
-
 	params.Update("response", strings.TrimSpace(stdout))
-	output.Out(output.StdOut).Print(stdout)
 
 	return nil
 }
@@ -404,17 +401,12 @@ func (executor *CommandLineExecutor) Execute(env *engine.VirtualEnvironment, com
 		return err
 	}
 
-	stdout, stderr, err := cmd.ExecuteCommandLine(instruction)
+	stdout, _, err := cmd.ExecuteCommandLine(instruction)
 	if err != nil {
-		output.Out(output.StdErr).Print(stderr)
-		output.Out(output.StdOut).Print(stdout)
 		return err
 	}
 
-	output.Out(output.StdErr).Print(stderr)
-
 	params.Update("response", strings.TrimSpace(stdout))
-	output.Out(output.StdOut).Print(stdout)
 
 	return nil
 }

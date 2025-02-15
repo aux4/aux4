@@ -16,11 +16,18 @@ func Help(profile core.Profile, json bool, long bool) {
 		return
 	}
 
-	for i, command := range profile.Commands {
-		if i > 0 {
+  printedCommand := false
+
+	for _, command := range profile.Commands {
+    if command.Private {
+      continue
+    }
+		if printedCommand {
 			output.Out(output.StdOut).Println("")
 		}
 		HelpCommand(command, json, long)
+
+    printedCommand = true
 	}
 }
 

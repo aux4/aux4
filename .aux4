@@ -4,6 +4,17 @@
       "name": "main",
       "commands": [
         {
+          "name": "test",
+          "execute": [
+            "ls --color=always",
+            "aux4-otp",
+            "FORCE_COLOR=1 ~/.aux4.config/packages/aux4/pkger/aux4-pkger list-packages"
+          ],
+          "help": {
+            "text": "test color"
+          }
+        },
+        {
           "name": "build",
           "execute": [
             "profile:build"
