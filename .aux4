@@ -4,15 +4,6 @@
       "name": "main",
       "commands": [
         {
-          "name": "test",
-          "execute": [
-            "~/.aux4.config/packages/aux4/pkger/aux4-pkger list-packages"
-          ],
-          "help": {
-            "text": "test color"
-          }
-        },
-        {
           "name": "build",
           "execute": [
             "profile:build"
@@ -31,7 +22,7 @@
             "cat aux4/version.go | sed 's/${version}/${version}-local/g' > version.txt",
             "mv version.txt aux4/version.go",
             "log:building aux4 for $os $arch",
-            "go run . build $os",
+            "aux4 build $os",
             "log:installing aux4 on /usr/local/bin",
             "sudo cp bin/aux4-${os}-${arch} /usr/local/bin/aux4",
             "mv version.go.bak aux4/version.go"

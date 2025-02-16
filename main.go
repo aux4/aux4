@@ -48,10 +48,11 @@ func main() {
 
 	if err := executor.Execute(env, actions, &params); err != nil {
 		if aux4Err, ok := err.(core.Aux4Error); ok {
-			output.Out(output.StdErr).Println(output.Red(aux4Err))
+			if aux4Err.Message != "" {
+				output.Out(output.StdErr).Println(output.Red(aux4Err.Message))
+			}
 			os.Exit(aux4Err.ExitCode)
 		} else {
-			output.Out(output.StdErr).Println(output.Red(err))
 			os.Exit(1)
 		}
 	}

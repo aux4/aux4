@@ -38,15 +38,9 @@ func ExecuteCommandLineWithStdIn(instruction string) (string, string, error) {
 }
 
 func executeCommand(instruction string, withStdOut bool, withStdIn bool) (string, string, error) {
-	// isExpression := strings.Contains(instruction, "|") || strings.Contains(instruction, "&") || strings.Contains(instruction, ">") || strings.Contains(instruction, "<") || strings.Contains(instruction, "=")
-
 	var cmd *exec.Cmd
-	// if isExpression {
+
 	cmd = exec.Command("bash", "-c", instruction)
-	// } else {
-	// 	args := splitCommandLineIntoArgs(instruction)
-	//    cmd = exec.Command(args[0], args[1:]...)
-	// }
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -67,7 +61,6 @@ func executeCommand(instruction string, withStdOut bool, withStdIn bool) (string
 		exitError, ok := err.(*exec.ExitError)
 		if ok {
 			return stdout.String(), stderr.String(), core.Aux4Error{
-				Message:  exitError.Error(),
 				ExitCode: exitError.ExitCode(),
 				Cause:    err,
 			}
