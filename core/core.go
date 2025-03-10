@@ -41,6 +41,7 @@ type Package struct {
 	Scope        string     `json:"scope"`
 	Name         string     `json:"name"`
 	Version      string     `json:"version"`
+	License      string     `json:"license"`
 	Description  string     `json:"description"`
 	Git          string     `json:"git"`
 	Website      string     `json:"website"`

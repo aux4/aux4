@@ -1,12 +1,14 @@
 package param
 
 import (
-	"aux4.dev/aux4/cmd"
-	"aux4.dev/aux4/core"
-	"aux4.dev/aux4/output"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
+
+	"aux4.dev/aux4/cmd"
+	"aux4.dev/aux4/core"
+	"aux4.dev/aux4/output"
 
 	"github.com/manifoldco/promptui"
 	"golang.org/x/text/cases"
@@ -25,34 +27,41 @@ func ParameterLookups() []ParameterLookup {
 }
 
 type ConfigLookup struct {
+	load       bool
+	parameters map[string]interface{}
 }
 
-func (l ConfigLookup) Get(parameters *Parameters, command core.Command, actions []string, name string) (any, error) {
-	if !cmd.IsCommandAvailable("aux4-config") {
+func (l *ConfigLookup) Get(parameters *Parameters, command core.Command, actions []string, name string) (any, error) {
+	if !parameters.Has("configFile") && !parameters.Has("config") {
 		return nil, nil
+	}
+
+	if l.load {
+		value, found := l.parameters[name]
+		if !found {
+			return nil, nil
+		}
+		return value, nil
 	}
 
 	args := []string{}
 
 	if parameters.Has("configFile") {
-		configFile, err := parameters.Get(command, actions, "configFile")
-		if err != nil {
-			return nil, err
-		}
+		configFile := parameters.JustGet("configFile")
 		args = append(args, "--file "+configFile.(string))
 	}
 
 	if parameters.Has("config") {
-		config, err := parameters.Get(command, actions, "config")
-		if err != nil {
-			return nil, err
+		config  := parameters.JustGet("config")
+		configParam := config.(string)
+		if configParam != "true" {
+			args = append(args, fmt.Sprintf("--name %s", configParam))
 		}
-		args = append(args, fmt.Sprintf("--name %s/", config.(string)))
-	} else {
-		args = append(args, "--name ")
 	}
 
-	stdout, _, err := cmd.ExecuteCommandLineNoOutput(fmt.Sprintf("aux4-config get %s%s", strings.Join(args, " "), name))
+	l.load = true
+
+	stdout, _, err := cmd.ExecuteCommandLineNoOutput(fmt.Sprintf("aux4 config get %s", strings.Join(args, " ")))
 	if err != nil {
 		return nil, nil
 	}
@@ -61,7 +70,17 @@ func (l ConfigLookup) Get(parameters *Parameters, command core.Command, actions 
 		return nil, nil
 	}
 
-	return strings.TrimSpace(stdout), nil
+	jsonString := strings.TrimSpace(stdout)
+
+	var params map[string]interface{}
+	err = json.Unmarshal([]byte(jsonString), &params)
+	if err != nil {
+		return nil, nil
+	}
+
+	l.parameters = params
+
+	return params[name], nil
 }
 
 type EncryptedParameterLookup struct {
@@ -206,7 +225,7 @@ func promptText(variable core.CommandHelpVariable) (string, error) {
 	if variable.Hide || variable.Encrypt {
 		prompt = promptui.Prompt{Label: text, HideEntered: true, Mask: '*'}
 	} else {
-    prompt = promptui.Prompt{Label: text, HideEntered: true}
+		prompt = promptui.Prompt{Label: text, HideEntered: true}
 	}
 
 	text, err := prompt.Run()
