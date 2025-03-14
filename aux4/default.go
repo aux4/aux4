@@ -6,6 +6,8 @@ func DefaultAux4() string {
       "scope": "aux4",
       "name": "aux4",
       "version": "` + Version + `",
+      "description": "Command-line generator",
+      "license": "Apache-2.0",
       "profiles": [
         {
           "name": "main",

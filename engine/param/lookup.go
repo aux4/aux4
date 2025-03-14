@@ -140,7 +140,13 @@ func (l EnvironmentVariableLookup) Get(parameters *Parameters, command core.Comm
 		return nil, nil
 	}
 
-	return os.Getenv(variable.Env), nil
+  value := os.Getenv(variable.Env)
+
+  if value == "" {
+    return nil, nil
+  }
+
+  return value, nil
 }
 
 type DefaultLookup struct {

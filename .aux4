@@ -35,12 +35,11 @@
           "name": "package",
           "execute": [
             "set:version=!tail -n 1 aux4/version.go | awk -F '\"' '{print $2}'",
-            "mkdir -p package/aux4/aux4",
             "cp README.md LICENSE package",
             "go run misc/aux4-generator.go > package/.aux4",
             "cd package && aux4 aux4 pkger build .",
             "mv package/aux4_aux4_${version}.zip .",
-            "rm -rf package",
+            "rm -rf package/.aux4 package/LICENSE package/README.md",
             "aux4 aux4 pkger publish aux4_aux4_${version}.zip"
           ],
           "help": {

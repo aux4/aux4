@@ -24,4 +24,8 @@ go.work
 
 .DS_Store
 local-test/
-package/
+package/aux4/**
+package/.aux4
+package/LICENSE
+package/README.md
+**/*.zip
