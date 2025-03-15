@@ -52,7 +52,7 @@ func (l *ConfigLookup) Get(parameters *Parameters, command core.Command, actions
 	}
 
 	if parameters.Has("config") {
-		config  := parameters.JustGet("config")
+		config := parameters.JustGet("config")
 		configParam := config.(string)
 		if configParam != "true" {
 			args = append(args, fmt.Sprintf("--name %s", configParam))
@@ -115,11 +115,14 @@ func (l EncryptedParameterLookup) Get(parameters *Parameters, command core.Comma
 		}
 	}
 
-	if !cmd.IsCommandAvailable("aux4-encrypt") {
+	iv, _ := parameters.Get(command, actions, "iv")
+	secret, _ := parameters.Get(command, actions, "secret")
+
+	if iv == nil || secret == nil {
 		return nil, nil
 	}
 
-	stdout, _, err := cmd.ExecuteCommandLineNoOutput(fmt.Sprintf("aux4-encrypt decrypt %s", encryptedParameter.(string)))
+	stdout, _, err := cmd.ExecuteCommandLineNoOutput(fmt.Sprintf("aux4 encrypter decrypt --iv %s --secret %s %s", iv, secret, encryptedParameter.(string)))
 	if err != nil {
 		return nil, core.InternalError("Error decrypting the value of '"+name+"' (it may not be encrypted)", nil)
 	}
@@ -140,13 +143,13 @@ func (l EnvironmentVariableLookup) Get(parameters *Parameters, command core.Comm
 		return nil, nil
 	}
 
-  value := os.Getenv(variable.Env)
+	value := os.Getenv(variable.Env)
 
-  if value == "" {
-    return nil, nil
-  }
+	if value == "" {
+		return nil, nil
+	}
 
-  return value, nil
+	return value, nil
 }
 
 type DefaultLookup struct {
@@ -163,8 +166,12 @@ func (l DefaultLookup) Get(parameters *Parameters, command core.Command, actions
 	}
 
 	value := *variable.Default
-	if variable.Encrypt && cmd.IsCommandAvailable("aux4-encrypt") {
-		stdout, _, err := cmd.ExecuteCommandLineNoOutput(fmt.Sprintf("aux4-encrypt decrypt %s", value))
+
+	iv, _ := parameters.Get(command, actions, "iv")
+	secret, _ := parameters.Get(command, actions, "secret")
+
+	if variable.Encrypt && iv != nil && secret != nil {
+		stdout, _, err := cmd.ExecuteCommandLineNoOutput(fmt.Sprintf("aux4 encrypter decrypt --iv %s --secret %s %s", iv, secret, value))
 		if err != nil {
 			return nil, core.InternalError("Error decrypting the value of '"+name+"' (it may not be encrypted)", nil)
 		}
