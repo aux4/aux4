@@ -6,8 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"regexp"
-	"strings"
 
 	"aux4.dev/aux4/core"
 	"aux4.dev/aux4/output"
@@ -71,28 +69,3 @@ func executeCommand(instruction string, withStdOut bool, withStdIn bool) (string
 	return stdout.String(), stderr.String(), nil
 }
 
-func IsCommandAvailable(command string) bool {
-	if _, exists := commandsAvailable[command]; !exists {
-		_, err := exec.LookPath(command)
-		commandsAvailable[command] = err == nil
-	}
-	return commandsAvailable[command]
-}
-
-func splitCommandLineIntoArgs(instruction string) []string {
-	argsRegex := regexp.MustCompile(`[^\s"']+|"([^"]*)"|'([^']*)'`)
-	instructionArgs := argsRegex.FindAllString(instruction, -1)
-
-	args := []string{}
-
-	for _, arg := range instructionArgs {
-		unquoted := arg
-		if strings.HasPrefix(arg, "\"") || strings.HasPrefix(arg, "'") {
-			unquoted = arg[1 : len(arg)-1]
-		}
-
-		args = append(args, unquoted)
-	}
-
-	return args
-}
