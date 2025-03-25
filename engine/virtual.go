@@ -60,17 +60,17 @@ type VirtualEnvironment struct {
 }
 
 func (env *VirtualEnvironment) ListCommandsAvailable(profileName string) []string {
-  profile := env.profiles[profileName]
-  if profile == nil {
-    return []string{}
-  }
+	profile := env.profiles[profileName]
+	if profile == nil {
+		return []string{}
+	}
 
-  commands := make([]string, 0)
-  for commandName := range profile.Commands {
-    commands = append(commands, commandName)
-  }
+	commands := make([]string, 0)
+	for commandName := range profile.Commands {
+		commands = append(commands, commandName)
+	}
 
-  return commands
+	return commands
 }
 
 func (env *VirtualEnvironment) GetProfile(name string) *VirtualProfile {
@@ -96,12 +96,12 @@ func (env *VirtualEnvironment) Save(path string) error {
 		aux4Package.Profiles = append(aux4Package.Profiles, profile)
 	}
 
-  err := io.WriteJsonFile(path, &aux4Package)
-  if err != nil {
-    return core.InternalError("Error saving virtual environment", err)
-  }
+	err := io.WriteJsonFile(path, &aux4Package)
+	if err != nil {
+		return core.InternalError("Error saving virtual environment", err)
+	}
 
-  return nil
+	return nil
 }
 
 func InitializeVirtualEnvironment(library *Library, registry *VirtualExecutorRegisty) (*VirtualEnvironment, error) {
@@ -142,13 +142,16 @@ func loadPackage(env *VirtualEnvironment, pack *core.Package) error {
 				return core.InternalError(strings.Join([]string{"Command name is required in", profile.Name, "profile. Package:", pack.Name}, " "), nil)
 			}
 
-			_, exists := virtualProfile.Commands[command.Name]
+			existingCommand, exists := virtualProfile.Commands[command.Name]
 			if exists {
-				continue
+        packageName := fmt.Sprintf("%s/%s@", pack.Scope, pack.Name)
+        if !strings.HasPrefix(existingCommand.Ref.Package, packageName) {
+			    continue
+        }
 			}
 
 			if command.Ref.Path == "" {
-        packageName := ".aux4"
+				packageName := ".aux4"
 				if pack.Scope != "" && pack.Name != "" {
 					packageName = fmt.Sprintf("%s/%s", pack.Scope, pack.Name)
 					if pack.Version != "" {

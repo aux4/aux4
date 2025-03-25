@@ -24,7 +24,7 @@
             "log:building aux4 for $os $arch",
             "aux4 build $os",
             "log:installing aux4 on /usr/local/bin",
-            "sudo cp bin/aux4-${os}-${arch} /usr/local/bin/aux4",
+            "sudo cp package/dist/${os}/${arch}/aux4 /usr/local/bin/aux4",
             "mv version.go.bak aux4/version.go"
           ],
           "help": {
@@ -37,7 +37,7 @@
             "set:version=!tail -n 1 aux4/version.go | awk -F '\"' '{print $2}'",
             "cp README.md LICENSE package",
             "go run misc/aux4-generator.go > package/.aux4",
-            "cd package && aux4 aux4 pkger build .",
+            "cd package && aux4 aux4 pkger build --out out .",
             "mv package/aux4_aux4_${version}.zip .",
             "rm -rf package/.aux4 package/LICENSE package/README.md",
             "aux4 aux4 pkger publish aux4_aux4_${version}.zip"
@@ -61,7 +61,6 @@
             "git commit -am 'release: $version'",
             "git tag -a v${version} -m 'release: v${version}'",
             "git push --follow-tags",
-            "chmod +x bin/*",
             "gh release create v${version} bin/*",
             "aux4 package"
           ],
@@ -88,8 +87,8 @@
         {
           "name": "darwin",
           "execute": [
-            "GOOS=darwin GOARCH=amd64 go build -o bin/aux4-darwin-amd64 .",
-            "GOOS=darwin GOARCH=arm64 go build -o bin/aux4-darwin-arm64 ."
+            "GOOS=darwin GOARCH=amd64 go build -o package/dist/darwin/amd64/aux4 .",
+            "GOOS=darwin GOARCH=arm64 go build -o package/dist/darwin/arm64/aux4 ."
           ],
           "help": {
             "text": "build the app for darwin"
@@ -98,9 +97,9 @@
         {
           "name": "linux",
           "execute": [
-            "GOOS=linux GOARCH=amd64 go build -o bin/aux4-linux-amd64 .",
-            "GOOS=linux GOARCH=arm64 go build -o bin/aux4-linux-arm64 .",
-            "GOOS=linux GOARCH=386 go build -o bin/aux4-linux-386 ."
+            "GOOS=linux GOARCH=amd64 go build -o package/dist/linux/amd64/aux4 .",
+            "GOOS=linux GOARCH=arm64 go build -o package/dist/linux/arm64/aux4 .",
+            "GOOS=linux GOARCH=386 go build -o package/dist/linux/386/aux4 ."
           ],
           "help": {
             "text": "build the app for linux"
@@ -109,9 +108,9 @@
         {
           "name": "windows",
           "execute": [
-            "GOOS=windows GOARCH=amd64 go build -o bin/aux4-windows-amd64.exe .",
-            "GOOS=windows GOARCH=arm64 go build -o bin/aux4-windows-arm64.exe .",
-            "GOOS=windows GOARCH=386 go build -o bin/aux4-windows-386.exe ."
+            "GOOS=windows GOARCH=amd64 go build -o package/dist/windows/amd64/aux4.exe .",
+            "GOOS=windows GOARCH=arm64 go build -o package/dist/windows/arm64/aux4.exe .",
+            "GOOS=windows GOARCH=386 go build -o package/dist/windows/386/aux4.exe ."
           ],
           "help": {
             "text": "build the app for windows"
@@ -122,7 +121,8 @@
           "execute": [
             "aux4 build darwin",
             "aux4 build linux",
-            "aux4 build windows"
+            "aux4 build windows",
+            "chmod -R +x package/dist/*"
           ],
           "help": {
             "text": "build the app for all platforms"

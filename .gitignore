@@ -28,4 +28,5 @@ package/aux4/**
 package/.aux4
 package/LICENSE
 package/README.md
+package/dist
 **/*.zip
