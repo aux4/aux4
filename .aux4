@@ -61,8 +61,8 @@
             "git commit -am 'release: $version'",
             "git tag -a v${version} -m 'release: v${version}'",
             "git push --follow-tags",
-            "gh release create v${version} bin/*",
-            "aux4 package"
+            "aux4 package",
+            "gh release create v${version} out/*"
           ],
           "help": {
             "text": "release a new version",
