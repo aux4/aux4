@@ -23,9 +23,10 @@
             "mv version.txt aux4/version.go",
             "log:building aux4 for $os $arch",
             "aux4 build $os",
-            "log:installing aux4 on /usr/local/bin",
-            "sudo cp package/dist/${os}/${arch}/aux4 /usr/local/bin/aux4",
-            "mv version.go.bak aux4/version.go"
+            "log:installing aux4 on ~/.aux4.config/packages/aux4/aux4",
+            "cp -f package/dist/${os}/${arch}/aux4 ~/.aux4.config/packages/aux4/aux4/aux4",
+            "mv version.go.bak aux4/version.go",
+            "aux4 aux4 autoinstall"
           ],
           "help": {
             "text": "install the app locally"

@@ -24,6 +24,7 @@ It shows the source code of the command.
 }
 ```
 
+Execute the command to see the source code.
 
 ```bash
 > aux4 aux4 source hello

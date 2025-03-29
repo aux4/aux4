@@ -90,6 +90,11 @@ func HelpCommand(command core.Command, json bool, long bool) {
 			variablesHelp.WriteString(output.Cyan("--"))
 			variablesHelp.WriteString(output.Cyan(variable.Name))
 
+      if variable.Arg {
+        variablesHelp.WriteString(" ")
+        variablesHelp.WriteString(output.Magenta("<arg>"))
+      }
+
 			if long {
 				if variable.Text != "" {
 					variablesHelp.WriteString("\n")

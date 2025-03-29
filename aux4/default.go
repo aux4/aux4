@@ -8,6 +8,8 @@ func DefaultAux4() string {
       "version": "` + Version + `",
       "description": "Command-line generator",
       "license": "Apache-2.0",
+      "git": "https://github.com/aux4/aux4",
+      "website": "https://aux4.io",
       "profiles": [
         {
           "name": "main",
