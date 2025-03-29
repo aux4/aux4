@@ -35,6 +35,7 @@
         {
           "name": "package",
           "execute": [
+            "rm -f out/*",
             "set:version=!tail -n 1 aux4/version.go | awk -F '\"' '{print $2}'",
             "cp README.md LICENSE package",
             "go run misc/aux4-generator.go > package/.aux4",
