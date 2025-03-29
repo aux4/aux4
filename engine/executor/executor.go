@@ -1,18 +1,21 @@
 package executor
 
 import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"reflect"
+	"strings"
+
 	"aux4.dev/aux4/cmd"
+	"aux4.dev/aux4/config"
 	"aux4.dev/aux4/core"
 	"aux4.dev/aux4/engine"
 	"aux4.dev/aux4/engine/param"
 	"aux4.dev/aux4/man"
 	"aux4.dev/aux4/output"
-	"encoding/json"
-	"fmt"
-	"os"
-	"os/exec"
-	"reflect"
-	"strings"
 
 	"github.com/manifoldco/promptui"
 )
@@ -41,8 +44,6 @@ func Execute(env *engine.VirtualEnvironment, actions []string, params *param.Par
 	if !exists {
 		return core.CommandNotFoundError(commandName)
 	}
-
-	params.Set("packageDir", command.Ref.Dir)
 
 	if params.Has("help") && len(actions) == 1 {
 		json := params.JustGet("json")
@@ -75,6 +76,19 @@ func Execute(env *engine.VirtualEnvironment, actions []string, params *param.Par
 
 		return nil
 	}
+
+	params.Set("aux4HomeDir", config.GetAux4HomeDirectory())
+	params.Set("packageDir", command.Ref.Dir)
+
+	if strings.Contains(command.Ref.Package, "/") && strings.Contains(command.Ref.Package, "@") {
+    packageParts := strings.Split(command.Ref.Package, "@")
+    packageNameParts := strings.Split(packageParts[0], "/")
+    scope := packageNameParts[0]
+    name := packageNameParts[1]
+		params.Set("configDir", filepath.Join(config.GetAux4HomeDirectory(), "config", scope, name))
+	} else {
+		params.Set("configDir", filepath.Join(config.GetAux4HomeDirectory(), "config"))
+  }
 
 	for _, commandLine := range command.Execute {
 		executor := commandExecutorFactory(commandLine)
@@ -189,7 +203,7 @@ func (executor *EachCommandExecutor) Execute(env *engine.VirtualEnvironment, com
 
 	response := params.JustGet("response")
 	ignoreErrorsParam := params.JustGet("ignoreErrors")
-  ignoreErrors := ignoreErrorsParam == "true" || ignoreErrorsParam == true
+	ignoreErrors := ignoreErrorsParam == "true" || ignoreErrorsParam == true
 
 	var list []any
 

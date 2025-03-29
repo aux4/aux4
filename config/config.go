@@ -6,16 +6,16 @@ import (
 	"path/filepath"
 )
 
-func GetConfigDirectory() string {
+func GetAux4HomeDirectory() string {
 	return filepath.Join(os.Getenv("HOME"), ".aux4.config")
 }
 
 func GetConfigPath(path string) string {
-	return filepath.Join(GetConfigDirectory(), path)
+	return filepath.Join(GetAux4HomeDirectory(), path)
 }
 
 func GetAux4GlobalPath() string {
-	return filepath.Join(GetConfigDirectory(), "global.aux4")
+	return filepath.Join(GetAux4HomeDirectory(), "global.aux4")
 }
 
 func ListAux4Files(path string, aux4Params param.Aux4Parameters) []string {
