@@ -30,3 +30,4 @@ package/LICENSE
 package/README.md
 package/dist
 **/*.zip
+out/
