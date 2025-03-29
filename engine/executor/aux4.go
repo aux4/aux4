@@ -112,7 +112,7 @@ func (executor *Aux4VersionExecutor) Execute(env *engine.VirtualEnvironment, com
 
 	output.Out(output.StdOut).Println()
 	output.Out(output.StdOut).Println("  ", output.Cyan("aux4"), output.Yellow(aux4.Version))
-	output.Out(output.StdOut).Println("  ", output.Gray(year, " aux4. aux4 is created and maintained by aux4 community."))
+	output.Out(output.StdOut).Println("  ", output.Gray(year, " aux4. aux4 is created and maintained by the aux4 community."))
 	output.Out(output.StdOut).Println("  ", output.Gray("https://aux4.io"))
 	output.Out(output.StdOut).Println()
 
