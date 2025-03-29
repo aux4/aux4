@@ -45,7 +45,7 @@ func HelpCommand(command core.Command, json bool, long bool) {
 	if long {
 		description := ""
 		if command.Help != nil {
-			description = breakLines(command.Help.Text, lineLength, "")
+			description = breakLines(periodEnd(command.Help.Text), lineLength, "")
 		}
 
 		if description != "" {
@@ -55,7 +55,7 @@ func HelpCommand(command core.Command, json bool, long bool) {
 	} else {
 		description := ""
 		if command.Help != nil {
-			description = command.Help.Text
+			description = periodEnd(command.Help.Text)
 			if len(description) > 100 {
 				if strings.Index(description, ".") > -1 {
 					description = description[:strings.Index(description, ".")+1]
@@ -93,7 +93,7 @@ func HelpCommand(command core.Command, json bool, long bool) {
 			if long {
 				if variable.Text != "" {
 					variablesHelp.WriteString("\n")
-					variablesHelp.WriteString(breakLines(variable.Text, lineLength, spacing+spacing))
+					variablesHelp.WriteString(breakLines(periodEnd(variable.Text), lineLength, spacing+spacing))
 				}
 
 				if variable.Options != nil && len(variable.Options) > 0 {
@@ -156,18 +156,21 @@ func helpCommandJson(command core.Command) {
 	}
 
 	if command.Help != nil {
-		man.Text = command.Help.Text
+		man.Text = periodEnd(command.Help.Text)
 
 		if command.Help.Variables != nil && len(command.Help.Variables) > 0 {
 			for _, v := range command.Help.Variables {
 				variable := ManParameter{
 					Name:    v.Name,
-					Text:    v.Text,
-					Default: *v.Default,
+					Text:    periodEnd(v.Text),
 					Env:     v.Env,
 					Arg:     v.Arg,
 					Options: v.Options,
 				}
+
+        if v.Default != nil {
+          variable.Default = *v.Default
+        }
 
 				man.Parameters = append(man.Parameters, variable)
 			}
@@ -180,16 +183,6 @@ func helpCommandJson(command core.Command) {
 	}
 
 	output.Out(output.StdOut).Print(string(value))
-}
-
-func maxCommandNameLength(commandNames []string) int {
-	max := 0
-	for _, commandName := range commandNames {
-		if len(commandName) > max {
-			max = len(commandName)
-		}
-	}
-	return max
 }
 
 func breakLines(text string, maxLineLength int, spacing string) string {
@@ -246,6 +239,18 @@ func breakLines(text string, maxLineLength int, spacing string) string {
 	}
 
 	return newText.String()
+}
+
+func periodEnd(text string) string {
+  if text == "" {
+    return ""
+  }
+
+  if text[len(text)-1] == '.' {
+    return text
+  }
+
+  return text + "."
 }
 
 type Man struct {
