@@ -38,9 +38,8 @@
             "cp README.md LICENSE package",
             "go run misc/aux4-generator.go > package/.aux4",
             "cd package && aux4 aux4 pkger build --out out .",
-            "mv package/aux4_aux4_${version}.zip .",
             "rm -rf package/.aux4 package/LICENSE package/README.md",
-            "aux4 aux4 pkger publish aux4_aux4_${version}.zip"
+            "aux4 aux4 pkger publish package/out/aux4_aux4_${version}.zip"
           ],
           "help": {
             "text": "package the app"
