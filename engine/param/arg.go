@@ -1,12 +1,14 @@
 package param
 
 import (
-  "aux4.dev/aux4/core"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"aux4.dev/aux4/core"
 
 	"github.com/yalp/jsonpath"
 )
@@ -264,6 +266,17 @@ func InjectParameters(command core.Command, instruction string, actions []string
 		if value == nil {
 			return match
 		}
+
+    typeOfValue := reflect.TypeOf(value)
+    if typeOfValue.Kind() != reflect.String { 
+      jsonValue, err := json.Marshal(value)
+      if err != nil {
+        return match
+      }
+
+      value = string(jsonValue)
+    }
+
 		return fmt.Sprintf("%v", value)
 	}), nil
 }

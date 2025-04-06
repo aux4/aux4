@@ -52,7 +52,28 @@ func Execute(env *engine.VirtualEnvironment, actions []string, params *param.Par
 		help := params.JustGet("help")
 		isHelp := help == true || help == "true"
 
-		man.HelpCommand(command, isJson, isHelp)
+		man.HelpCommand(command, isJson, isHelp, "")
+
+		if command.Execute != nil {
+			for _, execute := range command.Execute {
+				if strings.HasPrefix(execute, "profile:") {
+					rawProfileName := strings.TrimPrefix(execute, "profile:")
+          profileName, err := param.InjectParameters(command, rawProfileName, actions, params)
+          if err != nil {
+            return err
+          }
+          
+					profile := env.GetProfile(profileName)
+					if profile != nil {
+						for _, profileCommand := range profile.CommandsOrdered {
+							output.Out(output.StdOut).Println("")
+							man.HelpCommand(profile.Commands[profileCommand], isJson, isHelp, "  ")
+						}
+					}
+				}
+			}
+		}
+
 		return nil
 	}
 
@@ -81,14 +102,14 @@ func Execute(env *engine.VirtualEnvironment, actions []string, params *param.Par
 	params.Set("packageDir", command.Ref.Dir)
 
 	if strings.Contains(command.Ref.Package, "/") && strings.Contains(command.Ref.Package, "@") {
-    packageParts := strings.Split(command.Ref.Package, "@")
-    packageNameParts := strings.Split(packageParts[0], "/")
-    scope := packageNameParts[0]
-    name := packageNameParts[1]
+		packageParts := strings.Split(command.Ref.Package, "@")
+		packageNameParts := strings.Split(packageParts[0], "/")
+		scope := packageNameParts[0]
+		name := packageNameParts[1]
 		params.Set("configDir", filepath.Join(config.GetAux4HomeDirectory(), "config", scope, name))
 	} else {
 		params.Set("configDir", filepath.Join(config.GetAux4HomeDirectory(), "config"))
-  }
+	}
 
 	for _, commandLine := range command.Execute {
 		executor := commandExecutorFactory(commandLine)

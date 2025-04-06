@@ -25,13 +25,13 @@ func Help(profile core.Profile, json bool, long bool) {
 		if printedCommand {
 			output.Out(output.StdOut).Println("")
 		}
-		HelpCommand(command, json, long)
+		HelpCommand(command, json, long, " ")
 
     printedCommand = true
 	}
 }
 
-func HelpCommand(command core.Command, json bool, long bool) {
+func HelpCommand(command core.Command, json bool, long bool, leftPadding string) {
 	if json {
 		helpCommandJson(command)
 		return
@@ -40,7 +40,7 @@ func HelpCommand(command core.Command, json bool, long bool) {
 	outputHelp := strings.Builder{}
 	commandName := command.Name
 
-	outputHelp.WriteString(output.Yellow(output.Bold(commandName)))
+	outputHelp.WriteString(output.Yellow(leftPadding, output.Bold(commandName)))
 
 	if long {
 		description := ""
@@ -50,6 +50,7 @@ func HelpCommand(command core.Command, json bool, long bool) {
 
 		if description != "" {
 			outputHelp.WriteString("\n")
+			outputHelp.WriteString(leftPadding)
 			outputHelp.WriteString(description)
 		}
 	} else {
@@ -66,6 +67,7 @@ func HelpCommand(command core.Command, json bool, long bool) {
 			}
 
 			outputHelp.WriteString("\n")
+			outputHelp.WriteString(leftPadding)
 			outputHelp.WriteString(description)
 		}
 	}
@@ -86,6 +88,7 @@ func HelpCommand(command core.Command, json bool, long bool) {
 				variablesHelp.WriteString("\n")
 			}
 
+			variablesHelp.WriteString(leftPadding)
 			variablesHelp.WriteString(spacing)
 			variablesHelp.WriteString(output.Cyan("--"))
 			variablesHelp.WriteString(output.Cyan(variable.Name))
@@ -98,11 +101,13 @@ func HelpCommand(command core.Command, json bool, long bool) {
 			if long {
 				if variable.Text != "" {
 					variablesHelp.WriteString("\n")
+					variablesHelp.WriteString(leftPadding)
 					variablesHelp.WriteString(breakLines(periodEnd(variable.Text), lineLength, spacing+spacing))
 				}
 
 				if variable.Options != nil && len(variable.Options) > 0 {
 					variablesHelp.WriteString("\n\n")
+					variablesHelp.WriteString(leftPadding)
 					variablesHelp.WriteString(spacing)
 					variablesHelp.WriteString(spacing)
 					variablesHelp.WriteString(output.Bold("Options:"))
@@ -112,6 +117,7 @@ func HelpCommand(command core.Command, json bool, long bool) {
 						if i > 0 {
 							variablesHelp.WriteString("\n")
 						}
+						variablesHelp.WriteString(leftPadding)
 						variablesHelp.WriteString(spacing)
 						variablesHelp.WriteString(spacing)
 						variablesHelp.WriteString("* ")
@@ -121,6 +127,7 @@ func HelpCommand(command core.Command, json bool, long bool) {
 
 				if variable.Default != nil {
 					variablesHelp.WriteString("\n\n")
+					variablesHelp.WriteString(leftPadding)
 					variablesHelp.WriteString(spacing)
 					variablesHelp.WriteString(spacing)
 					variablesHelp.WriteString(output.Bold("Default: "))
@@ -129,6 +136,7 @@ func HelpCommand(command core.Command, json bool, long bool) {
 
 				if variable.Env != "" {
 					variablesHelp.WriteString("\n\n")
+					variablesHelp.WriteString(leftPadding)
 					variablesHelp.WriteString(spacing)
 					variablesHelp.WriteString(spacing)
 					variablesHelp.WriteString(output.Bold("Environment variable: "))
