@@ -57,7 +57,7 @@ aux4 show --help
 
 ```expect
 show
-print show
+print show.
 ```
 
 ## Using man command
@@ -91,5 +91,5 @@ aux4 aux4 man show
 
 ```expect
 show
-print show
+print show.
 ```

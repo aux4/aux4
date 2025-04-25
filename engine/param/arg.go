@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"aux4.dev/aux4/core"
 
@@ -38,46 +39,46 @@ func ParseArgs(args []string) (Aux4Parameters, []string, Parameters) {
 				params[name] = make([]any, 0)
 			}
 			params[name] = append(params[name], value)
-    } else if strings.HasPrefix(arg, "-") {
-      name := arg[1:]
-      value := ""
+		} else if strings.HasPrefix(arg, "-") {
+			name := arg[1:]
+			value := ""
 
-      if strings.Contains(name, "=") {
-        parts := strings.Split(name, "=")
-        name = parts[0]
-        value = parts[1]
-      } else if index+1 >= len(args) || strings.HasPrefix(args[index+1], "-") {
-        value = "true"
-      } else {
-        value = args[index+1]
-        index++
-      }
+			if strings.Contains(name, "=") {
+				parts := strings.Split(name, "=")
+				name = parts[0]
+				value = parts[1]
+			} else if index+1 >= len(args) || strings.HasPrefix(args[index+1], "-") {
+				value = "true"
+			} else {
+				value = args[index+1]
+				index++
+			}
 
-      aux4Params[name] = value
+			aux4Params[name] = value
 		} else {
 			actions = append(actions, arg)
 		}
 	}
 
-  return Aux4Parameters{ params: aux4Params }, actions, Parameters{params: params, lookups: ParameterLookups()}
+	return Aux4Parameters{params: aux4Params}, actions, Parameters{params: params, lookups: ParameterLookups()}
 }
 
 type ParameterLookup interface {
 	Get(parameters *Parameters, command core.Command, actions []string, name string) (any, error)
 }
 
-type Aux4Parameters struct{
-  params map[string]string
+type Aux4Parameters struct {
+	params map[string]string
 }
 
 func (params *Aux4Parameters) Local() bool {
-  value, ok := params.params["local"]
-  return ok && value == "true"
+	value, ok := params.params["local"]
+	return ok && value == "true"
 }
 
 func (params *Aux4Parameters) NoPackages() bool {
-  value, ok := params.params["no-packages"]
-  return ok && value == "true"
+	value, ok := params.params["no-packages"]
+	return ok && value == "true"
 }
 
 type Parameters struct {
@@ -116,10 +117,10 @@ func (p *Parameters) JustGet(name string) any {
 
 func (p *Parameters) Get(command core.Command, actions []string, name string) (any, error) {
 	if p.params[name] != nil {
-    variable, exists := command.Help.GetVariable(name)
-    if !exists || !variable.Encrypt {
-      return p.params[name][(len(p.params[name]) - 1)], nil
-    }
+		variable, exists := command.Help.GetVariable(name)
+		if !exists || !variable.Encrypt {
+			return p.params[name][(len(p.params[name]) - 1)], nil
+		}
 	}
 
 	value := any(nil)
@@ -240,43 +241,160 @@ func (p *Parameters) String() string {
 }
 
 func InjectParameters(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
-	const variableRegex = "\\$([a-zA-Z0-9]+)|\\$\\{([^}\\s]+)\\}"
+	const variableRegex = "\\$([a-zA-Z0-9]+)|\\$\\{([^}\\s]+)\\}|value\\(([^)]+)\\)|values\\(([^)]+)\\)|param\\(([^)]+)\\)|params\\(([^)]+)\\)"
 	expr := regexp.MustCompile(variableRegex)
 	matches := expr.FindAllSubmatch([]byte(instruction), -1)
 
 	variables := map[string]any{}
 	for _, match := range matches {
 		variableExpression := string(match[0])
-		variablePath := string(match[1])
+		var expressionValue string
+		var err error
 
-		if variablePath == "" {
-			variablePath = string(match[2])
+		if strings.HasPrefix(variableExpression, "${") {
+			variablePath := string(match[0])
+			expressionValue, err = getVariableValueAsString(command, actions, params, variablePath, false)
+			if err != nil {
+				return "", err
+			}
+		} else if strings.HasPrefix(variableExpression, "$") {
+			variablePath := string(match[1])
+			expressionValue, err = getVariableValueAsString(command, actions, params, variablePath, false)
+			if err != nil {
+				return "", err
+			}
+		} else if strings.HasPrefix(variableExpression, "value(") {
+			variablePath := string(match[3])
+			value, err := getVariableValueAsString(command, actions, params, variablePath, true)
+			if err != nil {
+				return "", err
+			}
+
+			expressionValue = fmt.Sprintf("'%s'", value)
+		} else if strings.HasPrefix(variableExpression, "values(") {
+			expressionValue = ""
+
+			variableList := strings.Split(string(match[4]), ",")
+			for i := 0; i < len(variableList); i++ {
+				variablePath := strings.TrimSpace(variableList[i])
+				variableValue, err := getVariableValueAsString(command, actions, params, variablePath, true)
+				if err != nil {
+					return "", err
+				}
+
+				if i > 0 {
+					expressionValue += " "
+				}
+
+				expressionValue += fmt.Sprintf("'%s'", variableValue)
+			}
+		} else if strings.HasPrefix(variableExpression, "param(") {
+			variablePath := string(match[5])
+			value, err := getVariableValueAsString(command, actions, params, variablePath, true)
+			if err != nil {
+				return "", err
+			}
+
+			if value != "" {
+        paramName := standardizeParameterName(variablePath)
+				expressionValue = fmt.Sprintf("--%s '%s'", paramName, value)
+			}
+		} else if strings.HasPrefix(variableExpression, "params(") {
+			expressionValue = ""
+
+			variableList := strings.Split(string(match[6]), ",")
+			for i := 0; i < len(variableList); i++ {
+				variablePath := strings.TrimSpace(variableList[i])
+				variableValue, err := getVariableValueAsString(command, actions, params, variablePath, true)
+				if err != nil {
+					return "", err
+				}
+
+				if variableValue == "" {
+					continue
+				}
+
+				if i > 0 {
+					expressionValue += " "
+				}
+
+        paramName := standardizeParameterName(variablePath)
+				expressionValue += fmt.Sprintf("--%s '%s'", paramName, variableValue)
+			}
 		}
 
-		value, err := params.Expr(command, actions, variablePath)
-		if err != nil {
-			return "", err
-		}
-
-		variables[variableExpression] = value
+		variables[variableExpression] = expressionValue
 	}
 
 	return expr.ReplaceAllStringFunc(instruction, func(match string) string {
 		value := variables[match]
 		if value == nil {
-			return match
+			return ""
 		}
-
-    typeOfValue := reflect.TypeOf(value)
-    if typeOfValue.Kind() != reflect.String { 
-      jsonValue, err := json.Marshal(value)
-      if err != nil {
-        return match
-      }
-
-      value = string(jsonValue)
-    }
 
 		return fmt.Sprintf("%v", value)
 	}), nil
 }
+
+func getVariableValueAsString(command core.Command, actions []string, params *Parameters, variableName string, escape bool) (string, error) {
+	value, err := params.Expr(command, actions, variableName)
+	if err != nil {
+		return "", err
+	}
+
+	return valueToString(value, escape), nil
+}
+
+func valueToString(value any, escape bool) string {
+	if value == nil {
+		return ""
+	}
+
+	typeOfValue := reflect.TypeOf(value)
+	if typeOfValue.Kind() != reflect.String {
+		jsonValue, err := json.Marshal(value)
+		if err != nil {
+			value = fmt.Sprintf("%v", value)
+		} else {
+			value = string(jsonValue)
+		}
+	}
+
+	if escape {
+		value = escapeValue(value)
+	}
+	return fmt.Sprintf("%v", value)
+}
+
+func escapeValue(value any) string {
+	if value == nil {
+		return ""
+	}
+	return strings.ReplaceAll(value.(string), "'", "'\\''")
+}
+
+func standardizeParameterName(name string) string {
+  if !strings.Contains(name, ".") {
+    return name
+  }
+
+  var result strings.Builder
+  upperNext := false
+
+  for _, char := range name {
+    if char == '.' {
+      upperNext = true
+      continue
+    }
+
+    if upperNext {
+      result.WriteRune(unicode.ToUpper(char))
+      upperNext = false
+    } else {
+      result.WriteRune(char)
+    }
+  }
+
+  return result.String()
+}
+
