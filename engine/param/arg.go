@@ -258,34 +258,62 @@ func (p *Parameters) String() string {
 }
 
 func InjectParameters(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
-	// Pre-resolve nested ${...} variable expressions (innermost first)
-		innerVarRe := regexp.MustCompile(`\$\{([^{}]+)\}`)
-		var innerErr error
-		for {
-			changed := false
-			newInst := innerVarRe.ReplaceAllStringFunc(instruction, func(fullMatch string) string {
-				if innerErr != nil {
-					return fullMatch
-				}
-				val, err := getVariableValueAsString(command, actions, params, fullMatch, false)
-				if err != nil {
-					if strings.Contains(err.Error(), "Variable not found") {
-						return fullMatch
-					}
-					innerErr = err
-					return fullMatch
-				}
-				changed = true
-				return val
-			})
-			if innerErr != nil {
-				return "", innerErr
-			}
-			if !changed {
-				break
-			}
-			instruction = newInst
-		}
+   // Pre-resolve nested variables: bare ($name) first, then braced (${expr}).
+   var innerErr error
+   // Step 1: resolve bare variables ($foo)
+   bareRe := regexp.MustCompile(`\$[A-Za-z0-9]+`)
+   for {
+       changed := false
+       newInst := bareRe.ReplaceAllStringFunc(instruction, func(fullMatch string) string {
+           if innerErr != nil {
+               return fullMatch
+           }
+           val, err := getVariableValueAsString(command, actions, params, fullMatch, false)
+           if err != nil {
+               if strings.Contains(err.Error(), "Variable not found") {
+                   return fullMatch
+               }
+               innerErr = err
+               return fullMatch
+           }
+           changed = true
+           return val
+       })
+       if innerErr != nil {
+           return "", innerErr
+       }
+       if !changed {
+           break
+       }
+       instruction = newInst
+   }
+   // Step 2: resolve braced variables (${expr})
+   braceRe := regexp.MustCompile(`\$\{([^{}]+)\}`)
+   for {
+       changed := false
+       newInst := braceRe.ReplaceAllStringFunc(instruction, func(fullMatch string) string {
+           if innerErr != nil {
+               return fullMatch
+           }
+           val, err := getVariableValueAsString(command, actions, params, fullMatch, false)
+           if err != nil {
+               if strings.Contains(err.Error(), "Variable not found") {
+                   return fullMatch
+               }
+               innerErr = err
+               return fullMatch
+           }
+           changed = true
+           return val
+       })
+       if innerErr != nil {
+           return "", innerErr
+       }
+       if !changed {
+           break
+       }
+       instruction = newInst
+   }
 	const variableRegex = "\\$([a-zA-Z0-9]+)|\\$\\{([^}\\s]+)\\}|value\\(([^)]+)\\)|values\\(([^)]+)\\)|param\\(([^)]+)\\)|params\\(([^)]+)\\)"
 	expr := regexp.MustCompile(variableRegex)
 	matches := expr.FindAllSubmatch([]byte(instruction), -1)
