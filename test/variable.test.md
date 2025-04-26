@@ -480,7 +480,8 @@ aux4 print --value=1 --value=2 --value=3
           "name": "print",
           "execute": [
             "json:cat data.json",
-            "log:${response.person[name]}"
+            "set:field=name",
+            "log:${response.person[${field}]}"
           ]
         }
       ]

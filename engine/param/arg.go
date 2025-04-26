@@ -149,10 +149,11 @@ func (p *Parameters) GetMultiple(command core.Command, actions []string, name st
 }
 
 func (p *Parameters) Expr(command core.Command, actions []string, originalExpression string) (any, error) {
-	var name string
-	var value any
-	index := -1
-	jsonExpr := ""
+   var name string
+   var value any
+   index := -1
+   var key string
+   jsonExpr := ""
 
 	var expression = strings.TrimSpace(originalExpression)
 
@@ -169,12 +170,16 @@ func (p *Parameters) Expr(command core.Command, actions []string, originalExpres
 		name = parts[0]
 		jsonExpr = strings.Join(parts[1:], ".")
 
-		if strings.Contains(name, "[") {
-			originalName := name
-			name = name[:strings.Index(name, "[")]
-			indexString := originalName[strings.Index(originalName, "[")+1 : strings.Index(originalName, "]")]
-			index, _ = strconv.Atoi(indexString)
-		}
+       if strings.Contains(name, "[") {
+           originalName := name
+           name = name[:strings.Index(name, "[")]
+           idx := originalName[strings.Index(originalName, "[")+1 : strings.Index(originalName, "]")]
+           if parsedIdx, err := strconv.Atoi(idx); err == nil {
+               index = parsedIdx
+           } else {
+               key = idx
+           }
+       }
 	}
 
 	multiple := false
@@ -200,16 +205,28 @@ func (p *Parameters) Expr(command core.Command, actions []string, originalExpres
 		value = result
 	}
 
-	if index != -1 {
-		typeOfValue := reflect.TypeOf(value)
-		if typeOfValue.Kind() == reflect.Slice || typeOfValue.Kind() == reflect.Array {
-			if len(value.([]any)) > index {
-				value = value.([]any)[index]
-			} else {
-				return nil, core.InternalError("Index out of range: "+expression, nil)
-			}
-		}
-	}
+   if index != -1 {
+       typeOfValue := reflect.TypeOf(value)
+       if typeOfValue.Kind() == reflect.Slice || typeOfValue.Kind() == reflect.Array {
+           if len(value.([]any)) > index {
+               value = value.([]any)[index]
+           } else {
+               return nil, core.InternalError("Index out of range: "+expression, nil)
+           }
+       } else {
+           return nil, core.InternalError("Index out of range: "+expression, nil)
+       }
+   } else if key != "" {
+       if m, ok := value.(map[string]any); ok {
+           if v2, ok2 := m[key]; ok2 {
+               value = v2
+           } else {
+               return nil, core.InternalError("Key not found: "+expression, nil)
+           }
+       } else {
+           return nil, core.InternalError("Cannot apply key lookup: "+expression, nil)
+       }
+   }
 
 	if jsonExpr != "" {
 		jsonValue, err := jsonpath.Read(value, "$."+jsonExpr)
@@ -241,6 +258,34 @@ func (p *Parameters) String() string {
 }
 
 func InjectParameters(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
+	// Pre-resolve nested ${...} variable expressions (innermost first)
+		innerVarRe := regexp.MustCompile(`\$\{([^{}]+)\}`)
+		var innerErr error
+		for {
+			changed := false
+			newInst := innerVarRe.ReplaceAllStringFunc(instruction, func(fullMatch string) string {
+				if innerErr != nil {
+					return fullMatch
+				}
+				val, err := getVariableValueAsString(command, actions, params, fullMatch, false)
+				if err != nil {
+					if strings.Contains(err.Error(), "Variable not found") {
+						return fullMatch
+					}
+					innerErr = err
+					return fullMatch
+				}
+				changed = true
+				return val
+			})
+			if innerErr != nil {
+				return "", innerErr
+			}
+			if !changed {
+				break
+			}
+			instruction = newInst
+		}
 	const variableRegex = "\\$([a-zA-Z0-9]+)|\\$\\{([^}\\s]+)\\}|value\\(([^)]+)\\)|values\\(([^)]+)\\)|param\\(([^)]+)\\)|params\\(([^)]+)\\)"
 	expr := regexp.MustCompile(variableRegex)
 	matches := expr.FindAllSubmatch([]byte(instruction), -1)
@@ -273,10 +318,9 @@ func InjectParameters(command core.Command, instruction string, actions []string
 			variablePath := string(match[3])
 			value, err := getVariableValueAsString(command, actions, params, variablePath, true)
 			if err != nil {
-				if strings.Contains(err.Error(), "Variable not found") {
-					continue
+				if !strings.Contains(err.Error(), "Variable not found") {
+					return "", err
 				}
-				return "", err
 			}
 
 			expressionValue = fmt.Sprintf("'%s'", value)
@@ -288,10 +332,9 @@ func InjectParameters(command core.Command, instruction string, actions []string
 				variablePath := strings.TrimSpace(variableList[i])
 				variableValue, err := getVariableValueAsString(command, actions, params, variablePath, true)
 				if err != nil {
-					if strings.Contains(err.Error(), "Variable not found") {
-						continue
+					if !strings.Contains(err.Error(), "Variable not found") {
+						return "", err
 					}
-					return "", err
 				}
 
 				if i > 0 {
