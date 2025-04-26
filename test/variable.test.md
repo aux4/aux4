@@ -232,7 +232,7 @@ aux4 print
 hello Mary
 ```
 
-## Set mutliple variables
+## Set multiple variables
 
 ```file:.aux4
 {
@@ -351,4 +351,148 @@ aux4 print
 
 ```expect
 hello Mary ${unknown} $1 $2
+```
+
+## Set variable with multiple values
+
+### Print last value
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print",
+          "execute": [
+            "log:${value}"
+          ],
+          "help": {
+            "variables": [
+              {
+                "name": "value"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print --value=1 --value=2 --value=3
+```
+
+```expect
+3
+```
+
+### Print by index
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print",
+          "execute": [
+            "log:${value*[1]} ${value*[2]}"
+          ],
+          "help": {
+            "variables": [
+              {
+                "name": "value"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print --value=1 --value=2 --value=3
+```
+
+```expect
+2 3
+```
+
+### Print all
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print",
+          "execute": [
+            "log:${value*}"
+          ],
+          "help": {
+            "variables": [
+              {
+                "name": "value"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print --value=1 --value=2 --value=3
+```
+
+```expect
+["1","2","3"]
+```
+
+## Extract variable from a map
+
+```file:data.json
+{
+  "person": {
+    "name": "John"
+  }
+}
+```
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print",
+          "execute": [
+            "json:cat data.json",
+            "log:${response.person[name]}"
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print
+```
+
+```expect
+John
 ```
