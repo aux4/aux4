@@ -93,6 +93,42 @@ aux4 print
 hello NONE
 ```
 
+## Optional variable
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print",
+          "execute": [
+            "log:hello ${name}!"
+          ],
+          "help": {
+            "variables": [
+              {
+                "name": "name",
+                "default": ""
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print
+```
+
+```expect
+hello !
+```
+
 ## Print variable from environment variable
 
 ```file:.aux4
@@ -286,4 +322,33 @@ aux4 print
 
 ```expect
 hello Sarah Fox
+```
+
+## Ignore unknown variables
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print",
+          "execute": [
+            "set:name=Mary",
+            "log:hello ${name} ${unknown} $1 $2"
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print
+```
+
+```expect
+hello Mary ${unknown} $1 $2
 ```

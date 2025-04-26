@@ -187,14 +187,14 @@ func (p *Parameters) Expr(command core.Command, actions []string, originalExpres
 	if multiple {
 		multiValue, err := p.GetMultiple(command, actions, name)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 
 		value = multiValue
 	} else {
 		result, err := p.Get(command, actions, name)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 
 		value = result
@@ -206,7 +206,7 @@ func (p *Parameters) Expr(command core.Command, actions []string, originalExpres
 			if len(value.([]any)) > index {
 				value = value.([]any)[index]
 			} else {
-				return "", core.InternalError("Index out of range: "+expression, nil)
+				return nil, core.InternalError("Index out of range: "+expression, nil)
 			}
 		}
 	}
@@ -214,7 +214,7 @@ func (p *Parameters) Expr(command core.Command, actions []string, originalExpres
 	if jsonExpr != "" {
 		jsonValue, err := jsonpath.Read(value, "$."+jsonExpr)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		value = jsonValue
 	}
@@ -255,18 +255,27 @@ func InjectParameters(command core.Command, instruction string, actions []string
 			variablePath := string(match[0])
 			expressionValue, err = getVariableValueAsString(command, actions, params, variablePath, false)
 			if err != nil {
+				if strings.Contains(err.Error(), "Variable not found") {
+					continue
+				}
 				return "", err
 			}
 		} else if strings.HasPrefix(variableExpression, "$") {
 			variablePath := string(match[1])
 			expressionValue, err = getVariableValueAsString(command, actions, params, variablePath, false)
 			if err != nil {
+				if strings.Contains(err.Error(), "Variable not found") {
+					continue
+				}
 				return "", err
 			}
 		} else if strings.HasPrefix(variableExpression, "value(") {
 			variablePath := string(match[3])
 			value, err := getVariableValueAsString(command, actions, params, variablePath, true)
 			if err != nil {
+				if strings.Contains(err.Error(), "Variable not found") {
+					continue
+				}
 				return "", err
 			}
 
@@ -279,6 +288,9 @@ func InjectParameters(command core.Command, instruction string, actions []string
 				variablePath := strings.TrimSpace(variableList[i])
 				variableValue, err := getVariableValueAsString(command, actions, params, variablePath, true)
 				if err != nil {
+					if strings.Contains(err.Error(), "Variable not found") {
+						continue
+					}
 					return "", err
 				}
 
@@ -292,11 +304,14 @@ func InjectParameters(command core.Command, instruction string, actions []string
 			variablePath := string(match[5])
 			value, err := getVariableValueAsString(command, actions, params, variablePath, true)
 			if err != nil {
+				if strings.Contains(err.Error(), "Variable not found") {
+					continue
+				}
 				return "", err
 			}
 
 			if value != "" {
-        paramName := standardizeParameterName(variablePath)
+				paramName := standardizeParameterName(variablePath)
 				expressionValue = fmt.Sprintf("--%s '%s'", paramName, value)
 			}
 		} else if strings.HasPrefix(variableExpression, "params(") {
@@ -307,6 +322,9 @@ func InjectParameters(command core.Command, instruction string, actions []string
 				variablePath := strings.TrimSpace(variableList[i])
 				variableValue, err := getVariableValueAsString(command, actions, params, variablePath, true)
 				if err != nil {
+					if strings.Contains(err.Error(), "Variable not found") {
+						continue
+					}
 					return "", err
 				}
 
@@ -318,7 +336,7 @@ func InjectParameters(command core.Command, instruction string, actions []string
 					expressionValue += " "
 				}
 
-        paramName := standardizeParameterName(variablePath)
+				paramName := standardizeParameterName(variablePath)
 				expressionValue += fmt.Sprintf("--%s '%s'", paramName, variableValue)
 			}
 		}
@@ -327,9 +345,9 @@ func InjectParameters(command core.Command, instruction string, actions []string
 	}
 
 	return expr.ReplaceAllStringFunc(instruction, func(match string) string {
-		value := variables[match]
-		if value == nil {
-			return ""
+		value, exists := variables[match]
+		if !exists {
+			return match
 		}
 
 		return fmt.Sprintf("%v", value)
@@ -340,6 +358,10 @@ func getVariableValueAsString(command core.Command, actions []string, params *Pa
 	value, err := params.Expr(command, actions, variableName)
 	if err != nil {
 		return "", err
+	}
+
+	if value == nil {
+		return "", core.VariableNotFoundError(variableName)
 	}
 
 	return valueToString(value, escape), nil
@@ -374,27 +396,26 @@ func escapeValue(value any) string {
 }
 
 func standardizeParameterName(name string) string {
-  if !strings.Contains(name, ".") {
-    return name
-  }
+	if !strings.Contains(name, ".") {
+		return name
+	}
 
-  var result strings.Builder
-  upperNext := false
+	var result strings.Builder
+	upperNext := false
 
-  for _, char := range name {
-    if char == '.' {
-      upperNext = true
-      continue
-    }
+	for _, char := range name {
+		if char == '.' {
+			upperNext = true
+			continue
+		}
 
-    if upperNext {
-      result.WriteRune(unicode.ToUpper(char))
-      upperNext = false
-    } else {
-      result.WriteRune(char)
-    }
-  }
+		if upperNext {
+			result.WriteRune(unicode.ToUpper(char))
+			upperNext = false
+		} else {
+			result.WriteRune(char)
+		}
+	}
 
-  return result.String()
+	return result.String()
 }
-

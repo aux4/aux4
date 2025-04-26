@@ -24,6 +24,8 @@
             "log:building aux4 for $os $arch",
             "aux4 build $os",
             "log:installing aux4 on ~/.aux4.config/packages/aux4/aux4",
+            "log:cp -f package/dist/${os}/${arch}/aux4 ~/.aux4.config/packages/aux4/aux4/aux4",
+            "nout:echo ${response} | pbcopy",
             "cp -f package/dist/${os}/${arch}/aux4 ~/.aux4.config/packages/aux4/aux4/aux4",
             "mv version.go.bak aux4/version.go",
             "aux4 aux4 autoinstall"

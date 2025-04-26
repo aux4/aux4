@@ -299,6 +299,7 @@ func (executor *LogCommandExecutor) Execute(env *engine.VirtualEnvironment, comm
 		return err
 	}
 	output.Out(output.StdOut).Println(instruction)
+	params.Update("response", instruction)
 	return nil
 }
 

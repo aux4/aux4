@@ -25,6 +25,13 @@ func InternalError(message string, cause error) Aux4Error {
   }
 }
 
+func VariableNotFoundError(variableName string) Aux4Error {
+	return Aux4Error{
+		Message: fmt.Sprintf("Variable not found: %s", variableName),
+		ExitCode: 1,
+	}
+}
+
 func UserAbortedError() Aux4Error {
   return Aux4Error{
     Message: "User aborted",
