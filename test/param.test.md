@@ -11,7 +11,7 @@
         {
           "name": "print",
           "execute": [
-            "log:cmd param(name)"
+            "log:cmd param(name) param(age) param(undefined)"
           ],
           "help": {
             "text": "print param name",
@@ -19,6 +19,10 @@
               {
                 "name": "name",
                 "text": "the name to print"
+              },
+              {
+                "name": "age",
+                "text": "the age to print"
               }
             ]
           }
@@ -30,11 +34,11 @@
 ```
 
 ```execute
-aux4 print --name Joe
+aux4 print --name Joe --age 20
 ```
 
 ```expect
-cmd --name 'Joe'
+cmd --name 'Joe' --age '20' 
 ```
 
 ## multi param
@@ -48,7 +52,7 @@ cmd --name 'Joe'
         {
           "name": "print",
           "execute": [
-            "log:cmd params(name, age)"
+            "log:cmd params(name, age, undefined)"
           ],
           "help": {
             "text": "print params name and age",
@@ -90,7 +94,7 @@ cmd --name 'Joe' --age '20'
         {
           "name": "print",
           "execute": [
-            "log:cmd value(name)"
+            "log:cmd value(name) value(age)"
           ],
           "help": {
             "text": "print value name",
@@ -98,6 +102,10 @@ cmd --name 'Joe' --age '20'
               {
                 "name": "name",
                 "text": "the name to print"
+              },
+              {
+                "name": "age",
+                "text": "the age to print"
               }
             ]
           }
@@ -109,11 +117,11 @@ cmd --name 'Joe' --age '20'
 ```
 
 ```execute
-aux4 print --name Joe
+aux4 print --name Joe --age 20
 ```
 
 ```expect
-cmd 'Joe'
+cmd 'Joe' '20'
 ```
 
 ## multi value
@@ -127,7 +135,7 @@ cmd 'Joe'
         {
           "name": "print",
           "execute": [
-            "log:cmd values(name, age)"
+            "log:cmd values(name, age, undefined)"
           ],
           "help": {
             "text": "print params name and age",
@@ -155,7 +163,7 @@ aux4 print --name Joe --age 20
 ```
 
 ```expect
-cmd 'Joe' '20'
+cmd 'Joe' '20' ''
 ```
 
 ## Nested Data

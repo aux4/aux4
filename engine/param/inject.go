@@ -119,6 +119,7 @@ func resolveParamVariables(command core.Command, instruction string, actions []s
 		value, err := getVariableValueAsString(command, actions, params, variablePath, true)
 		if err != nil {
 			if strings.Contains(err.Error(), "Variable not found") {
+				variables[variableExpression] = ""
 				continue
 			}
 			return "", err
