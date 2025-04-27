@@ -1,10 +1,8 @@
 package param
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
@@ -61,10 +59,6 @@ func ParseArgs(args []string) (Aux4Parameters, []string, Parameters) {
 	}
 
 	return Aux4Parameters{params: aux4Params}, actions, Parameters{params: params, lookups: ParameterLookups()}
-}
-
-type ParameterLookup interface {
-	Get(parameters *Parameters, command core.Command, actions []string, name string) (any, error)
 }
 
 type Aux4Parameters struct {
@@ -149,11 +143,11 @@ func (p *Parameters) GetMultiple(command core.Command, actions []string, name st
 }
 
 func (p *Parameters) Expr(command core.Command, actions []string, originalExpression string) (any, error) {
-   var name string
-   var value any
-   index := -1
-   var key string
-   jsonExpr := ""
+	var name string
+	var value any
+	index := -1
+	var key string
+	jsonExpr := ""
 
 	var expression = strings.TrimSpace(originalExpression)
 
@@ -170,16 +164,16 @@ func (p *Parameters) Expr(command core.Command, actions []string, originalExpres
 		name = parts[0]
 		jsonExpr = strings.Join(parts[1:], ".")
 
-       if strings.Contains(name, "[") {
-           originalName := name
-           name = name[:strings.Index(name, "[")]
-           idx := originalName[strings.Index(originalName, "[")+1 : strings.Index(originalName, "]")]
-           if parsedIdx, err := strconv.Atoi(idx); err == nil {
-               index = parsedIdx
-           } else {
-               key = idx
-           }
-       }
+		if strings.Contains(name, "[") {
+			originalName := name
+			name = name[:strings.Index(name, "[")]
+			idx := originalName[strings.Index(originalName, "[")+1 : strings.Index(originalName, "]")]
+			if parsedIdx, err := strconv.Atoi(idx); err == nil {
+				index = parsedIdx
+			} else {
+				key = idx
+			}
+		}
 	}
 
 	multiple := false
@@ -205,33 +199,33 @@ func (p *Parameters) Expr(command core.Command, actions []string, originalExpres
 		value = result
 	}
 
-   if index != -1 {
-       typeOfValue := reflect.TypeOf(value)
-       if typeOfValue.Kind() == reflect.Slice || typeOfValue.Kind() == reflect.Array {
-           if len(value.([]any)) > index {
-               value = value.([]any)[index]
-           } else {
-               return nil, core.InternalError("Index out of range: "+expression, nil)
-           }
-       } else {
-           return nil, core.InternalError("Index out of range: "+expression, nil)
-       }
-   } else if key != "" {
-       if m, ok := value.(map[string]any); ok {
-           if v2, ok2 := m[key]; ok2 {
-               value = v2
-           } else {
-               return nil, core.InternalError("Key not found: "+expression, nil)
-           }
-       } else {
-           return nil, core.InternalError("Cannot apply key lookup: "+expression, nil)
-       }
-   }
+	if index != -1 {
+		typeOfValue := reflect.TypeOf(value)
+		if typeOfValue.Kind() == reflect.Slice || typeOfValue.Kind() == reflect.Array {
+			if len(value.([]any)) > index {
+				value = value.([]any)[index]
+			} else {
+				return nil, core.InternalError("Index out of range: "+expression, nil)
+			}
+		} else {
+			return nil, core.InternalError("Index out of range: "+expression, nil)
+		}
+	} else if key != "" {
+		if valueMap, ok := value.(map[string]any); ok {
+			if keyValue, exists := valueMap[key]; exists {
+				value = keyValue
+			} else {
+				return nil, core.InternalError("Key not found: "+expression, nil)
+			}
+		} else {
+			return nil, core.InternalError("Cannot apply key lookup: "+expression, nil)
+		}
+	}
 
 	if jsonExpr != "" {
 		jsonValue, err := jsonpath.Read(value, "$."+jsonExpr)
 		if err != nil {
-			return nil, err
+			return nil, core.InternalError("Error trying to access field '"+jsonExpr+"' from "+fmt.Sprintf("'%v'", value), err)
 		}
 		value = jsonValue
 	}
@@ -255,215 +249,6 @@ func (p *Parameters) String() string {
 		}
 	}
 	return builder.String()
-}
-
-func InjectParameters(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
-   // Pre-resolve nested variables: bare ($name) first, then braced (${expr}).
-   var innerErr error
-   // Step 1: resolve bare variables ($foo)
-   bareRe := regexp.MustCompile(`\$[A-Za-z0-9]+`)
-   for {
-       changed := false
-       newInst := bareRe.ReplaceAllStringFunc(instruction, func(fullMatch string) string {
-           if innerErr != nil {
-               return fullMatch
-           }
-           val, err := getVariableValueAsString(command, actions, params, fullMatch, false)
-           if err != nil {
-               if strings.Contains(err.Error(), "Variable not found") {
-                   return fullMatch
-               }
-               innerErr = err
-               return fullMatch
-           }
-           changed = true
-           return val
-       })
-       if innerErr != nil {
-           return "", innerErr
-       }
-       if !changed {
-           break
-       }
-       instruction = newInst
-   }
-   // Step 2: resolve braced variables (${expr})
-   braceRe := regexp.MustCompile(`\$\{([^{}]+)\}`)
-   for {
-       changed := false
-       newInst := braceRe.ReplaceAllStringFunc(instruction, func(fullMatch string) string {
-           if innerErr != nil {
-               return fullMatch
-           }
-           val, err := getVariableValueAsString(command, actions, params, fullMatch, false)
-           if err != nil {
-               if strings.Contains(err.Error(), "Variable not found") {
-                   return fullMatch
-               }
-               innerErr = err
-               return fullMatch
-           }
-           changed = true
-           return val
-       })
-       if innerErr != nil {
-           return "", innerErr
-       }
-       if !changed {
-           break
-       }
-       instruction = newInst
-   }
-	const variableRegex = "\\$([a-zA-Z0-9]+)|\\$\\{([^}\\s]+)\\}|value\\(([^)]+)\\)|values\\(([^)]+)\\)|param\\(([^)]+)\\)|params\\(([^)]+)\\)"
-	expr := regexp.MustCompile(variableRegex)
-	matches := expr.FindAllSubmatch([]byte(instruction), -1)
-
-	variables := map[string]any{}
-	for _, match := range matches {
-		variableExpression := string(match[0])
-		var expressionValue string
-		var err error
-
-		if strings.HasPrefix(variableExpression, "${") {
-			variablePath := string(match[0])
-			expressionValue, err = getVariableValueAsString(command, actions, params, variablePath, false)
-			if err != nil {
-				if strings.Contains(err.Error(), "Variable not found") {
-					continue
-				}
-				return "", err
-			}
-		} else if strings.HasPrefix(variableExpression, "$") {
-			variablePath := string(match[1])
-			expressionValue, err = getVariableValueAsString(command, actions, params, variablePath, false)
-			if err != nil {
-				if strings.Contains(err.Error(), "Variable not found") {
-					continue
-				}
-				return "", err
-			}
-		} else if strings.HasPrefix(variableExpression, "value(") {
-			variablePath := string(match[3])
-			value, err := getVariableValueAsString(command, actions, params, variablePath, true)
-			if err != nil {
-				if !strings.Contains(err.Error(), "Variable not found") {
-					return "", err
-				}
-			}
-
-			expressionValue = fmt.Sprintf("'%s'", value)
-		} else if strings.HasPrefix(variableExpression, "values(") {
-			expressionValue = ""
-
-			variableList := strings.Split(string(match[4]), ",")
-			for i := 0; i < len(variableList); i++ {
-				variablePath := strings.TrimSpace(variableList[i])
-				variableValue, err := getVariableValueAsString(command, actions, params, variablePath, true)
-				if err != nil {
-					if !strings.Contains(err.Error(), "Variable not found") {
-						return "", err
-					}
-				}
-
-				if i > 0 {
-					expressionValue += " "
-				}
-
-				expressionValue += fmt.Sprintf("'%s'", variableValue)
-			}
-		} else if strings.HasPrefix(variableExpression, "param(") {
-			variablePath := string(match[5])
-			value, err := getVariableValueAsString(command, actions, params, variablePath, true)
-			if err != nil {
-				if strings.Contains(err.Error(), "Variable not found") {
-					continue
-				}
-				return "", err
-			}
-
-			if value != "" {
-				paramName := standardizeParameterName(variablePath)
-				expressionValue = fmt.Sprintf("--%s '%s'", paramName, value)
-			}
-		} else if strings.HasPrefix(variableExpression, "params(") {
-			expressionValue = ""
-
-			variableList := strings.Split(string(match[6]), ",")
-			for i := 0; i < len(variableList); i++ {
-				variablePath := strings.TrimSpace(variableList[i])
-				variableValue, err := getVariableValueAsString(command, actions, params, variablePath, true)
-				if err != nil {
-					if strings.Contains(err.Error(), "Variable not found") {
-						continue
-					}
-					return "", err
-				}
-
-				if variableValue == "" {
-					continue
-				}
-
-				if i > 0 {
-					expressionValue += " "
-				}
-
-				paramName := standardizeParameterName(variablePath)
-				expressionValue += fmt.Sprintf("--%s '%s'", paramName, variableValue)
-			}
-		}
-
-		variables[variableExpression] = expressionValue
-	}
-
-	return expr.ReplaceAllStringFunc(instruction, func(match string) string {
-		value, exists := variables[match]
-		if !exists {
-			return match
-		}
-
-		return fmt.Sprintf("%v", value)
-	}), nil
-}
-
-func getVariableValueAsString(command core.Command, actions []string, params *Parameters, variableName string, escape bool) (string, error) {
-	value, err := params.Expr(command, actions, variableName)
-	if err != nil {
-		return "", err
-	}
-
-	if value == nil {
-		return "", core.VariableNotFoundError(variableName)
-	}
-
-	return valueToString(value, escape), nil
-}
-
-func valueToString(value any, escape bool) string {
-	if value == nil {
-		return ""
-	}
-
-	typeOfValue := reflect.TypeOf(value)
-	if typeOfValue.Kind() != reflect.String {
-		jsonValue, err := json.Marshal(value)
-		if err != nil {
-			value = fmt.Sprintf("%v", value)
-		} else {
-			value = string(jsonValue)
-		}
-	}
-
-	if escape {
-		value = escapeValue(value)
-	}
-	return fmt.Sprintf("%v", value)
-}
-
-func escapeValue(value any) string {
-	if value == nil {
-		return ""
-	}
-	return strings.ReplaceAll(value.(string), "'", "'\\''")
 }
 
 func standardizeParameterName(name string) string {

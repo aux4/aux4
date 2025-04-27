@@ -296,6 +296,7 @@ func (executor *LogCommandExecutor) Execute(env *engine.VirtualEnvironment, comm
 	text := strings.TrimPrefix(executor.Command, "log:")
 	instruction, err := param.InjectParameters(command, text, actions, params)
 	if err != nil {
+		fmt.Println("Error injecting parameters:", err)
 		return err
 	}
 	output.Out(output.StdOut).Println(instruction)

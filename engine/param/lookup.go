@@ -26,6 +26,10 @@ func ParameterLookups() []ParameterLookup {
 	}
 }
 
+type ParameterLookup interface {
+	Get(parameters *Parameters, command core.Command, actions []string, name string) (any, error)
+}
+
 type ConfigLookup struct {
 	load       bool
 	parameters map[string]interface{}
