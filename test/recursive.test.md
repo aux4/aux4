@@ -4,31 +4,31 @@
 
 ```file:.aux4
 {
-    "profiles": [
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
         {
-            "name": "main",
-            "commands": [
-                {
-                    "name": "one",
-                    "execute": [
-                        "aux4 two"
-                    ],
-                    "help": {
-                        "text": "calls two command"
-                    }
-                },
-                {
-                    "name": "two",
-                    "execute": [
-                        "echo two"
-                    ],
-                    "help": {
-                        "text": "print two"
-                    }
-                }
-            ]
+          "name": "one",
+          "execute": [
+            "aux4 two"
+          ],
+          "help": {
+            "text": "calls two command"
+          }
+        },
+        {
+          "name": "two",
+          "execute": [
+            "echo two"
+          ],
+          "help": {
+            "text": "print two"
+          }
         }
-    ]
+      ]
+    }
+  ]
 }
 ```
 
@@ -46,37 +46,37 @@ two
 
 ```file:.aux4
 {
-    "profiles": [
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
         {
-            "name": "main",
-            "commands": [
-                {
-                    "name": "one",
-                    "execute": [
-                        "aux4 two --name one"
-                    ],
-                    "help": {
-                        "text": "calls two command"
-                    }
-                },
-                {
-                    "name": "two",
-                    "execute": [
-                        "echo two $name"
-                    ],
-                    "help": {
-                        "text": "print two and name",
-                        "variables": [
-                            {
-                                "name": "name",
-                                "text": "the name to print"
-                            }
-                        ]
-                    }
-                }
+          "name": "one",
+          "execute": [
+            "aux4 two --name one"
+          ],
+          "help": {
+            "text": "calls two command"
+          }
+        },
+        {
+          "name": "two",
+          "execute": [
+            "echo two $name"
+          ],
+          "help": {
+            "text": "print two and name",
+            "variables": [
+              {
+                "name": "name",
+                "text": "the name to print"
+              }
             ]
+          }
         }
-    ]
+      ]
+    }
+  ]
 }
 ```
 
