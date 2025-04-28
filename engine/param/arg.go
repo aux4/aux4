@@ -61,6 +61,37 @@ func ParseArgs(args []string) (Aux4Parameters, []string, Parameters) {
 	return Aux4Parameters{params: aux4Params}, actions, Parameters{params: params, lookups: ParameterLookups()}
 }
 
+func ExtractArgs(instruction string) []string {
+   var args []string
+   var current strings.Builder
+   inSingleQuote := false
+   inDoubleQuote := false
+   escapeNext := false
+   for _, r := range instruction {
+       if escapeNext {
+           current.WriteRune(r)
+           escapeNext = false
+       } else if r == '\\' {
+           escapeNext = true
+       } else if r == '\'' && !inDoubleQuote {
+           inSingleQuote = !inSingleQuote
+       } else if r == '"' && !inSingleQuote {
+           inDoubleQuote = !inDoubleQuote
+       } else if unicode.IsSpace(r) && !inSingleQuote && !inDoubleQuote {
+           if current.Len() > 0 {
+               args = append(args, current.String())
+               current.Reset()
+           }
+       } else {
+           current.WriteRune(r)
+       }
+   }
+   if current.Len() > 0 {
+       args = append(args, current.String())
+   }
+   return args
+}
+
 type Aux4Parameters struct {
 	params map[string]string
 }
