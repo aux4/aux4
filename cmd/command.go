@@ -39,6 +39,7 @@ func executeCommand(instruction string, withStdOut bool, withStdIn bool) (string
 	var cmd *exec.Cmd
 
 	cmd = exec.Command("bash", "-c", instruction)
+	cmd.Env = append(os.Environ(), "CLICOLOR_FORCE=1")
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer

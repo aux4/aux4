@@ -16,18 +16,18 @@ func Help(profile core.Profile, json bool, long bool) {
 		return
 	}
 
-  printedCommand := false
+	printedCommand := false
 
 	for _, command := range profile.Commands {
-    if command.Private {
-      continue
-    }
+		if command.Private {
+			continue
+		}
 		if printedCommand {
 			output.Out(output.StdOut).Println("")
 		}
-		HelpCommand(command, json, long, " ")
+		HelpCommand(command, json, long, "")
 
-    printedCommand = true
+		printedCommand = true
 	}
 }
 
@@ -93,10 +93,15 @@ func HelpCommand(command core.Command, json bool, long bool, leftPadding string)
 			variablesHelp.WriteString(output.Cyan("--"))
 			variablesHelp.WriteString(output.Cyan(variable.Name))
 
-      if variable.Arg {
-        variablesHelp.WriteString(" ")
-        variablesHelp.WriteString(output.Magenta("<arg>"))
-      }
+			if variable.Arg {
+				variablesHelp.WriteString(" ")
+				variablesHelp.WriteString(output.Magenta("<arg>"))
+			}
+
+			if variable.Multiple {
+				variablesHelp.WriteString(" ")
+				variablesHelp.WriteString(output.Gray("<multiple>"))
+			}
 
 			if long {
 				if variable.Text != "" {
@@ -174,16 +179,17 @@ func helpCommandJson(command core.Command) {
 		if command.Help.Variables != nil && len(command.Help.Variables) > 0 {
 			for _, v := range command.Help.Variables {
 				variable := ManParameter{
-					Name:    v.Name,
-					Text:    periodEnd(v.Text),
-					Env:     v.Env,
-					Arg:     v.Arg,
-					Options: v.Options,
+					Name:     v.Name,
+					Text:     periodEnd(v.Text),
+					Env:      v.Env,
+					Arg:      v.Arg,
+					Multiple: v.Multiple,
+					Options:  v.Options,
 				}
 
-        if v.Default != nil {
-          variable.Default = *v.Default
-        }
+				if v.Default != nil {
+					variable.Default = *v.Default
+				}
 
 				man.Parameters = append(man.Parameters, variable)
 			}
@@ -255,15 +261,15 @@ func breakLines(text string, maxLineLength int, spacing string) string {
 }
 
 func periodEnd(text string) string {
-  if text == "" {
-    return ""
-  }
+	if text == "" {
+		return ""
+	}
 
-  if text[len(text)-1] == '.' {
-    return text
-  }
+	if text[len(text)-1] == '.' {
+		return text
+	}
 
-  return text + "."
+	return text + "."
 }
 
 type Man struct {
@@ -273,10 +279,11 @@ type Man struct {
 }
 
 type ManParameter struct {
-	Name    string   `json:"name"`
-	Text    string   `json:"text"`
-	Default string   `json:"default"`
-	Env     string   `json:"env"`
-	Arg     bool     `json:"arg"`
-	Options []string `json:"options"`
+	Name     string   `json:"name"`
+	Text     string   `json:"text"`
+	Default  string   `json:"default"`
+	Env      string   `json:"env"`
+	Arg      bool     `json:"arg"`
+	Multiple bool     `json:"multiple"`
+	Options  []string `json:"options"`
 }

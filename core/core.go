@@ -80,7 +80,7 @@ type Command struct {
 	Name    string       `json:"name"`
 	Execute []string     `json:"execute"`
 	Help    *CommandHelp `json:"help"`
-  Private bool         `json:"private"`
+	Private bool         `json:"private"`
 	Ref     CommandRef   `json:"ref"`
 }
 
@@ -121,12 +121,13 @@ func (help *CommandHelp) GetVariable(name string) (*CommandHelpVariable, bool) {
 }
 
 type CommandHelpVariable struct {
-	Name    string   `json:"name"`
-	Text    string   `json:"text"`
-	Default *string  `json:"default"`
-	Arg     bool     `json:"arg"`
-	Hide    bool     `json:"hide"`
-	Encrypt bool     `json:"encrypt"`
-	Env     string   `json:"env"`
-	Options []string `json:"options"`
+	Name     string   `json:"name"`
+	Text     string   `json:"text"`
+	Default  *string  `json:"default"`
+	Arg      bool     `json:"arg"`
+	Multiple bool     `json:"multiple"`
+	Hide     bool     `json:"hide"`
+	Encrypt  bool     `json:"encrypt"`
+	Env      string   `json:"env"`
+	Options  []string `json:"options"`
 }

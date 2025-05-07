@@ -455,7 +455,19 @@ func (executor *Aux4CommandExecutor) Execute(env *engine.VirtualEnvironment, com
 	// Parse nested args into actions and parameters for the sub-invocation
 	_, nestedActions, nestedParams := param.ParseArgs(nestedArgs)
 	// Execute the nested aux4 command in the same environment
-	return Execute(env, nestedActions, &nestedParams)
+
+	currentProfile := env.CurrentProfile
+
+	env.SetProfile("main")
+
+	err = Execute(env, nestedActions, &nestedParams)
+	if err != nil {
+		return err
+	}
+
+	env.SetProfile(currentProfile)
+
+	return nil
 }
 
 type CommandLineExecutor struct {
