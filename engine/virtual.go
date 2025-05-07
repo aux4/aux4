@@ -148,10 +148,6 @@ func loadPackage(env *VirtualEnvironment, pack *core.Package) error {
 				if !strings.HasPrefix(existingCommand.Ref.Package, packageName) {
 					continue
 				}
-
-				fmt.Println("Command already exists:")
-				fmt.Println("  New:", command.Name, command.Ref.Path, command.Ref.Package, command.Ref.Profile)
-				fmt.Println("  Old:", existingCommand.Name, existingCommand.Ref.Path, existingCommand.Ref.Package, existingCommand.Ref.Profile)
 			}
 
 			if command.Ref.Path == "" {

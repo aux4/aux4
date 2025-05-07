@@ -98,6 +98,11 @@ func HelpCommand(command core.Command, json bool, long bool, leftPadding string)
 				variablesHelp.WriteString(output.Magenta("<arg>"))
 			}
 
+			if variable.Default != nil && *variable.Default == "" {
+				variablesHelp.WriteString(" ")
+				variablesHelp.WriteString(output.Gray("<optional>"))
+			}
+
 			if variable.Multiple {
 				variablesHelp.WriteString(" ")
 				variablesHelp.WriteString(output.Gray("<multiple>"))
@@ -130,7 +135,7 @@ func HelpCommand(command core.Command, json bool, long bool, leftPadding string)
 					}
 				}
 
-				if variable.Default != nil {
+				if variable.Default != nil && *variable.Default != "" {
 					variablesHelp.WriteString("\n\n")
 					variablesHelp.WriteString(leftPadding)
 					variablesHelp.WriteString(spacing)

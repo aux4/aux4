@@ -371,7 +371,8 @@ hello Mary ${unknown} $1 $2
           "help": {
             "variables": [
               {
-                "name": "value"
+                "name": "value",
+                "multiple": true
               }
             ]
           }
@@ -406,7 +407,8 @@ aux4 print --value=1 --value=2 --value=3
           "help": {
             "variables": [
               {
-                "name": "value"
+                "name": "value",
+                "multiple": true
               }
             ]
           }
@@ -441,7 +443,8 @@ aux4 print --value=1 --value=2 --value=3
           "help": {
             "variables": [
               {
-                "name": "value"
+                "name": "value",
+                "multiple": true
               }
             ]
           }
