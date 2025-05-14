@@ -300,7 +300,7 @@ aux4 hello --help
 hello
 say hello.
 
-  --name
+  --name [Joe]
     The name to say hello.
 
     Default: Joe

@@ -98,9 +98,13 @@ func HelpCommand(command core.Command, json bool, long bool, leftPadding string)
 				variablesHelp.WriteString(output.Magenta("<arg>"))
 			}
 
-			if variable.Default != nil && *variable.Default == "" {
-				variablesHelp.WriteString(" ")
-				variablesHelp.WriteString(output.Gray("<optional>"))
+			if variable.Default != nil {
+				if *variable.Default == "" {
+					variablesHelp.WriteString(" ")
+					variablesHelp.WriteString(output.Gray("<optional>"))
+				} else {
+					variablesHelp.WriteString(output.Gray(" [", output.Italic(*variable.Default), "]"))
+				}
 			}
 
 			if variable.Multiple {

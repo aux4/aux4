@@ -23,7 +23,7 @@ func ParseArgs(args []string) (Aux4Parameters, []string, Parameters) {
 			name := arg[2:]
 			value := ""
 			if strings.Contains(name, "=") {
-				parts := strings.Split(name, "=")
+				parts := strings.SplitN(name, "=", 2)
 				name = parts[0]
 				value = parts[1]
 			} else if index+1 >= len(args) || strings.HasPrefix(args[index+1], "-") {

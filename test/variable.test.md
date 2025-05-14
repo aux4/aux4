@@ -28,7 +28,35 @@ aux4 print --name Joe
 hello Joe
 ```
 
-## Use variable without curl brackets
+## Define variable with equals sign
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print",
+          "execute": [
+            "echo hello ${name}"
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print --name=Joe
+```
+
+```expect
+hello Joe
+```
+
+## Use variable without curly brackets
 
 ```file:.aux4
 {
@@ -461,6 +489,42 @@ aux4 print --value=1 --value=2 --value=3
 
 ```expect
 ["1","2","3"]
+```
+
+### Set multiple values using equals sign
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print",
+          "execute": [
+            "log:${var*}"
+          ],
+          "help": {
+            "variables": [
+              {
+                "name": "var",
+                "multiple": true
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print --var env=dev --var user=admin --var=host=localhost
+```
+
+```expect
+["env=dev","user=admin","host=localhost"]
 ```
 
 ## Extract variable from a map
