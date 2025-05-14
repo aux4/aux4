@@ -62,34 +62,34 @@ func ParseArgs(args []string) (Aux4Parameters, []string, Parameters) {
 }
 
 func ExtractArgs(instruction string) []string {
-   var args []string
-   var current strings.Builder
-   inSingleQuote := false
-   inDoubleQuote := false
-   escapeNext := false
-   for _, r := range instruction {
-       if escapeNext {
-           current.WriteRune(r)
-           escapeNext = false
-       } else if r == '\\' {
-           escapeNext = true
-       } else if r == '\'' && !inDoubleQuote {
-           inSingleQuote = !inSingleQuote
-       } else if r == '"' && !inSingleQuote {
-           inDoubleQuote = !inDoubleQuote
-       } else if unicode.IsSpace(r) && !inSingleQuote && !inDoubleQuote {
-           if current.Len() > 0 {
-               args = append(args, current.String())
-               current.Reset()
-           }
-       } else {
-           current.WriteRune(r)
-       }
-   }
-   if current.Len() > 0 {
-       args = append(args, current.String())
-   }
-   return args
+	var args []string
+	var current strings.Builder
+	inSingleQuote := false
+	inDoubleQuote := false
+	escapeNext := false
+	for _, r := range instruction {
+		if escapeNext {
+			current.WriteRune(r)
+			escapeNext = false
+		} else if r == '\\' {
+			escapeNext = true
+		} else if r == '\'' && !inDoubleQuote {
+			inSingleQuote = !inSingleQuote
+		} else if r == '"' && !inSingleQuote {
+			inDoubleQuote = !inDoubleQuote
+		} else if unicode.IsSpace(r) && !inSingleQuote && !inDoubleQuote {
+			if current.Len() > 0 {
+				args = append(args, current.String())
+				current.Reset()
+			}
+		} else {
+			current.WriteRune(r)
+		}
+	}
+	if current.Len() > 0 {
+		args = append(args, current.String())
+	}
+	return args
 }
 
 type Aux4Parameters struct {
@@ -284,7 +284,7 @@ func (p *Parameters) String() string {
 
 func standardizeParameterName(name string) string {
 	if !strings.Contains(name, ".") {
-		return name
+		return removeStarSuffix(name)
 	}
 
 	var result strings.Builder
@@ -304,5 +304,12 @@ func standardizeParameterName(name string) string {
 		}
 	}
 
-	return result.String()
+	return removeStarSuffix(result.String())
+}
+
+func removeStarSuffix(name string) string {
+	for strings.HasSuffix(name, "*") {
+		name = strings.TrimSuffix(name, "*")
+	}
+	return name
 }
