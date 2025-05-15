@@ -118,23 +118,14 @@ func resolveParamVariables(command core.Command, instruction string, actions []s
 	variables := map[string]any{}
 	for _, match := range matches {
 		variableExpression := string(match[0])
-		var expressionValue string
-
 		variablePath := string(match[1])
-		value, err := getVariableValueAsString(command, actions, params, variablePath, true)
+
+		expressionValue, err := parseParam(command, actions, params, variablePath)
 		if err != nil {
-			if strings.Contains(err.Error(), "Variable not found") {
-				variables[variableExpression] = ""
-				continue
-			}
 			return "", err
 		}
 
-		if value != "" {
-			paramName := standardizeParameterName(variablePath)
-			expressionValue = fmt.Sprintf("--%s '%s'", paramName, value)
-			variables[variableExpression] = expressionValue
-		}
+		variables[variableExpression] = expressionValue
 	}
 
 	return replaceVariables(expr, instruction, variables), nil
@@ -156,11 +147,9 @@ func resolveParamsVariables(command core.Command, instruction string, actions []
 		variableList := strings.Split(string(match[1]), ",")
 		for i := 0; i < len(variableList); i++ {
 			variablePath := strings.TrimSpace(variableList[i])
-			variableValue, err := getVariableValueAsString(command, actions, params, variablePath, true)
+
+			variableValue, err := parseParam(command, actions, params, variablePath)
 			if err != nil {
-				if strings.Contains(err.Error(), "Variable not found") {
-					continue
-				}
 				return "", err
 			}
 
@@ -172,14 +161,56 @@ func resolveParamsVariables(command core.Command, instruction string, actions []
 				expressionValue += " "
 			}
 
-			paramName := standardizeParameterName(variablePath)
-			expressionValue += fmt.Sprintf("--%s '%s'", paramName, variableValue)
+			expressionValue += variableValue
 		}
 
 		variables[variableExpression] = expressionValue
 	}
 
 	return replaceVariables(expr, instruction, variables), nil
+}
+
+func parseParam(command core.Command, actions []string, params *Parameters, variablePath string) (string, error) {
+	var expressionValue string
+
+	if strings.HasSuffix(variablePath, "**") {
+		result, err := params.Expr(command, actions, strings.TrimSuffix(variablePath, "*"))
+		if err != nil {
+			return "", err
+		}
+
+		variablePath = strings.TrimSuffix(variablePath, "**")
+
+		if result != nil {
+			typeOfResult := reflect.TypeOf(result)
+
+			if typeOfResult.Kind() == reflect.Slice {
+				for _, item := range result.([]any) {
+					if expressionValue != "" {
+						expressionValue += " "
+					}
+					expressionValue += fmt.Sprintf("--%s '%s'", variablePath, item)
+				}
+			}
+		}
+	}
+
+	if expressionValue == "" {
+		result, err := getVariableValueAsString(command, actions, params, variablePath, true)
+		if err != nil {
+			if strings.Contains(err.Error(), "Variable not found") {
+				return "", nil
+			}
+			return "", err
+		}
+
+		if result != "" {
+			paramName := standardizeParameterName(variablePath)
+			expressionValue = fmt.Sprintf("--%s '%s'", paramName, result)
+		}
+	}
+
+	return expressionValue, nil
 }
 
 func resolveConditional(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {

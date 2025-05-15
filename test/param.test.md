@@ -77,7 +77,6 @@ cmd --name 'Joe' --age '20'
 ```execute
 aux4 print --name Joe --age 20
 ```
-```
 
 ```expect
 cmd --name 'Joe' --age '20'
@@ -94,19 +93,16 @@ cmd --name 'Joe' --age '20'
         {
           "name": "print",
           "execute": [
-            "log:cmd value(name) value(age)"
+            "log:cmd param(tag**)"
           ],
           "help": {
             "text": "print value name",
             "variables": [
               {
-                "name": "name",
-                "text": "the name to print"
-              },
-              {
-                "name": "age",
-                "text": "the age to print"
-              }
+                "name": "tag",
+                "text": "the name of the tag",
+                "multiple": true
+              } 
             ]
           }
         }
@@ -116,12 +112,24 @@ cmd --name 'Joe' --age '20'
 }
 ```
 
+### given single value
+
 ```execute
-aux4 print --name Joe --age 20
+aux4 print --tag first
 ```
 
 ```expect
-cmd 'Joe' '20'
+cmd --tag 'first'
+```
+
+### given multiple values
+
+```execute
+aux4 print --tag first --tag second
+```
+
+```expect
+cmd --tag 'first' --tag 'second'
 ```
 
 ## multi value
@@ -159,7 +167,6 @@ cmd 'Joe' '20'
 
 ```execute
 aux4 print --name Joe --age 20
-```
 ```
 
 ```expect
