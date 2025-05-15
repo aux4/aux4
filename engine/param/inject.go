@@ -43,6 +43,11 @@ func InjectParameters(command core.Command, instruction string, actions []string
 		return "", err
 	}
 
+	instruction, err = resolveConditional(command, instruction, actions, params)
+	if err != nil {
+		return "", err
+	}
+
 	return instruction, nil
 }
 
@@ -169,6 +174,59 @@ func resolveParamsVariables(command core.Command, instruction string, actions []
 
 			paramName := standardizeParameterName(variablePath)
 			expressionValue += fmt.Sprintf("--%s '%s'", paramName, variableValue)
+		}
+
+		variables[variableExpression] = expressionValue
+	}
+
+	return replaceVariables(expr, instruction, variables), nil
+}
+
+func resolveConditional(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
+	const variableRegex = "if\\(([^)]+)\\)"
+
+	expr := regexp.MustCompile(variableRegex)
+	matches := expr.FindAllSubmatch([]byte(instruction), -1)
+
+	variables := map[string]any{}
+	for _, match := range matches {
+		variableExpression := string(match[0])
+
+		variablePath := string(match[1])
+		conditionalSymbol := ""
+		conditionalNot := ""
+		expectedValue := ""
+
+		if strings.Contains(variablePath, "==") {
+			parts := strings.SplitN(variablePath, "==", 2)
+			variablePath = strings.TrimSpace(parts[0])
+			expectedValue = strings.TrimSpace(parts[1])
+			conditionalSymbol = "="
+		} else if strings.Contains(variablePath, "!=") {
+			parts := strings.SplitN(variablePath, "!=", 2)
+			variablePath = strings.TrimSpace(parts[0])
+			expectedValue = strings.TrimSpace(parts[1])
+			conditionalSymbol = "!="
+		}
+
+		if strings.HasPrefix(variablePath, "!") {
+			conditionalNot = " ! "
+			variablePath = strings.TrimSpace(variablePath[1:])
+		}
+
+		var expressionValue string
+
+		value, err := getVariableValueAsString(command, actions, params, variablePath, true)
+		if err != nil {
+			if !strings.Contains(err.Error(), "Variable not found") {
+				return "", err
+			}
+		}
+
+		if conditionalSymbol == "" {
+			expressionValue = fmt.Sprintf("[ %s'%s' ]", conditionalNot, value)
+		} else {
+			expressionValue = fmt.Sprintf("[ %s'%s' %s '%s' ]", conditionalNot, value, conditionalSymbol, expectedValue)
 		}
 
 		variables[variableExpression] = expressionValue
