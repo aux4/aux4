@@ -1,8 +1,10 @@
 package executor
 
 import (
+	"bufio"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"unicode"
 
@@ -14,6 +16,55 @@ import (
 )
 
 func RunShell(env *engine.VirtualEnvironment) error {
+	stat, _ := os.Stdin.Stat()
+	isPiped := (stat.Mode() & os.ModeCharDevice) == 0
+
+	if isPiped {
+		return runBatchMode(env)
+	}
+	return runInteractiveMode(env)
+}
+
+func runBatchMode(env *engine.VirtualEnvironment) error {
+	scanner := bufio.NewScanner(os.Stdin)
+	
+	for scanner.Scan() {
+		input := strings.TrimSpace(scanner.Text())
+		if input == "" {
+			continue
+		}
+
+		if input == "exit" {
+			break
+		}
+
+		output.Out(output.StdOut).Println(">", input)
+
+		args := parseInputAsArgs(input)
+
+		_, shellActions, shellParams := param.ParseArgs(args)
+
+		env.SetProfile("main")
+
+		if err := MainExecute(env, shellActions, &shellParams); err != nil {
+			if aux4Err, ok := err.(core.Aux4Error); ok {
+				output.Out(output.StdErr).Println(aux4Err)
+			} else {
+				output.Out(output.StdErr).Println("Error:", err)
+			}
+		}
+
+		output.Out(output.StdOut).Println()
+	}
+
+	if err := scanner.Err(); err != nil {
+		return core.InternalError(fmt.Sprintf("Error reading input: %v", err), err)
+	}
+
+	return nil
+}
+
+func runInteractiveMode(env *engine.VirtualEnvironment) error {
 	output.Out(output.StdOut).Println(output.Blue("aux4 shell"))
 	output.Out(output.StdOut).Println("Type commands without", output.Yellow("aux4"), "prefix.")
 	output.Out(output.StdOut).Println("Enter", output.Yellow("aux4 man"), "to see available commands.")
