@@ -100,7 +100,7 @@ func joinArgs(args ...interface{}) string {
 	for i, arg := range args {
 		strs[i] = fmt.Sprint(arg)
 	}
-	return strings.Join(strs, "")
+	return strings.ReplaceAll(strings.Join(strs, ""), ansiReset, "")
 }
 
 func Gray(args ...interface{}) string {

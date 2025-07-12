@@ -102,7 +102,7 @@ func (params *Aux4Parameters) Local() bool {
 }
 
 func (params *Aux4Parameters) NoPackages() bool {
-	value, ok := params.params["no-packages"]
+	value, ok := params.params["noPackages"]
 	return ok && value == "true"
 }
 
@@ -275,7 +275,7 @@ func (p *Parameters) String() string {
 			builder.WriteString("--")
 			builder.WriteString(name)
 			builder.WriteString(" '")
-			builder.WriteString(value.(string))
+			builder.WriteString(valueToString(value, false))
 			builder.WriteString("'")
 		}
 	}
