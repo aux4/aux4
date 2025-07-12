@@ -11,13 +11,10 @@ import (
 	"aux4.dev/aux4/engine/executor"
 	"aux4.dev/aux4/engine/param"
 	"aux4.dev/aux4/output"
-	"github.com/fatih/color"
 )
 
 func main() {
 	cmd.AbortOnCtrlC()
-
-	color.NoColor = false
 
 	aux4Params, actions, params := param.ParseArgs(os.Args[1:])
 

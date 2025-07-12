@@ -1,10 +1,8 @@
 package param
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
@@ -25,7 +23,7 @@ func ParseArgs(args []string) (Aux4Parameters, []string, Parameters) {
 			name := arg[2:]
 			value := ""
 			if strings.Contains(name, "=") {
-				parts := strings.Split(name, "=")
+				parts := strings.SplitN(name, "=", 2)
 				name = parts[0]
 				value = parts[1]
 			} else if index+1 >= len(args) || strings.HasPrefix(args[index+1], "-") {
@@ -63,8 +61,35 @@ func ParseArgs(args []string) (Aux4Parameters, []string, Parameters) {
 	return Aux4Parameters{params: aux4Params}, actions, Parameters{params: params, lookups: ParameterLookups()}
 }
 
-type ParameterLookup interface {
-	Get(parameters *Parameters, command core.Command, actions []string, name string) (any, error)
+func ExtractArgs(instruction string) []string {
+	var args []string
+	var current strings.Builder
+	inSingleQuote := false
+	inDoubleQuote := false
+	escapeNext := false
+	for _, r := range instruction {
+		if escapeNext {
+			current.WriteRune(r)
+			escapeNext = false
+		} else if r == '\\' {
+			escapeNext = true
+		} else if r == '\'' && !inDoubleQuote {
+			inSingleQuote = !inSingleQuote
+		} else if r == '"' && !inSingleQuote {
+			inDoubleQuote = !inDoubleQuote
+		} else if unicode.IsSpace(r) && !inSingleQuote && !inDoubleQuote {
+			if current.Len() > 0 {
+				args = append(args, current.String())
+				current.Reset()
+			}
+		} else {
+			current.WriteRune(r)
+		}
+	}
+	if current.Len() > 0 {
+		args = append(args, current.String())
+	}
+	return args
 }
 
 type Aux4Parameters struct {
@@ -77,7 +102,7 @@ func (params *Aux4Parameters) Local() bool {
 }
 
 func (params *Aux4Parameters) NoPackages() bool {
-	value, ok := params.params["no-packages"]
+	value, ok := params.params["noPackages"]
 	return ok && value == "true"
 }
 
@@ -152,6 +177,7 @@ func (p *Parameters) Expr(command core.Command, actions []string, originalExpres
 	var name string
 	var value any
 	index := -1
+	var key string
 	jsonExpr := ""
 
 	var expression = strings.TrimSpace(originalExpression)
@@ -172,8 +198,12 @@ func (p *Parameters) Expr(command core.Command, actions []string, originalExpres
 		if strings.Contains(name, "[") {
 			originalName := name
 			name = name[:strings.Index(name, "[")]
-			indexString := originalName[strings.Index(originalName, "[")+1 : strings.Index(originalName, "]")]
-			index, _ = strconv.Atoi(indexString)
+			idx := originalName[strings.Index(originalName, "[")+1 : strings.Index(originalName, "]")]
+			if parsedIdx, err := strconv.Atoi(idx); err == nil {
+				index = parsedIdx
+			} else {
+				key = idx
+			}
 		}
 	}
 
@@ -208,13 +238,25 @@ func (p *Parameters) Expr(command core.Command, actions []string, originalExpres
 			} else {
 				return nil, core.InternalError("Index out of range: "+expression, nil)
 			}
+		} else {
+			return nil, core.InternalError("Index out of range: "+expression, nil)
+		}
+	} else if key != "" {
+		if valueMap, ok := value.(map[string]any); ok {
+			if keyValue, exists := valueMap[key]; exists {
+				value = keyValue
+			} else {
+				return nil, core.InternalError("Key not found: "+expression, nil)
+			}
+		} else {
+			return nil, core.InternalError("Cannot apply key lookup: "+expression, nil)
 		}
 	}
 
 	if jsonExpr != "" {
 		jsonValue, err := jsonpath.Read(value, "$."+jsonExpr)
 		if err != nil {
-			return nil, err
+			return nil, core.InternalError("Error trying to access field '"+jsonExpr+"' from "+fmt.Sprintf("'%v'", value), err)
 		}
 		value = jsonValue
 	}
@@ -233,171 +275,16 @@ func (p *Parameters) String() string {
 			builder.WriteString("--")
 			builder.WriteString(name)
 			builder.WriteString(" '")
-			builder.WriteString(value.(string))
+			builder.WriteString(valueToString(value, false))
 			builder.WriteString("'")
 		}
 	}
 	return builder.String()
 }
 
-func InjectParameters(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
-	const variableRegex = "\\$([a-zA-Z0-9]+)|\\$\\{([^}\\s]+)\\}|value\\(([^)]+)\\)|values\\(([^)]+)\\)|param\\(([^)]+)\\)|params\\(([^)]+)\\)"
-	expr := regexp.MustCompile(variableRegex)
-	matches := expr.FindAllSubmatch([]byte(instruction), -1)
-
-	variables := map[string]any{}
-	for _, match := range matches {
-		variableExpression := string(match[0])
-		var expressionValue string
-		var err error
-
-		if strings.HasPrefix(variableExpression, "${") {
-			variablePath := string(match[0])
-			expressionValue, err = getVariableValueAsString(command, actions, params, variablePath, false)
-			if err != nil {
-				if strings.Contains(err.Error(), "Variable not found") {
-					continue
-				}
-				return "", err
-			}
-		} else if strings.HasPrefix(variableExpression, "$") {
-			variablePath := string(match[1])
-			expressionValue, err = getVariableValueAsString(command, actions, params, variablePath, false)
-			if err != nil {
-				if strings.Contains(err.Error(), "Variable not found") {
-					continue
-				}
-				return "", err
-			}
-		} else if strings.HasPrefix(variableExpression, "value(") {
-			variablePath := string(match[3])
-			value, err := getVariableValueAsString(command, actions, params, variablePath, true)
-			if err != nil {
-				if strings.Contains(err.Error(), "Variable not found") {
-					continue
-				}
-				return "", err
-			}
-
-			expressionValue = fmt.Sprintf("'%s'", value)
-		} else if strings.HasPrefix(variableExpression, "values(") {
-			expressionValue = ""
-
-			variableList := strings.Split(string(match[4]), ",")
-			for i := 0; i < len(variableList); i++ {
-				variablePath := strings.TrimSpace(variableList[i])
-				variableValue, err := getVariableValueAsString(command, actions, params, variablePath, true)
-				if err != nil {
-					if strings.Contains(err.Error(), "Variable not found") {
-						continue
-					}
-					return "", err
-				}
-
-				if i > 0 {
-					expressionValue += " "
-				}
-
-				expressionValue += fmt.Sprintf("'%s'", variableValue)
-			}
-		} else if strings.HasPrefix(variableExpression, "param(") {
-			variablePath := string(match[5])
-			value, err := getVariableValueAsString(command, actions, params, variablePath, true)
-			if err != nil {
-				if strings.Contains(err.Error(), "Variable not found") {
-					continue
-				}
-				return "", err
-			}
-
-			if value != "" {
-				paramName := standardizeParameterName(variablePath)
-				expressionValue = fmt.Sprintf("--%s '%s'", paramName, value)
-			}
-		} else if strings.HasPrefix(variableExpression, "params(") {
-			expressionValue = ""
-
-			variableList := strings.Split(string(match[6]), ",")
-			for i := 0; i < len(variableList); i++ {
-				variablePath := strings.TrimSpace(variableList[i])
-				variableValue, err := getVariableValueAsString(command, actions, params, variablePath, true)
-				if err != nil {
-					if strings.Contains(err.Error(), "Variable not found") {
-						continue
-					}
-					return "", err
-				}
-
-				if variableValue == "" {
-					continue
-				}
-
-				if i > 0 {
-					expressionValue += " "
-				}
-
-				paramName := standardizeParameterName(variablePath)
-				expressionValue += fmt.Sprintf("--%s '%s'", paramName, variableValue)
-			}
-		}
-
-		variables[variableExpression] = expressionValue
-	}
-
-	return expr.ReplaceAllStringFunc(instruction, func(match string) string {
-		value, exists := variables[match]
-		if !exists {
-			return match
-		}
-
-		return fmt.Sprintf("%v", value)
-	}), nil
-}
-
-func getVariableValueAsString(command core.Command, actions []string, params *Parameters, variableName string, escape bool) (string, error) {
-	value, err := params.Expr(command, actions, variableName)
-	if err != nil {
-		return "", err
-	}
-
-	if value == nil {
-		return "", core.VariableNotFoundError(variableName)
-	}
-
-	return valueToString(value, escape), nil
-}
-
-func valueToString(value any, escape bool) string {
-	if value == nil {
-		return ""
-	}
-
-	typeOfValue := reflect.TypeOf(value)
-	if typeOfValue.Kind() != reflect.String {
-		jsonValue, err := json.Marshal(value)
-		if err != nil {
-			value = fmt.Sprintf("%v", value)
-		} else {
-			value = string(jsonValue)
-		}
-	}
-
-	if escape {
-		value = escapeValue(value)
-	}
-	return fmt.Sprintf("%v", value)
-}
-
-func escapeValue(value any) string {
-	if value == nil {
-		return ""
-	}
-	return strings.ReplaceAll(value.(string), "'", "'\\''")
-}
-
 func standardizeParameterName(name string) string {
 	if !strings.Contains(name, ".") {
-		return name
+		return removeStarSuffix(name)
 	}
 
 	var result strings.Builder
@@ -417,5 +304,12 @@ func standardizeParameterName(name string) string {
 		}
 	}
 
-	return result.String()
+	return removeStarSuffix(result.String())
+}
+
+func removeStarSuffix(name string) string {
+	for strings.HasSuffix(name, "*") {
+		name = strings.TrimSuffix(name, "*")
+	}
+	return name
 }

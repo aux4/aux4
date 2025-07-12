@@ -11,7 +11,7 @@
         {
           "name": "print",
           "execute": [
-            "log:cmd param(name)"
+            "log:cmd param(name) param(age) param(undefined)"
           ],
           "help": {
             "text": "print param name",
@@ -19,6 +19,10 @@
               {
                 "name": "name",
                 "text": "the name to print"
+              },
+              {
+                "name": "age",
+                "text": "the age to print"
               }
             ]
           }
@@ -30,11 +34,11 @@
 ```
 
 ```execute
-aux4 print --name Joe
+aux4 print --name Joe --age 20
 ```
 
 ```expect
-cmd --name 'Joe'
+cmd --name 'Joe' --age '20' 
 ```
 
 ## multi param
@@ -48,7 +52,7 @@ cmd --name 'Joe'
         {
           "name": "print",
           "execute": [
-            "log:cmd params(name, age)"
+            "log:cmd params(name, age, undefined)"
           ],
           "help": {
             "text": "print params name and age",
@@ -72,7 +76,6 @@ cmd --name 'Joe'
 
 ```execute
 aux4 print --name Joe --age 20
-```
 ```
 
 ```expect
@@ -90,15 +93,16 @@ cmd --name 'Joe' --age '20'
         {
           "name": "print",
           "execute": [
-            "log:cmd value(name)"
+            "log:cmd param(tag**)"
           ],
           "help": {
             "text": "print value name",
             "variables": [
               {
-                "name": "name",
-                "text": "the name to print"
-              }
+                "name": "tag",
+                "text": "the name of the tag",
+                "multiple": true
+              } 
             ]
           }
         }
@@ -108,12 +112,24 @@ cmd --name 'Joe' --age '20'
 }
 ```
 
+### given single value
+
 ```execute
-aux4 print --name Joe
+aux4 print --tag first
 ```
 
 ```expect
-cmd 'Joe'
+cmd --tag 'first'
+```
+
+### given multiple values
+
+```execute
+aux4 print --tag first --tag second
+```
+
+```expect
+cmd --tag 'first' --tag 'second'
 ```
 
 ## multi value
@@ -127,7 +143,7 @@ cmd 'Joe'
         {
           "name": "print",
           "execute": [
-            "log:cmd values(name, age)"
+            "log:cmd values(name, age, undefined)"
           ],
           "help": {
             "text": "print params name and age",
@@ -152,10 +168,9 @@ cmd 'Joe'
 ```execute
 aux4 print --name Joe --age 20
 ```
-```
 
 ```expect
-cmd 'Joe' '20'
+cmd 'Joe' '20' ''
 ```
 
 ## Nested Data

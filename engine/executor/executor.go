@@ -58,11 +58,11 @@ func Execute(env *engine.VirtualEnvironment, actions []string, params *param.Par
 			for _, execute := range command.Execute {
 				if strings.HasPrefix(execute, "profile:") {
 					rawProfileName := strings.TrimPrefix(execute, "profile:")
-          profileName, err := param.InjectParameters(command, rawProfileName, actions, params)
-          if err != nil {
-            return err
-          }
-          
+					profileName, err := param.InjectParameters(command, rawProfileName, actions, params)
+					if err != nil {
+						return err
+					}
+
 					profile := env.GetProfile(profileName)
 					if profile != nil {
 						for _, profileCommand := range profile.CommandsOrdered {
@@ -154,6 +154,8 @@ func commandExecutorFactory(command string) engine.VirtualCommandExecutor {
 		return &NoutCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "stdin:") {
 		return &StdinCommandExecutor{Command: command}
+	} else if strings.HasPrefix(command, "aux4:") || (strings.HasPrefix(command, "aux4 ") && !strings.Contains(command, "&") && !strings.Contains(command, "|") && !strings.Contains(command, ">")) {
+		return &Aux4CommandExecutor{Command: command}
 	}
 	return &CommandLineExecutor{Command: command}
 }
@@ -296,6 +298,7 @@ func (executor *LogCommandExecutor) Execute(env *engine.VirtualEnvironment, comm
 	text := strings.TrimPrefix(executor.Command, "log:")
 	instruction, err := param.InjectParameters(command, text, actions, params)
 	if err != nil {
+		fmt.Println("Error injecting parameters:", err)
 		return err
 	}
 	output.Out(output.StdOut).Println(instruction)
@@ -423,6 +426,46 @@ func (executor *StdinCommandExecutor) Execute(env *engine.VirtualEnvironment, co
 	}
 
 	params.Update("response", strings.TrimSpace(stdout))
+
+	return nil
+}
+
+type Aux4CommandExecutor struct {
+	Command string
+}
+
+// Aux4CommandExecutor executes nested aux4 commands in-process using the prepared VirtualEnvironment.
+func (executor *Aux4CommandExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
+	// Strip the "aux4:" or "aux4 " prefix to get the nested instruction
+	var expression string
+	if strings.HasPrefix(executor.Command, "aux4:") {
+		expression = strings.TrimPrefix(executor.Command, "aux4:")
+	} else {
+		expression = strings.TrimPrefix(executor.Command, "aux4 ")
+	}
+
+	// Inject any parameters into the nested instruction
+	instruction, err := param.InjectParameters(command, expression, actions, params)
+	if err != nil {
+		return err
+	}
+
+	// Split the instruction into arguments, honoring quotes
+	nestedArgs := param.ExtractArgs(instruction)
+	// Parse nested args into actions and parameters for the sub-invocation
+	_, nestedActions, nestedParams := param.ParseArgs(nestedArgs)
+	// Execute the nested aux4 command in the same environment
+
+	currentProfile := env.CurrentProfile
+
+	env.SetProfile("main")
+
+	err = Execute(env, nestedActions, &nestedParams)
+	if err != nil {
+		return err
+	}
+
+	env.SetProfile(currentProfile)
 
 	return nil
 }

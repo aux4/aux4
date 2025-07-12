@@ -22,7 +22,7 @@ func ShowCommandSource(command core.Command) {
 func formatCommandLine(commandLine string) string {
 	formatted := commandLine
 
-  executorPrefixRegex := regexp.MustCompile(`^([^:]+):(.+)`)
+  executorPrefixRegex := regexp.MustCompile(`^([a-zA-Z0-9]+):(.+)`)
 	executorPrefixMatch := executorPrefixRegex.FindStringSubmatch(formatted)
 	if len(executorPrefixMatch) > 0 {
 		prefix := executorPrefixMatch[1]
@@ -58,40 +58,50 @@ func formatCommandLine(commandLine string) string {
 		}
 	}
 
+  paramRegex := regexp.MustCompile("(param|params|value|values|if)\\(([^)]+)\\)")
+	paramMatches := paramRegex.FindAllStringSubmatch(formatted, -1)
+	for _, paramMatch := range paramMatches {
+		match := paramMatch[0]
+		formattedMatch := match
+		formattedMatch = output.ColorText(formattedMatch, match, output.ColorMagenta)
+		formattedMatch = output.ColorText(formattedMatch, paramMatch[2], output.ColorCyan)
+		formatted = strings.ReplaceAll(formatted, match, formattedMatch)
+  }
+
 	textRegex := regexp.MustCompile(`"(.*?)"|'(.*?)'`)
 	textMatches := textRegex.FindAllStringSubmatch(formatted, -1)
 	for _, textMatch := range textMatches {
-		formatted = strings.ReplaceAll(formatted, textMatch[0], output.Green(textMatch[0]))
+		formatted = output.ColorText(formatted, textMatch[0], output.ColorGreen)
 	}
 
 	filePathRegex := regexp.MustCompile(`\/?(\S*)\/(\S*)`)
 	filePathMatches := filePathRegex.FindAllStringSubmatch(formatted, -1)
 	for _, filePathMatch := range filePathMatches {
-		formatted = strings.ReplaceAll(formatted, filePathMatch[0], output.Yellow(filePathMatch[0]))
+		formatted = output.ColorText(formatted, filePathMatch[0], output.ColorYellow)
 	}
 
 	variableRegex := regexp.MustCompile("\\$([a-zA-Z0-9]+)|\\$\\{([^}\\s]+)\\}")
 	variableMatches := variableRegex.FindAllStringSubmatch(formatted, -1)
 	for _, variableMatch := range variableMatches {
-		formatted = strings.ReplaceAll(formatted, variableMatch[0], output.Cyan(variableMatch[0]))
+		formatted = output.ColorText(formatted, variableMatch[0], output.ColorCyan)
 	}
 
   parameterRegex := regexp.MustCompile(`\s-{1,2}([a-zA-Z0-9-_]+)`)
   parameterMatches := parameterRegex.FindAllStringSubmatch(formatted, -1)
   for _, parameterMatch := range parameterMatches {
-    formatted = strings.ReplaceAll(formatted, parameterMatch[0], output.Blue(parameterMatch[0]))
+    formatted = output.ColorText(formatted, parameterMatch[0], output.ColorBlue)
   }
 
   environmentVariableRegex := regexp.MustCompile(`(^|\s)\b([^\s:;]+)\b=\b([^\s:;]+)\b`)
   environmentVariableMatches := environmentVariableRegex.FindAllStringSubmatch(formatted, -1)
   for _, environmentVariableMatch := range environmentVariableMatches {
     variable := environmentVariableMatch[0]
-    variable = strings.ReplaceAll(variable, environmentVariableMatch[2], output.Cyan(environmentVariableMatch[2]))
-    variable = strings.ReplaceAll(variable, environmentVariableMatch[3], output.Magenta(environmentVariableMatch[3]))
+    variable = output.ColorText(variable, environmentVariableMatch[2], output.ColorCyan)
+    variable = output.ColorText(variable, environmentVariableMatch[3], output.ColorMagenta)
     formatted = strings.ReplaceAll(formatted, environmentVariableMatch[0], variable)
   }
 
-  formatted = strings.ReplaceAll(formatted, "aux4", output.Bold("aux4"))
+  formatted = output.ColorText(formatted, "aux4", output.FormatBold)
 
 	return formatted
 }

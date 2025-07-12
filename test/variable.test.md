@@ -28,7 +28,35 @@ aux4 print --name Joe
 hello Joe
 ```
 
-## Use variable without curl brackets
+## Define variable with equals sign
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print",
+          "execute": [
+            "echo hello ${name}"
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print --name=Joe
+```
+
+```expect
+hello Joe
+```
+
+## Use variable without curly brackets
 
 ```file:.aux4
 {
@@ -232,7 +260,7 @@ aux4 print
 hello Mary
 ```
 
-## Set mutliple variables
+## Set multiple variables
 
 ```file:.aux4
 {
@@ -351,4 +379,188 @@ aux4 print
 
 ```expect
 hello Mary ${unknown} $1 $2
+```
+
+## Set variable with multiple values
+
+### Print last value
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print",
+          "execute": [
+            "log:${value}"
+          ],
+          "help": {
+            "variables": [
+              {
+                "name": "value",
+                "multiple": true
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print --value=1 --value=2 --value=3
+```
+
+```expect
+3
+```
+
+### Print by index
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print",
+          "execute": [
+            "log:${value*[1]} ${value*[2]}"
+          ],
+          "help": {
+            "variables": [
+              {
+                "name": "value",
+                "multiple": true
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print --value=1 --value=2 --value=3
+```
+
+```expect
+2 3
+```
+
+### Print all
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print",
+          "execute": [
+            "log:${value*}"
+          ],
+          "help": {
+            "variables": [
+              {
+                "name": "value",
+                "multiple": true
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print --value=1 --value=2 --value=3
+```
+
+```expect
+["1","2","3"]
+```
+
+### Set multiple values using equals sign
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print",
+          "execute": [
+            "log:${var*}"
+          ],
+          "help": {
+            "variables": [
+              {
+                "name": "var",
+                "multiple": true
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print --var env=dev --var user=admin --var=host=localhost
+```
+
+```expect
+["env=dev","user=admin","host=localhost"]
+```
+
+## Extract variable from a map
+
+```file:data.json
+{
+  "person": {
+    "name": "John"
+  }
+}
+```
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print",
+          "execute": [
+            "json:cat data.json",
+            "set:field=name",
+            "log:${response.person[$field]}"
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print
+```
+
+```expect
+John
 ```

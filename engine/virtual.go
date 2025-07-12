@@ -144,10 +144,10 @@ func loadPackage(env *VirtualEnvironment, pack *core.Package) error {
 
 			existingCommand, exists := virtualProfile.Commands[command.Name]
 			if exists {
-        packageName := fmt.Sprintf("%s/%s@", pack.Scope, pack.Name)
-        if !strings.HasPrefix(existingCommand.Ref.Package, packageName) {
-			    continue
-        }
+				packageName := fmt.Sprintf("%s/%s@", pack.Scope, pack.Name)
+				if !strings.HasPrefix(existingCommand.Ref.Package, packageName) {
+					continue
+				}
 			}
 
 			if command.Ref.Path == "" {
@@ -161,7 +161,10 @@ func loadPackage(env *VirtualEnvironment, pack *core.Package) error {
 				command.SetRef(pack.Path, packageName, profile.Name)
 			}
 
-			virtualProfile.CommandsOrdered = append(virtualProfile.CommandsOrdered, command.Name)
+			_, exists = virtualProfile.Commands[command.Name]
+			if !exists {
+				virtualProfile.CommandsOrdered = append(virtualProfile.CommandsOrdered, command.Name)
+			}
 			virtualProfile.Commands[command.Name] = command
 		}
 	}
