@@ -20,7 +20,7 @@ import (
 	"github.com/manifoldco/promptui"
 )
 
-func Execute(env *engine.VirtualEnvironment, actions []string, params *param.Parameters) error {
+func MainExecute(env *engine.VirtualEnvironment, actions []string, params *param.Parameters) error {
 	virtualProfile := env.GetProfile(env.CurrentProfile)
 	if virtualProfile == nil {
 		return core.InternalError(fmt.Sprintf("Profile not found: %s", env.CurrentProfile), nil)
@@ -171,7 +171,7 @@ func (executor *ProfileCommandExecutor) Execute(env *engine.VirtualEnvironment, 
 		return err
 	}
 	env.SetProfile(profileName)
-	return Execute(env, actions[1:], params)
+	return MainExecute(env, actions[1:], params)
 }
 
 type DebugCommandExecutor struct {
@@ -458,14 +458,17 @@ func (executor *Aux4CommandExecutor) Execute(env *engine.VirtualEnvironment, com
 
 	currentProfile := env.CurrentProfile
 
-	env.SetProfile("main")
+	_ = env.SetProfile("main")
 
-	err = Execute(env, nestedActions, &nestedParams)
+	err = MainExecute(env, nestedActions, &nestedParams)
 	if err != nil {
 		return err
 	}
 
-	env.SetProfile(currentProfile)
+	err = env.SetProfile(currentProfile)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

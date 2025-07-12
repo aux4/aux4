@@ -47,15 +47,15 @@ func (executor *Aux4AutoInstallExecutor) Execute(env *engine.VirtualEnvironment,
 			return nil
 		}
 	} else {
-    data, err := os.ReadFile(allPackagesPath)
-    if err != nil {
-      output.Out(output.StdErr).Println(output.Red("Error reading package metadata file"), output.Red(err))
-    }
+		data, err := os.ReadFile(allPackagesPath)
+		if err != nil {
+			output.Out(output.StdErr).Println(output.Red("Error reading package metadata file"), output.Red(err))
+		}
 
 		var jsonData map[string]interface{}
 		err = json.Unmarshal(data, &jsonData)
 		if err != nil {
-      output.Out(output.StdErr).Println(output.Red("Package metadata has invalid json format"), output.Red(err))
+			output.Out(output.StdErr).Println(output.Red("Package metadata has invalid json format"), output.Red(err))
 			return nil
 		}
 
@@ -67,7 +67,7 @@ func (executor *Aux4AutoInstallExecutor) Execute(env *engine.VirtualEnvironment,
 
 		aux4Package, ok := packages["aux4/aux4"].(map[string]interface{})
 		if !ok {
-			aux4Package = make(map[string]interface{}) 
+			aux4Package = make(map[string]interface{})
 			packages["aux4/aux4"] = aux4Package
 
 			aux4Package["scope"] = "aux4"
@@ -78,15 +78,15 @@ func (executor *Aux4AutoInstallExecutor) Execute(env *engine.VirtualEnvironment,
 
 		updatedData, err := json.MarshalIndent(jsonData, "", "  ")
 		if err != nil {
-      output.Out(output.StdErr).Println(output.Red("Error writing package metadata"), output.Red(err))
+			output.Out(output.StdErr).Println(output.Red("Error writing package metadata"), output.Red(err))
 			return nil
 		}
 
-    err = os.WriteFile(allPackagesPath, updatedData, 0644)
-    if err != nil {
-      output.Out(output.StdErr).Println(output.Red("Error saving package metadata"), output.Red(err))
-      return nil
-    }
+		err = os.WriteFile(allPackagesPath, updatedData, 0644)
+		if err != nil {
+			output.Out(output.StdErr).Println(output.Red("Error saving package metadata"), output.Red(err))
+			return nil
+		}
 	}
 
 	return nil
@@ -124,3 +124,11 @@ func (executor *Aux4VersionExecutor) Execute(env *engine.VirtualEnvironment, com
 
 	return nil
 }
+
+type Aux4ShellExecutor struct {
+}
+
+func (shellExecutor *Aux4ShellExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
+	return RunShell(env)
+}
+

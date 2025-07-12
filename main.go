@@ -35,6 +35,7 @@ func main() {
 
 	registry := engine.CreateVirtualExecutorRegistry()
 	registry.RegisterExecutor("aux4.version", &executor.Aux4VersionExecutor{})
+	registry.RegisterExecutor("aux4.shell", &executor.Aux4ShellExecutor{})
 	registry.RegisterExecutor("aux4.autoinstall", &executor.Aux4AutoInstallExecutor{})
 
 	env, err := engine.InitializeVirtualEnvironment(library, registry)
@@ -43,7 +44,7 @@ func main() {
 		os.Exit(err.(core.Aux4Error).ExitCode)
 	}
 
-	if err := executor.Execute(env, actions, &params); err != nil {
+	if err := executor.MainExecute(env, actions, &params); err != nil {
 		if aux4Err, ok := err.(core.Aux4Error); ok {
 			if aux4Err.Message != "" {
 				output.Out(output.StdErr).Println(output.Red(aux4Err.Message))

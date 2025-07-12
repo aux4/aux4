@@ -70,7 +70,13 @@ func DefaultAux4() string {
               "help": {
                 "text": "Show the location of a command"
               }
-            }
+            },
+						{
+							"name": "shell",
+							"help": {
+								"text": "Start an aux4 shell"
+							}
+						}
           ]
         }
       ]
@@ -86,7 +92,7 @@ func DefaultAux4Package() string {
         "aux4/aux4": {
           "scope": "aux4",
           "name": "aux4",
-          "version": "` + Version + `"
+ "version": "` + Version + `"
         }
       },
       "dependencies": {
