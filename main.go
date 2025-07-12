@@ -17,6 +17,7 @@ func main() {
 
 	library := LocalLibrary()
 	library.RegisterExecutor("aux4.version", &Aux4VersionExecutor{})
+	library.RegisterExecutor("aux4.shell", &Aux4ShellExecutor{})
 
 	if err := library.Load("", "aux4", []byte(`
     {
@@ -52,6 +53,12 @@ func main() {
               ],
               "help": {
                 "text": "Display help for a command"
+              }
+            },
+            {
+              "name": "shell",
+              "help": {
+                "text": "Start an interactive aux4 shell"
               }
             }
           ]
