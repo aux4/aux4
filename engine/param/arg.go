@@ -8,6 +8,7 @@ import (
 	"unicode"
 
 	"aux4.dev/aux4/core"
+	"aux4.dev/aux4/io"
 
 	"github.com/yalp/jsonpath"
 )
@@ -242,7 +243,13 @@ func (p *Parameters) Expr(command core.Command, actions []string, originalExpres
 			return nil, core.InternalError("Index out of range: "+expression, nil)
 		}
 	} else if key != "" {
-		if valueMap, ok := value.(map[string]any); ok {
+		if orderedMap, ok := value.(*io.OrderedMap); ok {
+			if keyValue, exists := orderedMap.Get(key); exists {
+				value = keyValue
+			} else {
+				return nil, core.InternalError("Key not found: "+expression, nil)
+			}
+		} else if valueMap, ok := value.(map[string]any); ok {
 			if keyValue, exists := valueMap[key]; exists {
 				value = keyValue
 			} else {
@@ -254,14 +261,49 @@ func (p *Parameters) Expr(command core.Command, actions []string, originalExpres
 	}
 
 	if jsonExpr != "" {
-		jsonValue, err := jsonpath.Read(value, "$."+jsonExpr)
+		var jsonValue interface{}
+		var err error
+		
+		if orderedMap, ok := value.(*io.OrderedMap); ok {
+			// Navigate through the OrderedMap manually to preserve order
+			jsonValue, err = navigateOrderedMap(orderedMap, jsonExpr)
+		} else {
+			jsonValue, err = jsonpath.Read(value, "$."+jsonExpr)
+		}
+		
 		if err != nil {
 			return nil, core.InternalError("Error trying to access field '"+jsonExpr+"' from "+fmt.Sprintf("'%v'", value), err)
 		}
+		
 		value = jsonValue
 	}
 
 	return value, nil
+}
+
+func navigateOrderedMap(om *io.OrderedMap, path string) (interface{}, error) {
+	parts := strings.Split(path, ".")
+	current := interface{}(om)
+	
+	for _, part := range parts {
+		if orderedMap, ok := current.(*io.OrderedMap); ok {
+			value, exists := orderedMap.Get(part)
+			if !exists {
+				return nil, fmt.Errorf("key '%s' not found", part)
+			}
+			current = value
+		} else if regularMap, ok := current.(map[string]interface{}); ok {
+			value, exists := regularMap[part]
+			if !exists {
+				return nil, fmt.Errorf("key '%s' not found", part)
+			}
+			current = value
+		} else {
+			return nil, fmt.Errorf("cannot navigate into non-object type %T", current)
+		}
+	}
+	
+	return current, nil
 }
 
 func (p *Parameters) String() string {

@@ -8,6 +8,7 @@ import (
 
 	"aux4.dev/aux4/cmd"
 	"aux4.dev/aux4/core"
+	"aux4.dev/aux4/io"
 	"aux4.dev/aux4/output"
 
 	"github.com/manifoldco/promptui"
@@ -32,7 +33,7 @@ type ParameterLookup interface {
 
 type ConfigLookup struct {
 	load       bool
-	parameters map[string]interface{}
+	parameters *io.OrderedMap
 }
 
 func (l *ConfigLookup) Get(parameters *Parameters, command core.Command, actions []string, name string) (any, error) {
@@ -41,7 +42,7 @@ func (l *ConfigLookup) Get(parameters *Parameters, command core.Command, actions
 	}
 
 	if l.load {
-		value, found := l.parameters[name]
+		value, found := l.parameters.Get(name)
 		if !found {
 			return nil, nil
 		}
@@ -76,15 +77,16 @@ func (l *ConfigLookup) Get(parameters *Parameters, command core.Command, actions
 
 	jsonString := strings.TrimSpace(stdout)
 
-	var params map[string]interface{}
-	err = json.Unmarshal([]byte(jsonString), &params)
+	params := io.NewOrderedMap()
+	err = json.Unmarshal([]byte(jsonString), params)
 	if err != nil {
 		return nil, nil
 	}
 
 	l.parameters = params
 
-	return params[name], nil
+	value, _ := params.Get(name)
+	return value, nil
 }
 
 type EncryptedParameterLookup struct {

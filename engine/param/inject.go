@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"aux4.dev/aux4/core"
+	"aux4.dev/aux4/io"
 )
 
 func InjectParameters(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
@@ -338,13 +339,22 @@ func valueToString(value any, escape bool) string {
 		return ""
 	}
 
-	typeOfValue := reflect.TypeOf(value)
-	if typeOfValue.Kind() != reflect.String {
-		jsonValue, err := json.Marshal(value)
+	if orderedMap, ok := value.(*io.OrderedMap); ok {
+		jsonValue, err := orderedMap.MarshalJSON()
 		if err != nil {
 			value = fmt.Sprintf("%v", value)
 		} else {
 			value = string(jsonValue)
+		}
+	} else {
+		typeOfValue := reflect.TypeOf(value)
+		if typeOfValue.Kind() != reflect.String {
+			jsonValue, err := marshalWithOrderPreservation(value)
+			if err != nil {
+				value = fmt.Sprintf("%v", value)
+			} else {
+				value = string(jsonValue)
+			}
 		}
 	}
 
@@ -352,6 +362,30 @@ func valueToString(value any, escape bool) string {
 		value = escapeValue(value)
 	}
 	return fmt.Sprintf("%v", value)
+}
+
+func marshalWithOrderPreservation(value interface{}) ([]byte, error) {
+	if orderedMap, ok := value.(*io.OrderedMap); ok {
+		return orderedMap.MarshalJSON()
+	}
+
+	if mapValue, ok := value.(map[string]interface{}); ok {
+		for key, val := range mapValue {
+			if orderedMapVal, ok := val.(*io.OrderedMap); ok {
+				mapValue[key] = orderedMapVal
+			}
+		}
+	}
+
+	if sliceValue, ok := value.([]interface{}); ok {
+		for i, val := range sliceValue {
+			if orderedMapVal, ok := val.(*io.OrderedMap); ok {
+				sliceValue[i] = orderedMapVal
+			}
+		}
+	}
+
+	return json.Marshal(value)
 }
 
 func escapeValue(value any) string {
