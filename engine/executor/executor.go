@@ -418,10 +418,8 @@ func (executor *StdinCommandExecutor) Execute(env *engine.VirtualEnvironment, co
 		return err
 	}
 
-	stdout, stderr, err := cmd.ExecuteCommandLineWithStdIn(instruction)
+	stdout, _, err := cmd.ExecuteCommandLineWithStdIn(instruction)
 	if err != nil {
-		output.Out(output.StdErr).Print(stderr)
-		output.Out(output.StdOut).Print(stdout)
 		return err
 	}
 
