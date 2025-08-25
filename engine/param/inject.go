@@ -322,6 +322,20 @@ func resolveExpression(expr string, command core.Command, instruction string, ac
 }
 
 func getVariableValueAsString(command core.Command, actions []string, params *Parameters, variableName string, escape bool) (string, error) {
+	if variableName == "*" {
+		allVars := make(map[string]any)
+		for name, values := range params.params {
+			if len(values) > 0 {
+				if len(values) == 1 {
+					allVars[name] = values[0]
+				} else {
+					allVars[name] = values
+				}
+			}
+		}
+		return valueToString(allVars, escape), nil
+	}
+
 	value, err := params.Expr(command, actions, variableName)
 	if err != nil {
 		return "", err
