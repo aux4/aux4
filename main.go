@@ -37,6 +37,7 @@ func main() {
 	registry.RegisterExecutor("aux4.version", &executor.Aux4VersionExecutor{})
 	registry.RegisterExecutor("aux4.shell", &executor.Aux4ShellExecutor{})
 	registry.RegisterExecutor("aux4.autoinstall", &executor.Aux4AutoInstallExecutor{})
+	registry.RegisterExecutor("aux4.perf", &executor.Aux4PerfExecutor{})
 
 	env, err := engine.InitializeVirtualEnvironment(library, registry)
 	if err != nil {

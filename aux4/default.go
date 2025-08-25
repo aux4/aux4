@@ -41,6 +41,19 @@ func DefaultAux4() string {
                 "text": "Display the version of aux4"
               }
             },
+						{
+							"name": "perf",
+							"help": {
+								"text": "Measure the performance of a command",
+								"variables": [
+									{
+										"name": "command",
+										"text": "The command to measure",
+										"arg": true
+									}
+								]
+							}
+						},
             {
               "name": "man",
               "execute": [

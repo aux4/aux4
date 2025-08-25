@@ -2,11 +2,13 @@ package executor
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
 	"aux4.dev/aux4/aux4"
+	"aux4.dev/aux4/cmd"
 	"aux4.dev/aux4/config"
 	"aux4.dev/aux4/core"
 	"aux4.dev/aux4/engine"
@@ -130,5 +132,66 @@ type Aux4ShellExecutor struct {
 
 func (shellExecutor *Aux4ShellExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
 	return RunShell(env)
+}
+
+type Aux4PerfExecutor struct {
+}
+
+func (executor *Aux4PerfExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
+	commandLineAny, err := params.Get(command, actions, "command")
+	if err != nil {
+		output.Out(output.StdErr).Println(output.Red("Error getting command parameter:"), output.Red(err))
+		return err
+	}
+	
+	if commandLineAny == nil {
+		output.Out(output.StdErr).Println(output.Red("Error: command parameter is required"))
+		return core.Aux4Error{ExitCode: 1, Message: "command parameter is required"}
+	}
+	
+	commandLine, ok := commandLineAny.(string)
+	if !ok || commandLine == "" {
+		output.Out(output.StdErr).Println(output.Red("Error: command parameter must be a non-empty string"))
+		return core.Aux4Error{ExitCode: 1, Message: "command parameter must be a non-empty string"}
+	}
+
+	output.Out(output.StdOut).Println(output.Yellow("Command:"), commandLine)
+
+	startTime := time.Now()
+	stdout, stderr, err := cmd.ExecuteCommandLineNoOutput(commandLine)
+	executionTime := time.Since(startTime)
+
+	var timeStr string
+	if executionTime < time.Millisecond {
+		timeStr = fmt.Sprintf("%.2fμs", float64(executionTime.Nanoseconds())/1000.0)
+	} else if executionTime < time.Second {
+		timeStr = fmt.Sprintf("%.2fms", float64(executionTime.Nanoseconds())/1e6)
+	} else if executionTime < time.Minute {
+		timeStr = fmt.Sprintf("%.2fs", executionTime.Seconds())
+	} else if executionTime < time.Hour {
+		timeStr = fmt.Sprintf("%.2fm", executionTime.Minutes())
+	} else {
+		timeStr = fmt.Sprintf("%.2fh", executionTime.Hours())
+	}
+
+	output.Out(output.StdOut).Println(output.Yellow("Execution time:"), timeStr)
+
+	if stdout != "" {
+		output.Out(output.StdOut).Println(output.Yellow("Output:"))
+		output.Out(output.StdOut).Print(stdout)
+	}
+
+	if err != nil {
+		if aux4Err, ok := err.(core.Aux4Error); ok {
+			output.Out(output.StdOut).Println(output.Red("Exit code:"), aux4Err.ExitCode)
+			if stderr != "" {
+				output.Out(output.StdErr).Print(stderr)
+			}
+			return nil // Don't propagate the error, just report it
+		}
+		return err
+	}
+
+	return nil
 }
 
