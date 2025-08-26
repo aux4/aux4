@@ -256,7 +256,7 @@ func (executor *EachCommandExecutor) Execute(env *engine.VirtualEnvironment, com
 			return err
 		}
 
-		_, _, err = cmd.ExecuteCommandLine(instruction)
+		_, _, err = cmd.ExecuteCommandLineWithStdIn(instruction)
 		if err != nil && !ignoreErrors {
 			return err
 		}

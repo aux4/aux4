@@ -38,7 +38,12 @@ func ExecuteCommandLineWithStdIn(instruction string) (string, string, error) {
 func executeCommand(instruction string, withStdOut bool, withStdIn bool) (string, string, error) {
 	var cmd *exec.Cmd
 
-	cmd = exec.Command("bash", "-c", instruction)
+	var shell = os.Getenv("SHELL")
+	if shell == "" {
+		shell = "/bin/sh"
+	}
+
+	cmd = exec.Command(shell, "-c", instruction)
 	cmd.Env = append(os.Environ(), "CLICOLOR_FORCE=1")
 
 	var stdout bytes.Buffer
