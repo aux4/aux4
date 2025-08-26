@@ -155,11 +155,12 @@ func (executor *Aux4PerfExecutor) Execute(env *engine.VirtualEnvironment, comman
 		return core.Aux4Error{ExitCode: 1, Message: "command parameter must be a non-empty string"}
 	}
 
-	output.Out(output.StdOut).Println(output.Yellow("Command:"), commandLine)
+	stdout, stderr, executionTime, err := cmd.ExecuteCommandLinePerf(commandLine)
 
-	startTime := time.Now()
-	stdout, stderr, err := cmd.ExecuteCommandLineNoOutput(commandLine)
-	executionTime := time.Since(startTime)
+	// Show stdout first
+	if len(stdout) > 0 {
+		output.Out(output.StdOut).Print(stdout)
+	}
 
 	var timeStr string
 	if executionTime < time.Millisecond {
@@ -174,20 +175,18 @@ func (executor *Aux4PerfExecutor) Execute(env *engine.VirtualEnvironment, comman
 		timeStr = fmt.Sprintf("%.2fh", executionTime.Hours())
 	}
 
+	// Show performance stats after --
+	output.Out(output.StdOut).Println("--")
+	output.Out(output.StdOut).Println(output.Yellow("Command:"), commandLine)
 	output.Out(output.StdOut).Println(output.Yellow("Execution time:"), timeStr)
-
-	if stdout != "" {
-		output.Out(output.StdOut).Println(output.Yellow("Output:"))
-		output.Out(output.StdOut).Print(stdout)
-	}
 
 	if err != nil {
 		if aux4Err, ok := err.(core.Aux4Error); ok {
 			output.Out(output.StdOut).Println(output.Red("Exit code:"), aux4Err.ExitCode)
-			if stderr != "" {
+			if len(stderr) > 0 {
 				output.Out(output.StdErr).Print(stderr)
 			}
-			return nil // Don't propagate the error, just report it
+			return nil
 		}
 		return err
 	}
