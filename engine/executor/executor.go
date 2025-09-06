@@ -277,6 +277,11 @@ func (executor *ConfirmCommandExecutor) Execute(env *engine.VirtualEnvironment, 
 		return err
 	}
 
+	yes := params.JustGet("yes")
+	if yes == true || yes == "true" {
+		return nil
+	}
+
 	prompt := promptui.Prompt{
 		Label:     instruction,
 		IsConfirm: true,
