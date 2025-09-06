@@ -66,8 +66,12 @@ func MainExecute(env *engine.VirtualEnvironment, actions []string, params *param
 					profile := env.GetProfile(profileName)
 					if profile != nil {
 						for _, profileCommand := range profile.CommandsOrdered {
+							cmd := profile.Commands[profileCommand]
+							if cmd.Private {
+								continue
+							}
 							output.Out(output.StdOut).Println("")
-							man.HelpCommand(profile.Commands[profileCommand], isJson, isHelp, "  ")
+							man.HelpCommand(cmd, isJson, isHelp, "  ")
 						}
 					}
 				}
