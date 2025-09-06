@@ -36,6 +36,36 @@ func DefaultAux4() string {
               }
             },
             {
+              "name": "completion",
+              "private": true,
+              "help": {
+                "text": "Generate shell completion script",
+                "variables": [
+                  {
+                    "name": "shell",
+                    "text": "Shell type for completion script generation",
+                    "env": "SHELL",
+                    "options": ["bash", "zsh", "fish", "powershell"]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "autocomplete",
+              "private": true,
+              "help": {
+                "text": "Get autocomplete suggestions for a command",
+                "variables": [
+                  {
+                    "name": "cmd",
+                    "text": "Command to get autocomplete suggestions for",
+                    "default": "",
+                    "arg": true
+                  }
+                ]
+              }
+            },
+            {
               "name": "version",
               "help": {
                 "text": "Display the version of aux4"
