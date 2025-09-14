@@ -168,10 +168,23 @@ func (p *Parameters) Get(command core.Command, actions []string, name string) (a
 }
 
 func (p *Parameters) GetMultiple(command core.Command, actions []string, name string) ([]any, error) {
-	if p.params[name] == nil {
-		return make([]any, 0), nil
+	if p.params[name] != nil {
+		return p.params[name], nil
 	}
-	return p.params[name], nil
+
+	for _, lookup := range p.lookups {
+		result, err := lookup.Get(p, command, actions, name)
+		if err != nil {
+			return nil, err
+		}
+
+		if result != nil {
+			p.Set(name, result)
+			return p.params[name], nil
+		}
+	}
+
+	return make([]any, 0), nil
 }
 
 func (p *Parameters) Expr(command core.Command, actions []string, originalExpression string) (any, error) {
@@ -265,7 +278,6 @@ func (p *Parameters) Expr(command core.Command, actions []string, originalExpres
 		var err error
 		
 		if orderedMap, ok := value.(*io.OrderedMap); ok {
-			// Navigate through the OrderedMap manually to preserve order
 			jsonValue, err = navigateOrderedMap(orderedMap, jsonExpr)
 		} else {
 			jsonValue, err = jsonpath.Read(value, "$."+jsonExpr)

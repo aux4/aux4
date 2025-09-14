@@ -200,11 +200,21 @@ func (l ArgLookup) Get(parameters *Parameters, command core.Command, actions []s
 		return nil, nil
 	}
 
-	if len(actions) != 2 {
-		return nil, nil
+	if variable.Multiple {
+		if len(actions) <= 1 {
+			return []any{}, nil
+		}
+		result := make([]any, len(actions)-1)
+		for i, arg := range actions[1:] {
+			result[i] = arg
+		}
+		return result, nil
+	} else {
+		if len(actions) != 2 {
+			return nil, nil
+		}
+		return actions[1], nil
 	}
-
-	return actions[1], nil
 }
 
 type PromptLookup struct {

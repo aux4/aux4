@@ -249,3 +249,64 @@ aux4 print
 ```expect
 cmd 'Joe' '20' 'New York'
 ```
+
+## arg and multiple
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "arg-multiple",
+          "execute": [
+            "echo value(text*)"
+          ],
+          "help": {
+            "text": "multi and arg",
+            "variables": [
+              {
+                "name": "text",
+                "text": "some text",
+                "arg": true,
+                "multiple": true
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+### using positional arguments
+
+```execute
+aux4 arg-multiple abc def
+```
+
+```expect
+["abc","def"]
+```
+
+### using single positional argument
+
+```execute
+aux4 arg-multiple abc
+```
+
+```expect
+["abc"]
+```
+
+### using named parameters
+
+```execute
+aux4 arg-multiple --text abc1 --text abc2
+```
+
+```expect
+["abc1","abc2"]
+```
