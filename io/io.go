@@ -191,6 +191,15 @@ func NewOrderedMap() *OrderedMap {
 }
 
 func (om *OrderedMap) Set(key string, value interface{}) {
+	if om == nil {
+		return
+	}
+	if om.values == nil {
+		om.values = make(map[string]interface{})
+	}
+	if om.keys == nil {
+		om.keys = make([]string, 0)
+	}
 	if _, exists := om.values[key]; !exists {
 		om.keys = append(om.keys, key)
 	}
@@ -198,15 +207,27 @@ func (om *OrderedMap) Set(key string, value interface{}) {
 }
 
 func (om *OrderedMap) Get(key string) (interface{}, bool) {
+	if om == nil {
+		return nil, false
+	}
+	if om.values == nil {
+		return nil, false
+	}
 	value, exists := om.values[key]
 	return value, exists
 }
 
 func (om *OrderedMap) Keys() []string {
+	if om == nil || om.keys == nil {
+		return []string{}
+	}
 	return om.keys
 }
 
 func (om *OrderedMap) Values() map[string]interface{} {
+	if om == nil || om.values == nil {
+		return make(map[string]interface{})
+	}
 	return om.values
 }
 

@@ -35,6 +35,15 @@
           }
         },
         {
+          "name": "sign",
+          "execute": [
+            "codesign --force --deep --sign - ~/.aux4.config/packages/aux4/aux4/aux4"
+          ],
+          "help": {
+            "text": "sign the app (macOS only)"
+          }
+        },
+        {
           "name": "package",
           "execute": [
             "rm -f out/*",

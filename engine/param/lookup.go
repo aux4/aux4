@@ -20,7 +20,7 @@ func ParameterLookups() []ParameterLookup {
 	return []ParameterLookup{
 		&ArgLookup{},
 		&EnvironmentVariableLookup{},
-		&ConfigLookup{},
+		NewConfigLookup(),
 		&EncryptedParameterLookup{},
 		&DefaultLookup{},
 		&PromptLookup{},
@@ -36,12 +36,22 @@ type ConfigLookup struct {
 	parameters *io.OrderedMap
 }
 
+func NewConfigLookup() *ConfigLookup {
+	return &ConfigLookup{
+		load:       false,
+		parameters: io.NewOrderedMap(),
+	}
+}
+
 func (l *ConfigLookup) Get(parameters *Parameters, command core.Command, actions []string, name string) (any, error) {
 	if !parameters.Has("configFile") && !parameters.Has("config") {
 		return nil, nil
 	}
 
 	if l.load {
+		if l.parameters == nil {
+			return nil, fmt.Errorf("config lookup: parameters not initialized - this is likely a bug in the configuration loading process")
+		}
 		value, found := l.parameters.Get(name)
 		if !found {
 			return nil, nil
@@ -64,8 +74,6 @@ func (l *ConfigLookup) Get(parameters *Parameters, command core.Command, actions
 		}
 	}
 
-	l.load = true
-
 	stdout, _, err := cmd.ExecuteCommandLineNoOutput(fmt.Sprintf("aux4 config get %s", strings.Join(args, " ")))
 	if err != nil {
 		return nil, nil
@@ -84,6 +92,7 @@ func (l *ConfigLookup) Get(parameters *Parameters, command core.Command, actions
 	}
 
 	l.parameters = params
+	l.load = true
 
 	value, _ := params.Get(name)
 	return value, nil

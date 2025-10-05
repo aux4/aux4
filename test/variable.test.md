@@ -84,7 +84,6 @@ aux4 print --name Joe
 hello Joe
 ```
 
-
 ## Print variable default value
 
 ```file:.aux4
@@ -563,4 +562,73 @@ aux4 print
 
 ```expect
 John
+```
+
+## Using environment variable instead of aux4 variable
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print",
+          "execute": [
+            "TEXT='Hello World' && echo \"$TEXT\""
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print
+```
+
+```expect
+Hello World
+```
+
+## Config variable race condition test
+
+```file:test-config.yaml
+config:
+  testValue: "config-loaded"
+```
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "race-test",
+          "execute": [
+            "log:1",
+            "nout:if(configFile==) && echo test-config.yaml || echo ${configFile}",
+            "set:actualConfigFile=$response",
+            "log:2 config file: ${actualConfigFile}",
+            "log:3 testing variable: ${testValue}",
+            "log:4 end"
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 race-test --configFile=""
+```
+
+```expect
+1
+2 config file: test-config.yaml
+3 testing variable: ${testValue}
+4 end
 ```
