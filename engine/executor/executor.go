@@ -160,6 +160,8 @@ func commandExecutorFactory(command string) engine.VirtualCommandExecutor {
 		return &StdinCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "aux4:") || (strings.HasPrefix(command, "aux4 ") && !strings.Contains(command, "&") && !strings.Contains(command, "|") && !strings.Contains(command, ">")) {
 		return &Aux4CommandExecutor{Command: command}
+	} else if strings.HasPrefix(command, "#") {
+		return &CommentExecutor{Command: command}
 	}
 	return &CommandLineExecutor{Command: command}
 }
@@ -477,6 +479,15 @@ func (executor *Aux4CommandExecutor) Execute(env *engine.VirtualEnvironment, com
 		return err
 	}
 
+	return nil
+}
+
+type CommentExecutor struct {
+	Command string
+}
+
+func (executor *CommentExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
+	// Comments starting with # are ignored, just skip execution
 	return nil
 }
 
