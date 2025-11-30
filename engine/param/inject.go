@@ -49,6 +49,9 @@ func InjectParameters(command core.Command, instruction string, actions []string
 		return "", err
 	}
 
+	instruction = strings.TrimSpace(instruction)
+	instruction = regexp.MustCompile(`\s+`).ReplaceAllString(instruction, " ")
+
 	return instruction, nil
 }
 
@@ -121,7 +124,7 @@ func resolveParamVariables(command core.Command, instruction string, actions []s
 		variableExpression := string(match[0])
 		variablePath := string(match[1])
 
-		expressionValue, err := parseParam(command, actions, params, variablePath)
+		expressionValue, err := parseParam(command, actions, params, variablePath, true)
 		if err != nil {
 			return "", err
 		}
@@ -149,7 +152,7 @@ func resolveParamsVariables(command core.Command, instruction string, actions []
 		for i := 0; i < len(variableList); i++ {
 			variablePath := strings.TrimSpace(variableList[i])
 
-			variableValue, err := parseParam(command, actions, params, variablePath)
+			variableValue, err := parseParam(command, actions, params, variablePath, false)
 			if err != nil {
 				return "", err
 			}
@@ -171,16 +174,29 @@ func resolveParamsVariables(command core.Command, instruction string, actions []
 	return replaceVariables(expr, instruction, variables), nil
 }
 
-func parseParam(command core.Command, actions []string, params *Parameters, variablePath string) (string, error) {
+func parseParam(command core.Command, actions []string, params *Parameters, variablePath string, allowAlias bool) (string, error) {
 	var expressionValue string
 
-	if strings.HasSuffix(variablePath, "**") {
-		result, err := params.Expr(command, actions, strings.TrimSuffix(variablePath, "*"))
+	var actualVariablePath, alias string
+	if allowAlias && strings.Contains(variablePath, ",") && !strings.HasSuffix(variablePath, "**") {
+		parts := strings.SplitN(variablePath, ",", 2)
+		actualVariablePath = strings.TrimSpace(parts[0])
+		alias = strings.TrimSpace(parts[1])
+	} else {
+		actualVariablePath = variablePath
+	}
+
+	if strings.HasSuffix(actualVariablePath, "**") {
+		result, err := params.Expr(command, actions, strings.TrimSuffix(actualVariablePath, "*"))
 		if err != nil {
 			return "", err
 		}
 
-		variablePath = strings.TrimSuffix(variablePath, "**")
+		basePath := strings.TrimSuffix(actualVariablePath, "**")
+		paramName := basePath
+		if alias != "" {
+			paramName = alias
+		}
 
 		if result != nil {
 			typeOfResult := reflect.TypeOf(result)
@@ -190,14 +206,14 @@ func parseParam(command core.Command, actions []string, params *Parameters, vari
 					if expressionValue != "" {
 						expressionValue += " "
 					}
-					expressionValue += fmt.Sprintf("--%s '%s'", variablePath, item)
+					expressionValue += fmt.Sprintf("--%s '%s'", paramName, item)
 				}
 			}
 		}
 	}
 
 	if expressionValue == "" {
-		result, err := getVariableValueAsString(command, actions, params, variablePath, true)
+		result, err := getVariableValueAsString(command, actions, params, actualVariablePath, true)
 		if err != nil {
 			if strings.Contains(err.Error(), "Variable not found") {
 				return "", nil
@@ -206,7 +222,12 @@ func parseParam(command core.Command, actions []string, params *Parameters, vari
 		}
 
 		if result != "" {
-			paramName := standardizeParameterName(variablePath)
+			var paramName string
+			if alias != "" {
+				paramName = alias
+			} else {
+				paramName = standardizeParameterName(actualVariablePath)
+			}
 			expressionValue = fmt.Sprintf("--%s '%s'", paramName, result)
 		}
 	}
