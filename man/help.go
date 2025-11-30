@@ -197,8 +197,10 @@ func helpCommandJson(command core.Command) {
 				}
 
 				if v.Default != nil {
-					variable.Default = *v.Default
+					variable.Default = v.Default
 				}
+
+				variable.Hide = v.Hide
 
 				man.Parameters = append(man.Parameters, variable)
 			}
@@ -290,7 +292,8 @@ type Man struct {
 type ManParameter struct {
 	Name     string   `json:"name"`
 	Text     string   `json:"text"`
-	Default  string   `json:"default"`
+	Default  *string  `json:"default"`
+	Hide     bool     `json:"hide"`
 	Env      string   `json:"env"`
 	Arg      bool     `json:"arg"`
 	Multiple bool     `json:"multiple"`
