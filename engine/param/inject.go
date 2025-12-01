@@ -44,6 +44,11 @@ func InjectParameters(command core.Command, instruction string, actions []string
 		return "", err
 	}
 
+	instruction, err = resolveObjectVariables(command, instruction, actions, params)
+	if err != nil {
+		return "", err
+	}
+
 	instruction, err = resolveConditional(command, instruction, actions, params)
 	if err != nil {
 		return "", err
@@ -172,6 +177,59 @@ func resolveParamsVariables(command core.Command, instruction string, actions []
 	}
 
 	return replaceVariables(expr, instruction, variables), nil
+}
+
+func resolveObjectVariables(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
+	const variableRegex = "object\\(([^)]+)\\)"
+
+	expr := regexp.MustCompile(variableRegex)
+	matches := expr.FindAllSubmatch([]byte(instruction), -1)
+
+	variables := map[string]any{}
+	for _, match := range matches {
+		variableExpression := string(match[0])
+
+		expressionValue, err := parseObject(command, actions, params, string(match[1]))
+		if err != nil {
+			return "", err
+		}
+
+		variables[variableExpression] = expressionValue
+	}
+
+	return replaceVariables(expr, instruction, variables), nil
+}
+
+func parseObject(command core.Command, actions []string, params *Parameters, fieldList string) (string, error) {
+	result := make(map[string]string)
+
+	fields := strings.Split(fieldList, ",")
+	for _, field := range fields {
+		field = strings.TrimSpace(field)
+		if field == "" {
+			continue
+		}
+
+		value, err := getVariableValueAsString(command, actions, params, field, false)
+		if err != nil {
+			if strings.Contains(err.Error(), "Variable not found") {
+				continue
+			}
+			return "", err
+		}
+
+		if value != "" {
+			jsonKey := strings.ReplaceAll(field, ".", "_")
+			result[jsonKey] = value
+		}
+	}
+
+	jsonBytes, err := json.Marshal(result)
+	if err != nil {
+		return "", err
+	}
+
+	return string(jsonBytes), nil
 }
 
 func parseParam(command core.Command, actions []string, params *Parameters, variablePath string, allowAlias bool) (string, error) {

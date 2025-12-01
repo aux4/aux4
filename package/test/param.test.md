@@ -481,3 +481,245 @@ aux4 print
 ```expect
 cmd --n 'Joe' --a '20' --c 'New York'
 ```
+
+## object with all fields having values
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print",
+          "execute": [
+            "log:cmd object(name,age)"
+          ],
+          "help": {
+            "text": "print object with name and age",
+            "variables": [
+              {
+                "name": "name",
+                "text": "the name"
+              },
+              {
+                "name": "age",
+                "text": "the age"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print --name Joe --age 20
+```
+
+```expect
+cmd {"age":"20","name":"Joe"}
+```
+
+## object with some fields missing
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print",
+          "execute": [
+            "log:cmd object(name,age,undefined)"
+          ],
+          "help": {
+            "text": "print object with some undefined fields",
+            "variables": [
+              {
+                "name": "name",
+                "text": "the name"
+              },
+              {
+                "name": "age",
+                "text": "the age"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print --name Joe --age 20
+```
+
+```expect
+cmd {"age":"20","name":"Joe"}
+```
+
+## object with all fields missing
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print",
+          "execute": [
+            "log:cmd object(undefined1,undefined2)"
+          ],
+          "help": {
+            "text": "print empty object"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print
+```
+
+```expect
+cmd {}
+```
+
+## object with nested data
+
+```file:data.json
+{
+  "name": "Joe",
+  "age": 20,
+  "address": {
+    "city": "New York",
+    "state": "NY"
+  }
+}
+```
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print",
+          "execute": [
+            "json:cat data.json",
+            "log:cmd object(response.name,response.age,response.address.city)"
+          ],
+          "help": {
+            "text": "print object with nested fields"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print
+```
+
+```expect
+cmd {"response_address_city":"New York","response_age":"20","response_name":"Joe"}
+```
+
+## object with single field
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print",
+          "execute": [
+            "log:cmd object(name)"
+          ],
+          "help": {
+            "text": "print object with single field",
+            "variables": [
+              {
+                "name": "name",
+                "text": "the name"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print --name Joe
+```
+
+```expect
+cmd {"name":"Joe"}
+```
+
+## object with dynamic field selection
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print",
+          "execute": [
+            "log:cmd object($fields)"
+          ],
+          "help": {
+            "text": "print object with dynamically selected fields",
+            "variables": [
+              {
+                "name": "name",
+                "text": "the name"
+              },
+              {
+                "name": "age",
+                "text": "the age"
+              },
+              {
+                "name": "city",
+                "text": "the city"
+              },
+              {
+                "name": "fields",
+                "text": "comma-separated list of fields to include"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print --name John --age 23 --city NYC --fields 'name,age'
+```
+
+```expect
+cmd {"age":"23","name":"John"}
+```
