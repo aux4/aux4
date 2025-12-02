@@ -236,8 +236,8 @@ func parseParam(command core.Command, actions []string, params *Parameters, vari
 	var expressionValue string
 
 	var actualVariablePath, alias string
-	if allowAlias && strings.Contains(variablePath, ",") && !strings.HasSuffix(variablePath, "**") {
-		parts := strings.SplitN(variablePath, ",", 2)
+	if allowAlias && strings.Contains(variablePath, ":") && !strings.HasSuffix(variablePath, "**") {
+		parts := strings.SplitN(variablePath, ":", 2)
 		actualVariablePath = strings.TrimSpace(parts[0])
 		alias = strings.TrimSpace(parts[1])
 	} else {

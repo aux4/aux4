@@ -322,7 +322,7 @@ aux4 arg-multiple --text abc1 --text abc2
         {
           "name": "print",
           "execute": [
-            "log:cmd param(name,n) param(age,a) param(undefined,u)"
+            "log:cmd param(name:n) param(age:a) param(undefined:u)"
           ],
           "help": {
             "text": "print param name with alias",
@@ -363,7 +363,7 @@ cmd --n 'Joe' --a '20'
         {
           "name": "print",
           "execute": [
-            "log:cmd param(name,n) param(undefined,u)"
+            "log:cmd param(name:n) param(undefined:u)"
           ],
           "help": {
             "text": "print param with alias, some undefined",
@@ -400,7 +400,7 @@ cmd --n 'Joe'
         {
           "name": "print",
           "execute": [
-            "log:cmd param(tag**,t)"
+            "log:cmd param(tag**:t)"
           ],
           "help": {
             "text": "print multiple values with alias",
@@ -462,7 +462,7 @@ cmd --t 'first' --t 'second'
           "name": "print",
           "execute": [
             "json:cat data.json",
-            "log:cmd param(response.name,n) param(response.age,a) param(response.address.city,c)"
+            "log:cmd param(response.name:n) param(response.age:a) param(response.address.city:c)"
           ],
           "help": {
             "text": "print nested params with aliases"
