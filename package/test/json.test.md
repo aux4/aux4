@@ -5,10 +5,12 @@
 ```file:array.json
 [
   {
+    "@type": "person",
     "name": "john",
     "age": 30
   },
   {
+    "@type": "person",
     "name": "mary",
     "age": 35
   }
@@ -36,7 +38,7 @@
                 "help": {
                     "text": "get first item of array and return name and age"
                 }
-               } 
+               }
             ]
         }
     ]
@@ -66,12 +68,12 @@ mary
                 "name": "get-each",
                 "execute": [
                     "json:cat array.json",
-                    "each:echo ${item.name} ${item.age}"
+                    "each:echo ${item[@type]} ${item.name} ${item.age}"
                 ],
                 "help": {
                     "text": "print name and age for each item of the array"
                 }
-               } 
+               }
             ]
         }
     ]
@@ -83,6 +85,6 @@ aux4 get-each
 ```
 
 ```expect
-john 30
-mary 35
+person john 30
+person mary 35
 ```
