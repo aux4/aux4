@@ -318,6 +318,37 @@ aux4 print
 hello John=John
 ```
 
+## Set concatenated variables with dot
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print-username",
+          "execute": [
+            "set:firstName=John",
+            "set:lastName=Doe",
+            "set:username=${firstName}.${lastName}",
+            "echo username ${username}"
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print-username
+```
+
+```expect
+username John.Doe
+```
+
 ## Set variable executing command
 
 ```file:name.txt
@@ -349,6 +380,35 @@ aux4 print
 
 ```expect
 hello Sarah Fox
+```
+
+## Set variable executing command with error
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print",
+          "execute": [
+            "set:fullName=!cat missing.txt",
+            "echo hello ${fullName}"
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print
+```
+
+```error
+cat: missing.txt: No such file or directory
 ```
 
 ## Ignore unknown variables

@@ -337,19 +337,22 @@ func (executor *SetCommandExecutor) Execute(env *engine.VirtualEnvironment, comm
 				return err
 			}
 
-			stdout, _, err := cmd.ExecuteCommandLineNoOutput(instruction)
+			stdout, stderr, err := cmd.ExecuteCommandLineNoOutput(instruction)
 			if err != nil {
+				fmt.Fprint(os.Stderr, stderr)
 				return err
 			}
 
 			params.Update(name, strings.TrimSpace(stdout))
-		} else if strings.HasPrefix(valueExpression, "$") {
+		} else if strings.HasPrefix(valueExpression, "$") && strings.Count(valueExpression, "${") <= 1 {
+			// Single variable expression - use direct lookup
 			value, err := params.Expr(command, actions, valueExpression)
 			if err != nil {
 				return err
 			}
 			params.Update(name, value)
 		} else {
+			// Static values or concatenated variables - use full parameter injection
 			value, err := param.InjectParameters(command, valueExpression, actions, params)
 			if err != nil {
 				return err
