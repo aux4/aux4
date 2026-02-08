@@ -84,22 +84,3 @@ jobs:
         run: |
           git push origin main
           git push origin --tags
-
-      - name: Create GitHub Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          PACKAGE_FILE="package/${{ inputs.package_scope }}-${{ inputs.package_name }}-${VERSION}.zip"
-
-          if [ -f "${PACKAGE_FILE}" ]; then
-            gh release create "v${VERSION}" \
-              "${PACKAGE_FILE}" \
-              --title "Release v${VERSION}" \
-              --notes "Automated release of ${{ inputs.package_scope }}/${{ inputs.package_name }} v${VERSION}"
-          else
-            echo "::warning::Package file ${PACKAGE_FILE} not found, creating release without artifact"
-            gh release create "v${VERSION}" \
-              --title "Release v${VERSION}" \
-              --notes "Automated release of ${{ inputs.package_scope }}/${{ inputs.package_name }} v${VERSION}"
-          fi
