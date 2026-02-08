@@ -1,0 +1,105 @@
+name: Publish aux4 Package
+
+on:
+  workflow_call:
+    inputs:
+      package_name:
+        description: 'Package name (e.g., config, db)'
+        required: true
+        type: string
+      package_scope:
+        description: 'Package scope (e.g., aux4)'
+        required: false
+        type: string
+        default: 'aux4'
+      release_level:
+        description: 'Release level (patch, minor, major)'
+        required: false
+        type: string
+        default: 'patch'
+      skip_build:
+        description: 'Skip build step (package already built)'
+        required: false
+        type: boolean
+        default: false
+      publisher_image:
+        description: 'Docker image to use for publishing'
+        required: false
+        type: string
+        default: 'aux4/publisher:latest'
+    secrets:
+      AUX4_ACCESS_TOKEN:
+        description: 'aux4 access token for publishing'
+        required: true
+    outputs:
+      version:
+        description: 'The new package version'
+        value: ${{ jobs.publish.outputs.version }}
+
+permissions:
+  contents: write
+  packages: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Pull latest changes
+        run: |
+          git pull --rebase origin main
+
+      - name: Release package
+        env:
+          AUX4_ACCESS_TOKEN: ${{ secrets.AUX4_ACCESS_TOKEN }}
+        run: |
+          docker run --rm \
+            -v $(pwd):/workspace \
+            -w /workspace \
+            -e AUX4_ACCESS_TOKEN="${AUX4_ACCESS_TOKEN}" \
+            ${{ inputs.publisher_image }} \
+            "aux4 aux4 releaser release --level ${{ inputs.release_level }}"
+
+      - name: Get new version
+        id: version
+        run: |
+          VERSION=$(jq -r '.version' .aux4)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "::notice::Released ${{ inputs.package_scope }}/${{ inputs.package_name }} v${VERSION}"
+
+      - name: Push changes and tags
+        run: |
+          git push origin main
+          git push origin --tags
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          PACKAGE_FILE="package/${{ inputs.package_scope }}-${{ inputs.package_name }}-${VERSION}.zip"
+
+          if [ -f "${PACKAGE_FILE}" ]; then
+            gh release create "v${VERSION}" \
+              "${PACKAGE_FILE}" \
+              --title "Release v${VERSION}" \
+              --notes "Automated release of ${{ inputs.package_scope }}/${{ inputs.package_name }} v${VERSION}"
+          else
+            echo "::warning::Package file ${PACKAGE_FILE} not found, creating release without artifact"
+            gh release create "v${VERSION}" \
+              --title "Release v${VERSION}" \
+              --notes "Automated release of ${{ inputs.package_scope }}/${{ inputs.package_name }} v${VERSION}"
+          fi
