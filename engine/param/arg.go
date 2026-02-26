@@ -1,6 +1,7 @@
 package param
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -34,10 +35,32 @@ func ParseArgs(args []string) (Aux4Parameters, []string, Parameters) {
 				index++
 			}
 
-			if params[name] == nil {
-				params[name] = make([]any, 0)
+			if strings.Contains(name, ".") {
+				parts := strings.SplitN(name, ".", 2)
+				baseName := parts[0]
+				fieldPath := parts[1]
+
+				var obj map[string]interface{}
+				if params[baseName] != nil {
+					last := params[baseName][len(params[baseName])-1]
+					if m, ok := last.(map[string]interface{}); ok {
+						obj = m
+					}
+				}
+				if obj == nil {
+					obj = make(map[string]interface{})
+					if params[baseName] == nil {
+						params[baseName] = make([]any, 0)
+					}
+					params[baseName] = append(params[baseName], obj)
+				}
+				setNestedField(obj, fieldPath, value)
+			} else {
+				if params[name] == nil {
+					params[name] = make([]any, 0)
+				}
+				params[name] = append(params[name], value)
 			}
-			params[name] = append(params[name], value)
 		} else if strings.HasPrefix(arg, "-") {
 			name := arg[1:]
 			value := ""
@@ -274,9 +297,20 @@ func (p *Parameters) Expr(command core.Command, actions []string, originalExpres
 	}
 
 	if jsonExpr != "" {
+		if strValue, ok := value.(string); ok {
+			strValue = strings.TrimSpace(strValue)
+			if (strings.HasPrefix(strValue, "{") && strings.HasSuffix(strValue, "}")) ||
+				(strings.HasPrefix(strValue, "[") && strings.HasSuffix(strValue, "]")) {
+				var parsed interface{}
+				if err := json.Unmarshal([]byte(strValue), &parsed); err == nil {
+					value = parsed
+				}
+			}
+		}
+
 		var jsonValue interface{}
 		var err error
-		
+
 		if orderedMap, ok := value.(*io.OrderedMap); ok {
 			jsonValue, err = navigateOrderedMap(orderedMap, jsonExpr)
 		} else {
@@ -316,6 +350,20 @@ func navigateOrderedMap(om *io.OrderedMap, path string) (interface{}, error) {
 	}
 	
 	return current, nil
+}
+
+func setNestedField(obj map[string]interface{}, path string, value interface{}) {
+	parts := strings.SplitN(path, ".", 2)
+	if len(parts) == 1 {
+		obj[parts[0]] = value
+		return
+	}
+	child, ok := obj[parts[0]].(map[string]interface{})
+	if !ok {
+		child = make(map[string]interface{})
+		obj[parts[0]] = child
+	}
+	setNestedField(child, parts[1], value)
 }
 
 func (p *Parameters) String() string {
