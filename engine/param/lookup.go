@@ -43,8 +43,27 @@ func NewConfigLookup() *ConfigLookup {
 	}
 }
 
+func (l *ConfigLookup) getParamOrDefault(parameters *Parameters, command core.Command, name string) string {
+	if parameters.Has(name) {
+		value := parameters.JustGet(name)
+		if value != nil {
+			return value.(string)
+		}
+	}
+
+	variable, ok := command.Help.GetVariable(name)
+	if ok && variable.Default != nil {
+		return *variable.Default
+	}
+
+	return ""
+}
+
 func (l *ConfigLookup) Get(parameters *Parameters, command core.Command, actions []string, name string) (any, error) {
-	if !parameters.Has("configFile") && !parameters.Has("config") {
+	configFile := l.getParamOrDefault(parameters, command, "configFile")
+	config := l.getParamOrDefault(parameters, command, "config")
+
+	if configFile == "" && config == "" {
 		return nil, nil
 	}
 
@@ -61,16 +80,13 @@ func (l *ConfigLookup) Get(parameters *Parameters, command core.Command, actions
 
 	args := []string{}
 
-	if parameters.Has("configFile") {
-		configFile := parameters.JustGet("configFile")
-		args = append(args, "--file "+configFile.(string))
+	if configFile != "" {
+		args = append(args, "--file "+configFile)
 	}
 
-	if parameters.Has("config") {
-		config := parameters.JustGet("config")
-		configParam := config.(string)
-		if configParam != "true" {
-			args = append(args, fmt.Sprintf("--name %s", configParam))
+	if config != "" {
+		if config != "true" {
+			args = append(args, fmt.Sprintf("--name %s", config))
 		}
 	}
 
