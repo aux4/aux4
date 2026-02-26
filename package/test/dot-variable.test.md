@@ -43,6 +43,37 @@ aux4 print-person --person '{"firstName":"John","lastName":"Doe"}'
 John Doe
 ```
 
+## Print nested dot variables
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print-person",
+          "execute": [
+            "echo ${person.firstName} ${person.lastName} ${person.address.city}"
+          ],
+          "help": {
+            "text": "print person info"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print-person --person.firstName John --person.lastName Doe --person.address.city NY
+```
+
+```expect
+John Doe NY
+```
+
 ## Print dot variables with person variable only
 
 ```file:.aux4
