@@ -6,10 +6,19 @@
         {
           "name": "build",
           "execute": [
-            "profile:build"
+            "aux4 builder all"
           ],
           "help": {
             "text": "build the app"
+          }
+        },
+        {
+          "name": "builder",
+          "execute": [
+            "profile:builder"
+          ],
+          "help": {
+            "text": "build the app for a specific platform"
           }
         },
         {
@@ -22,7 +31,7 @@
             "cat aux4/version.go | sed 's/${version}/${version}-local/g' > version.txt",
             "mv version.txt aux4/version.go",
             "log:building aux4 for $os $arch",
-            "aux4 build $os",
+            "aux4 builder $os",
             "log:installing aux4 on ~/.aux4.config/packages/aux4/aux4",
             "log:cp -f package/dist/${os}/${arch}/aux4 ~/.aux4.config/packages/aux4/aux4/aux4",
             "nout:echo ${response} | pbcopy",
@@ -69,7 +78,7 @@
             "log:releasing version $version",
             "cat aux4/version.go | sed 's/${currentVersion}/${version}/g' > version.txt",
             "mv version.txt aux4/version.go",
-            "aux4 build all",
+            "aux4 builder all",
             "git commit -am 'release: $version'",
             "git tag -a v${version} -m 'release: v${version}'",
             "git push --follow-tags",
@@ -94,7 +103,7 @@
       ]
     },
     {
-      "name": "build",
+      "name": "builder",
       "commands": [
         {
           "name": "darwin",
@@ -131,10 +140,12 @@
         {
           "name": "all",
           "execute": [
-            "aux4 build darwin",
-            "aux4 build linux",
-            "aux4 build windows",
-            "chmod -R +x package/dist/*"
+            "aux4 builder darwin",
+            "aux4 builder linux",
+            "aux4 builder windows",
+            "chmod -R +x package/dist/*",
+            "cp README.md LICENSE package/",
+            "go run misc/aux4-generator.go > package/.aux4"
           ],
           "help": {
             "text": "build the app for all platforms"

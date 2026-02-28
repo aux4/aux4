@@ -1,0 +1,159 @@
+name: Publish Package
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**'
+      - '!.github/**'
+      - '!README.md'
+      - '!LICENSE'
+      - '!.gitignore'
+
+  workflow_dispatch:
+    inputs:
+      level:
+        description: 'Release level (patch, minor, major)'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+concurrency:
+  group: publish-package
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Pull latest changes
+        run: git pull --rebase origin ${{ github.ref_name }}
+
+      - name: Get current version
+        id: current
+        run: |
+          CURRENT_VERSION=$(tail -n 1 aux4/version.go | awk -F '"' '{print $2}')
+          echo "version=${CURRENT_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Increment version
+        id: version
+        run: |
+          CURRENT_VERSION="${{ steps.current.outputs.version }}"
+          LEVEL="${{ inputs.level || 'patch' }}"
+
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+
+          case "$LEVEL" in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
+
+          sed -i "s/${CURRENT_VERSION}/${NEW_VERSION}/g" aux4/version.go
+
+      - name: Build
+        run: |
+          # Darwin
+          GOOS=darwin GOARCH=amd64 go build -o package/dist/darwin/amd64/aux4 .
+          GOOS=darwin GOARCH=arm64 go build -o package/dist/darwin/arm64/aux4 .
+          # Linux
+          GOOS=linux GOARCH=amd64 go build -o package/dist/linux/amd64/aux4 .
+          GOOS=linux GOARCH=arm64 go build -o package/dist/linux/arm64/aux4 .
+          GOOS=linux GOARCH=386 go build -o package/dist/linux/386/aux4 .
+          # Windows
+          GOOS=windows GOARCH=amd64 go build -o package/dist/windows/amd64/aux4.exe .
+          GOOS=windows GOARCH=arm64 go build -o package/dist/windows/arm64/aux4.exe .
+          GOOS=windows GOARCH=386 go build -o package/dist/windows/386/aux4.exe .
+          chmod -R +x package/dist/*
+
+      - name: Generate package metadata
+        run: |
+          cp README.md LICENSE package/
+          go run misc/aux4-generator.go > package/.aux4
+
+      - name: Pull latest aux4 image
+        run: docker pull aux4/aux4:latest
+
+      - name: Build package
+        run: |
+          docker run --rm \
+            --user $(id -u):$(id -g) \
+            -v $(pwd):/workspace \
+            -w /workspace \
+            aux4/aux4:latest \
+            aux4 pkger build package
+
+      - name: Publish to hub.aux4.io
+        env:
+          AUX4_ACCESS_TOKEN: ${{ secrets.AUX4_ACCESS_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          AUX4_ACCESS_TOKEN=$(echo -n "$AUX4_ACCESS_TOKEN" | tr -d '[:space:]')
+          docker run --rm \
+            --user $(id -u):$(id -g) \
+            -v $(pwd):/workspace \
+            -w /workspace \
+            -e AUX4_ACCESS_TOKEN="${AUX4_ACCESS_TOKEN}" \
+            --entrypoint sh \
+            aux4/aux4:latest \
+            -c "aux4 aux4 pkger publish aux4_aux4_${VERSION}.zip"
+
+      - name: Cleanup generated files
+        run: rm -f package/.aux4 package/LICENSE package/README.md
+
+      - name: Commit and tag
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          git add aux4/version.go
+          git commit -m "release: ${VERSION}"
+          git tag -a "v${VERSION}" -m "release: v${VERSION}"
+
+      - name: Push changes and tags
+        run: |
+          git push origin ${{ github.ref_name }}
+          git push origin --tags
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          gh release create "v${VERSION}" \
+            aux4_aux4_${VERSION}.zip \
+            --title "Release v${VERSION}" \
+            --notes "Release of aux4/aux4 v${VERSION}"
