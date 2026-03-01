@@ -134,7 +134,7 @@ jobs:
             -c "aux4 aux4 pkger publish aux4_aux4_${VERSION}.zip"
 
       - name: Cleanup generated files
-        run: rm -f package/.aux4 package/LICENSE package/README.md package/aux4_aux4_*.zip
+        run: rm -f package/.aux4 package/LICENSE package/README.md
 
       - name: Commit and tag
         run: |
@@ -157,3 +157,6 @@ jobs:
             package/aux4_aux4_${VERSION}.zip \
             --title "Release v${VERSION}" \
             --notes "Release of aux4/aux4 v${VERSION}"
+
+      - name: Cleanup zip files
+        run: rm -f package/aux4_aux4_*.zip package/*_aux4_aux4_*.zip
