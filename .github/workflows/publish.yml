@@ -160,3 +160,12 @@ jobs:
 
       - name: Cleanup zip files
         run: rm -f package/aux4_aux4_*.zip package/*_aux4_aux4_*.zip
+
+      - name: Trigger Docker image rebuild
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_DISPATCH_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          gh api repos/aux4/docker-images/dispatches \
+            -f event_type=aux4-release \
+            -f "client_payload[version]=${VERSION}"
