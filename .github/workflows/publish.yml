@@ -114,9 +114,9 @@ jobs:
           docker run --rm \
             --user $(id -u):$(id -g) \
             -v $(pwd):/workspace \
-            -w /workspace \
+            -w /workspace/package \
             aux4/aux4:latest \
-            aux4 pkger build package
+            aux4 pkger build .
 
       - name: Publish to hub.aux4.io
         env:
