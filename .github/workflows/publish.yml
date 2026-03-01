@@ -154,6 +154,7 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           gh release create "v${VERSION}" \
+            package/*_aux4_aux4_${VERSION}.zip \
             package/aux4_aux4_${VERSION}.zip \
             --title "Release v${VERSION}" \
             --notes "Release of aux4/aux4 v${VERSION}"
