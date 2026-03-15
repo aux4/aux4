@@ -14,6 +14,7 @@ import (
 func InjectParameters(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
 	var err error
 
+	// Phase 1: Resolve variable references ($var and ${var})
 	instruction, err = resolveBareVariables(command, instruction, actions, params)
 	if err != nil {
 		return "", err
@@ -24,6 +25,17 @@ func InjectParameters(command core.Command, instruction string, actions []string
 		return "", err
 	}
 
+	// Phase 2: Resolve conditionals before function-style resolvers.
+	// This prevents if(...) patterns inside value()/values()/param()/params() results
+	// from being misinterpreted as aux4 conditionals (e.g., JavaScript code containing
+	// if(...) would otherwise be matched by the conditional regex).
+	instruction, err = resolveConditional(command, instruction, actions, params)
+	if err != nil {
+		return "", err
+	}
+
+	// Phase 3: Resolve function-style parameter references.
+	// These produce quoted/escaped output that should not be further processed.
 	instruction, err = resolveValueVariables(command, instruction, actions, params)
 	if err != nil {
 		return "", err
@@ -45,11 +57,6 @@ func InjectParameters(command core.Command, instruction string, actions []string
 	}
 
 	instruction, err = resolveObjectVariables(command, instruction, actions, params)
-	if err != nil {
-		return "", err
-	}
-
-	instruction, err = resolveConditional(command, instruction, actions, params)
 	if err != nil {
 		return "", err
 	}
@@ -422,6 +429,14 @@ func getVariableValueAsString(command core.Command, actions []string, params *Pa
 
 	if value == nil {
 		return "", core.VariableNotFoundError(variableName)
+	}
+
+	if strValue, ok := value.(string); ok && strings.HasPrefix(strValue, secretPrefix) {
+		resolved, err := ResolveSingleSecret(strValue)
+		if err != nil {
+			return "", err
+		}
+		value = resolved
 	}
 
 	return valueToString(value, escape), nil

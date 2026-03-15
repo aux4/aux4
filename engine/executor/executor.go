@@ -115,6 +115,10 @@ func MainExecute(env *engine.VirtualEnvironment, actions []string, params *param
 		params.Set("configDir", filepath.Join(config.GetAux4HomeDirectory(), "config"))
 	}
 
+	if err := param.ResolveSecrets(params); err != nil {
+		return err
+	}
+
 	for _, commandLine := range command.Execute {
 		executor := commandExecutorFactory(commandLine)
 		err := executor.Execute(env, command, actions, params)
