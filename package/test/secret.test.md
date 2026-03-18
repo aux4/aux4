@@ -108,6 +108,42 @@ aux4 print --value "secret://incomplete/path"
 secret://incomplete/path
 ```
 
+## OTP field triggers provider call
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print",
+          "execute": [
+            "log:${value}"
+          ],
+          "help": {
+            "variables": [
+              {
+                "name": "value",
+                "text": "Value to resolve"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print --value "secret://bitwarden/vault/item/otp"
+```
+
+```error:partial
+Secret provider 'aux4/secret-bitwarden' is not installed. Install it with: aux4 aux4 pkger install aux4/secret-bitwarden
+```
+
 ## Late-bound secret resolution
 
 ```file:.aux4
