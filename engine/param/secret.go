@@ -135,9 +135,34 @@ func ResolveSingleSecret(value string) (string, error) {
 
 // fetchSecrets calls the secret provider to resolve fields for a given ref.
 // Executes: aux4 secret <provider> get --ref "<ref>" --fields "<f1>,<f2>"
+// When the "otp" field is requested, adds --otp true to generate TOTP codes.
 func fetchSecrets(provider, ref string, fields []string) (map[string]string, error) {
-	instruction := fmt.Sprintf("aux4 secret %s get --ref '%s' --fields '%s'",
-		provider, ref, strings.Join(fields, ","))
+	needsOTP := false
+	regularFields := make([]string, 0, len(fields))
+	for _, f := range fields {
+		if f == "otp" {
+			needsOTP = true
+		} else {
+			regularFields = append(regularFields, f)
+		}
+	}
+
+	otpFlag := ""
+	if needsOTP {
+		otpFlag = " --otp true"
+	}
+
+	fieldsArg := ""
+	if len(regularFields) > 0 {
+		fieldsArg = fmt.Sprintf(" --fields '%s'", strings.Join(regularFields, ","))
+	} else if needsOTP {
+		// When only OTP is requested, we still need --fields to avoid interactive prompt.
+		// Use "username" as a placeholder; it won't be used.
+		fieldsArg = " --fields 'username'"
+	}
+
+	instruction := fmt.Sprintf("aux4 secret %s get --ref '%s'%s%s",
+		provider, ref, fieldsArg, otpFlag)
 
 	stdout, stderr, err := cmd.ExecuteCommandLineNoOutput(instruction)
 	if err != nil {

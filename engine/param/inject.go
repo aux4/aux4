@@ -11,8 +11,14 @@ import (
 	"aux4.dev/aux4/io"
 )
 
+// placeholder for $$ escape — chosen to be unlikely in real instructions
+const dollarEscapePlaceholder = "\x00DOLLAR\x00"
+
 func InjectParameters(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
 	var err error
+
+	// Protect $$ escape sequences from variable resolution
+	instruction = strings.ReplaceAll(instruction, "$$", dollarEscapePlaceholder)
 
 	// Phase 1: Resolve variable references ($var and ${var})
 	instruction, err = resolveBareVariables(command, instruction, actions, params)
@@ -60,6 +66,9 @@ func InjectParameters(command core.Command, instruction string, actions []string
 	if err != nil {
 		return "", err
 	}
+
+	// Restore $$ escape sequences to literal $
+	instruction = strings.ReplaceAll(instruction, dollarEscapePlaceholder, "$")
 
 	instruction = strings.TrimSpace(instruction)
 	instruction = regexp.MustCompile(`\s+`).ReplaceAllString(instruction, " ")
