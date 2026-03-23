@@ -77,11 +77,49 @@ func (profile *Profile) GetCommand(name string) (*Command, bool) {
 }
 
 type Command struct {
-	Name    string       `json:"name"`
-	Execute []string     `json:"execute"`
-	Help    *CommandHelp `json:"help"`
-	Private bool         `json:"private"`
-	Ref     CommandRef   `json:"ref"`
+	Name    string         `json:"name"`
+	Execute []string       `json:"execute"`
+	Help    *CommandHelp   `json:"help"`
+	Private bool           `json:"private"`
+	Render  *CommandRender `json:"render"`
+	Ref     CommandRef     `json:"ref"`
+}
+
+type CommandRender struct {
+	Default string            `json:"default"`
+	Options map[string]string `json:"-"`
+}
+
+func (r *CommandRender) UnmarshalJSON(data []byte) error {
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	r.Options = make(map[string]string)
+	for key, value := range raw {
+		var str string
+		if err := json.Unmarshal(value, &str); err != nil {
+			return err
+		}
+		if key == "default" {
+			r.Default = str
+		} else {
+			r.Options[key] = str
+		}
+	}
+	return nil
+}
+
+func (r CommandRender) MarshalJSON() ([]byte, error) {
+	raw := make(map[string]string)
+	if r.Default != "" {
+		raw["default"] = r.Default
+	}
+	for key, value := range r.Options {
+		raw[key] = value
+	}
+	return json.Marshal(raw)
 }
 
 func (command *Command) SetRef(Path string, Package string, Profile string) {

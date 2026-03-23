@@ -138,7 +138,125 @@ func MainExecute(env *engine.VirtualEnvironment, actions []string, params *param
 		}
 	}
 
+	if err := renderResponse(env, command, actions, params); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func renderResponse(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
+	if command.Render == nil {
+		return nil
+	}
+
+	response := params.JustGet("response")
+	if response == nil {
+		return nil
+	}
+
+	responseStr := responseToString(response)
+	if responseStr == "" {
+		return nil
+	}
+
+	renderName := ""
+
+	if params.Has("render") {
+		val := params.JustGet("render")
+		if str, ok := val.(string); ok {
+			renderName = str
+		}
+	}
+
+	if renderName == "" {
+		stat, err := os.Stdout.Stat()
+		isTTY := err == nil && (stat.Mode()&os.ModeCharDevice) != 0
+		if isTTY {
+			renderName = command.Render.Default
+		}
+	}
+
+	if renderName == "" || renderName == "none" {
+		fmt.Fprintln(os.Stdout, responseStr)
+		return nil
+	}
+
+	renderCmd, exists := command.Render.Options[renderName]
+	if !exists {
+		return core.InternalError(fmt.Sprintf("render format '%s' is not defined", renderName), nil)
+	}
+
+	renderCmd, err := param.InjectParameters(command, renderCmd, actions, params)
+	if err != nil {
+		return err
+	}
+
+	if isInProcessAux4Command(renderCmd) {
+		return executeInProcessRender(env, renderCmd, responseStr)
+	}
+
+	return cmd.ExecuteCommandWithPipedStdin(renderCmd, responseStr)
+}
+
+func isInProcessAux4Command(command string) bool {
+	return strings.HasPrefix(command, "aux4:") ||
+		(strings.HasPrefix(command, "aux4 ") &&
+			!strings.Contains(command, "&") &&
+			!strings.Contains(command, "|") &&
+			!strings.Contains(command, ">"))
+}
+
+func executeInProcessRender(env *engine.VirtualEnvironment, renderCmd string, responseStr string) error {
+	var expression string
+	if strings.HasPrefix(renderCmd, "aux4:") {
+		expression = strings.TrimPrefix(renderCmd, "aux4:")
+	} else {
+		expression = strings.TrimPrefix(renderCmd, "aux4 ")
+	}
+
+	origStdin := os.Stdin
+	r, w, err := os.Pipe()
+	if err != nil {
+		return cmd.ExecuteCommandWithPipedStdin(renderCmd, responseStr)
+	}
+
+	os.Stdin = r
+	go func() {
+		w.WriteString(responseStr)
+		w.Close()
+	}()
+
+	defer func() {
+		os.Stdin = origStdin
+		r.Close()
+	}()
+
+	nestedArgs := param.ExtractArgs(expression)
+	_, nestedActions, nestedParams := param.ParseArgs(nestedArgs)
+
+	currentProfile := env.CurrentProfile
+	_ = env.SetProfile("main")
+
+	execErr := MainExecute(env, nestedActions, &nestedParams)
+
+	_ = env.SetProfile(currentProfile)
+
+	return execErr
+}
+
+func responseToString(response any) string {
+	if response == nil {
+		return ""
+	}
+	if str, ok := response.(string); ok {
+		return str
+	}
+	data, err := json.Marshal(response)
+	if err != nil {
+		return fmt.Sprintf("%v", response)
+	}
+	return string(data)
 }
 
 func commandExecutorFactory(command string) engine.VirtualCommandExecutor {

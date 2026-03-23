@@ -35,6 +35,31 @@ func ExecuteCommandLineWithStdIn(instruction string) (string, string, error) {
 	return executeCommand(instruction, true, true)
 }
 
+func ExecuteCommandWithPipedStdin(instruction string, stdinData string) error {
+	var shell = os.Getenv("SHELL")
+	if shell == "" {
+		shell = "/bin/sh"
+	}
+
+	cmd := exec.Command(shell, "-c", instruction)
+	cmd.Stdin = bytes.NewBufferString(stdinData)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		exitError, ok := err.(*exec.ExitError)
+		if ok {
+			return core.Aux4Error{
+				ExitCode: exitError.ExitCode(),
+				Cause:    err,
+			}
+		}
+		return core.InternalError("Error executing render command", err)
+	}
+
+	return nil
+}
+
 func executeCommand(instruction string, withStdOut bool, withStdIn bool) (string, string, error) {
 	var cmd *exec.Cmd
 
