@@ -61,67 +61,92 @@ To run the `hello` command:
 Hello World
 ```
 
-## Command Output Rendering
+## Execute Array Functions
 
-Commands can declare a `render` field to define output formats. The render pipes the captured `response` through an external command via stdin.
+aux4 provides function-style resolvers that can be used inside `execute` arrays to transform variables and access positional arguments.
+
+### `arg(N)` — Access positional argument by index
+
+Returns the action at position `N` from the command line. Position `0` is the command name itself, `1` is the first argument, and so on.
 
 ```json
 {
-  "name": "list-users",
+  "name": "greet",
   "execute": [
-    "json:curl -s api.example.com/users"
+    "echo arg(0) arg(1)"
   ],
-  "render": {
-    "default": "table",
-    "table": "aux4 2table name,email,role",
-    "json": "cat",
-    "text": "aux4 2table --format md name,email,role"
-  },
   "help": {
-    "text": "list all users"
+    "text": "greet someone"
   }
 }
 ```
-
-- `default` — the render format used when stdout is a TTY and no `--render` flag is provided
-- All other keys are render format names mapped to shell commands
-
-### Selecting a Format
 
 ```bash
-aux4 list-users                  # uses default format (table) when in a terminal
-aux4 list-users --render json    # explicit format
-aux4 list-users --render none    # raw response output, no rendering
-aux4 list-users | jq .           # piped output auto-detects non-TTY, outputs raw response
+> aux4 greet hello
 ```
 
-### TTY Auto-Detection
+```text
+greet hello
+```
 
-When stdout is not a TTY (piped or redirected), rendering is skipped and the raw `response` is printed. This means `aux4 list-users | jq .` works without needing `--render none`. An explicit `--render <name>` overrides TTY detection.
+### `args(N,N,...)` — Get specific arguments as JSON array
 
-### Output Capture Requirement
-
-**Important:** The `render` field only works when the execute array captures output into `response`. Use `json:` or `nout:` executors to capture output silently. Plain shell commands and `log:` stream to stdout directly, which causes **double output** when combined with `render` — the original output prints during execution, then the rendered output prints afterward.
+Returns a JSON array of actions at the specified indices.
 
 ```json
 {
-  "execute": ["json:curl -s api.example.com/users"],
-  "render": { "default": "table", "table": "aux4 2table name,email" }
-}
-```
-
-### Parameter Injection
-
-Render commands support `${variable}` parameter injection:
-
-```json
-{
-  "render": {
-    "default": "table",
-    "table": "aux4 2table ${columns}"
+  "name": "greet",
+  "execute": [
+    "echo args(0,1)"
+  ],
+  "help": {
+    "text": "greet someone"
   }
 }
 ```
+
+```bash
+> aux4 greet hello
+```
+
+```text
+["greet","hello"]
+```
+
+### `args(*)` — Get all arguments as JSON array
+
+Returns all positional actions as a JSON array.
+
+```json
+{
+  "name": "greet",
+  "execute": [
+    "echo args(*)"
+  ],
+  "help": {
+    "text": "greet someone"
+  }
+}
+```
+
+```bash
+> aux4 greet hello world
+```
+
+```text
+["greet","hello","world"]
+```
+
+### Other functions
+
+| Function | Description |
+|----------|-------------|
+| `value(name)` | Returns the variable value wrapped in single quotes |
+| `values(name, age)` | Returns multiple variable values each wrapped in single quotes |
+| `param(name)` | Returns `--name 'value'` format |
+| `params(name, age)` | Returns multiple params in `--name 'value' --age 'value'` format |
+| `object(name, age)` | Returns a JSON object with the specified fields |
+| `if(name)` | Conditional expression |
 
 ## Docs
 

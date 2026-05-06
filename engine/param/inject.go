@@ -67,6 +67,16 @@ func InjectParameters(command core.Command, instruction string, actions []string
 		return "", err
 	}
 
+	instruction, err = resolveArgVariable(instruction, actions)
+	if err != nil {
+		return "", err
+	}
+
+	instruction, err = resolveArgsVariable(instruction, actions)
+	if err != nil {
+		return "", err
+	}
+
 	// Restore $$ escape sequences to literal $
 	instruction = strings.ReplaceAll(instruction, dollarEscapePlaceholder, "$")
 
@@ -510,4 +520,73 @@ func escapeValue(value any) string {
 		return ""
 	}
 	return strings.ReplaceAll(value.(string), "'", "'\\''")
+}
+
+func resolveArgVariable(instruction string, actions []string) (string, error) {
+	const variableRegex = `arg\((\d+)\)`
+
+	expr := regexp.MustCompile(variableRegex)
+	matches := expr.FindAllSubmatch([]byte(instruction), -1)
+
+	variables := map[string]any{}
+	for _, match := range matches {
+		variableExpression := string(match[0])
+		indexStr := string(match[1])
+
+		index := 0
+		for _, c := range indexStr {
+			index = index*10 + int(c-'0')
+		}
+
+		if index < len(actions) {
+			variables[variableExpression] = actions[index]
+		} else {
+			variables[variableExpression] = ""
+		}
+	}
+
+	return replaceVariables(expr, instruction, variables), nil
+}
+
+func resolveArgsVariable(instruction string, actions []string) (string, error) {
+	const variableRegex = `args\(([^)]+)\)`
+
+	expr := regexp.MustCompile(variableRegex)
+	matches := expr.FindAllSubmatch([]byte(instruction), -1)
+
+	variables := map[string]any{}
+	for _, match := range matches {
+		variableExpression := string(match[0])
+		content := strings.TrimSpace(string(match[1]))
+
+		if content == "*" {
+			jsonBytes, err := json.Marshal(actions)
+			if err != nil {
+				return "", err
+			}
+			variables[variableExpression] = string(jsonBytes)
+		} else {
+			indices := strings.Split(content, ",")
+			result := []string{}
+			for _, indexStr := range indices {
+				indexStr = strings.TrimSpace(indexStr)
+				index := 0
+				for _, c := range indexStr {
+					index = index*10 + int(c-'0')
+				}
+				if index < len(actions) {
+					result = append(result, actions[index])
+				} else {
+					result = append(result, "")
+				}
+			}
+			jsonBytes, err := json.Marshal(result)
+			if err != nil {
+				return "", err
+			}
+			variables[variableExpression] = string(jsonBytes)
+		}
+	}
+
+	return replaceVariables(expr, instruction, variables), nil
 }
