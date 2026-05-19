@@ -255,6 +255,10 @@ func (l PromptLookup) Get(parameters *Parameters, command core.Command, action [
 		return nil, nil
 	}
 
+	if variable.Multiple && len(variable.Options) > 0 {
+		return promptMultiSelect(*variable)
+	}
+
 	var text string
 	var err error
 

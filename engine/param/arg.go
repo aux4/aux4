@@ -269,7 +269,19 @@ func (p *Parameters) Expr(command core.Command, actions []string, originalExpres
 
 	if index != -1 {
 		typeOfValue := reflect.TypeOf(value)
-		if typeOfValue.Kind() == reflect.Slice || typeOfValue.Kind() == reflect.Array {
+		indexable := typeOfValue != nil && (typeOfValue.Kind() == reflect.Slice || typeOfValue.Kind() == reflect.Array)
+
+		if !indexable {
+			multiValue, err := p.GetMultiple(command, actions, name)
+			if err != nil {
+				return nil, err
+			}
+			value = multiValue
+			typeOfValue = reflect.TypeOf(value)
+			indexable = typeOfValue != nil && (typeOfValue.Kind() == reflect.Slice || typeOfValue.Kind() == reflect.Array)
+		}
+
+		if indexable {
 			if len(value.([]any)) > index {
 				value = value.([]any)[index]
 			} else {
