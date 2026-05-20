@@ -146,6 +146,10 @@ func UnzipFile(zipPath, destDir string) error {
 func unzipFileEntry(file *zip.File, destDir string) error {
 	filePath := filepath.Join(destDir, file.Name)
 
+	if !strings.HasPrefix(filePath, filepath.Clean(destDir)+string(os.PathSeparator)) {
+		return fmt.Errorf("illegal file path in zip: %s", file.Name)
+	}
+
 	if file.FileInfo().IsDir() {
 		err := os.MkdirAll(filePath, file.Mode())
 		if err != nil {
