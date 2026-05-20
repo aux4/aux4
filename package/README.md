@@ -137,6 +137,70 @@ Returns all positional actions as a JSON array.
 ["greet","hello","world"]
 ```
 
+### `range:N` / `range:X-Y` — Generate numeric sequences
+
+Generates an array of numbers and stores it in `response`. Useful with `each:` to iterate a fixed number of times or over a numeric range.
+
+- `range:N` — generates `[0, 1, ..., N-1]`
+- `range:X-Y` — generates `[X, X+1, ..., Y]`
+
+Supports variable interpolation.
+
+```json
+{
+  "name": "repeat",
+  "execute": [
+    "range:${n}",
+    "each:echo step ${item}"
+  ],
+  "help": {
+    "text": "iterate N times",
+    "variables": [
+      {
+        "name": "n",
+        "text": "number of iterations"
+      }
+    ]
+  }
+}
+```
+
+```bash
+> aux4 repeat --n 3
+```
+
+```text
+step 0
+step 1
+step 2
+```
+
+With a start-end range:
+
+```json
+{
+  "name": "ports",
+  "execute": [
+    "range:8080-8083",
+    "each:echo checking port ${item}"
+  ],
+  "help": {
+    "text": "check port range"
+  }
+}
+```
+
+```bash
+> aux4 ports
+```
+
+```text
+checking port 8080
+checking port 8081
+checking port 8082
+checking port 8083
+```
+
 ### Other functions
 
 | Function | Description |
