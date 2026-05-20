@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"aux4.dev/aux4/cmd"
@@ -276,6 +277,8 @@ func commandExecutorFactory(command string) engine.VirtualCommandExecutor {
 		return &AliasCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "json:") {
 		return &JsonCommandExecutor{Command: command}
+	} else if strings.HasPrefix(command, "range:") {
+		return &RangeCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "nout:") {
 		return &NoutCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "stdin:") {
@@ -341,6 +344,50 @@ func (executor *JsonCommandExecutor) Execute(env *engine.VirtualEnvironment, com
 	}
 
 	params.Update("response", data)
+
+	return nil
+}
+
+type RangeCommandExecutor struct {
+	Command string
+}
+
+func (executor *RangeCommandExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
+	expression := strings.TrimPrefix(executor.Command, "range:")
+
+	instruction, err := param.InjectParameters(command, expression, actions, params)
+	if err != nil {
+		return err
+	}
+
+	value := strings.TrimSpace(instruction)
+
+	var start, end int
+
+	if parts := strings.SplitN(value, "-", 2); len(parts) == 2 {
+		start, err = strconv.Atoi(strings.TrimSpace(parts[0]))
+		if err != nil {
+			return core.InternalError("range: expected a number before '-', got '"+parts[0]+"'", err)
+		}
+		end, err = strconv.Atoi(strings.TrimSpace(parts[1]))
+		if err != nil {
+			return core.InternalError("range: expected a number after '-', got '"+parts[1]+"'", err)
+		}
+	} else {
+		start = 0
+		end, err = strconv.Atoi(value)
+		if err != nil {
+			return core.InternalError("range: expected a number, got '"+value+"'", err)
+		}
+		end--
+	}
+
+	result := make([]any, 0, end-start+1)
+	for i := start; i <= end; i++ {
+		result = append(result, i)
+	}
+
+	params.Update("response", result)
 
 	return nil
 }
