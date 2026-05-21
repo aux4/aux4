@@ -21,6 +21,34 @@ import (
 	"github.com/manifoldco/promptui"
 )
 
+var blockedHookExecutors = []string{"profile:", "stdin:"}
+
+func validateHookSteps(steps []string, phase string) error {
+	for _, step := range steps {
+		for _, prefix := range blockedHookExecutors {
+			if strings.HasPrefix(step, prefix) {
+				return core.InternalError(fmt.Sprintf("%q executor is not allowed in hooks (%s phase)", prefix, phase), nil)
+			}
+		}
+	}
+	return nil
+}
+
+func buildCommandPath(command core.Command) string {
+	return command.Ref.Profile + "/" + command.Name
+}
+
+func executeHookSteps(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters, steps []string) error {
+	for _, step := range steps {
+		executor := commandExecutorFactory(step)
+		err := executor.Execute(env, command, actions, params)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func MainExecute(env *engine.VirtualEnvironment, actions []string, params *param.Parameters) error {
 	virtualProfile := env.GetProfile(env.CurrentProfile)
 	if virtualProfile == nil {
@@ -87,6 +115,11 @@ func MainExecute(env *engine.VirtualEnvironment, actions []string, params *param
 		return nil
 	}
 
+	if params.Has("showHooks") && len(actions) == 1 {
+		ShowCommandHooks(env, buildCommandPath(command))
+		return nil
+	}
+
 	if params.Has("whereIsIt") && len(actions) == 1 {
 		showPathOnly := params.Has("path")
 
@@ -120,23 +153,121 @@ func MainExecute(env *engine.VirtualEnvironment, actions []string, params *param
 		return err
 	}
 
+	// Determine if hooks should run
+	shouldRunHooks := !command.NoHooks && !env.InHook && !engine.IsHooksDisabled(params)
+
+	var matchedHooks []engine.HookEntry
+	var commandPath string
+	if shouldRunHooks {
+		commandPath = buildCommandPath(command)
+		matchedHooks = env.Hooks.Match(commandPath, params)
+	}
+
+	// Set hook metadata once
+	if len(matchedHooks) > 0 {
+		scopeName, pkgName := splitPackageRef(command.Ref.Package)
+		params.Update("__command", commandPath)
+		params.Update("__scope", scopeName)
+		params.Update("__package", pkgName)
+	}
+
+	// Run before hooks
+	if len(matchedHooks) > 0 {
+		env.InHook = true
+		for i, entry := range matchedHooks {
+			if len(entry.Hook.Before) > 0 {
+				if err := validateHookSteps(entry.Hook.Before, "before"); err != nil {
+					env.InHook = false
+					return err
+				}
+
+				if err := executeHookSteps(env, command, actions, params, entry.Hook.Before); err != nil {
+					// Before hook failed — run error hooks from hooks that already started
+					params.Update("__error", err.Error())
+					params.Update("__exitCode", "1")
+					for _, errEntry := range matchedHooks[:i+1] {
+						if len(errEntry.Hook.Error) > 0 {
+							if verr := validateHookSteps(errEntry.Hook.Error, "error"); verr == nil {
+								_ = executeHookSteps(env, command, actions, params, errEntry.Hook.Error)
+							}
+						}
+					}
+					env.InHook = false
+					return err
+				}
+			}
+		}
+		env.InHook = false
+	}
+
+	// Run command execute steps
+	var execErr error
 	for _, commandLine := range command.Execute {
 		executor := commandExecutorFactory(commandLine)
 		err := executor.Execute(env, command, actions, params)
 		if err != nil {
-			return err
+			execErr = err
+			break
 		}
 	}
 
-	if len(command.Execute) == 0 {
+	if execErr == nil && len(command.Execute) == 0 {
 		key := fmt.Sprintf("%s.%s", virtualProfile.Name, command.Name)
 		executor, exists := env.Registry.GetExecutor(key)
 		if exists {
-			err := executor.Execute(env, command, actions, params)
-			if err != nil {
-				return err
+			execErr = executor.Execute(env, command, actions, params)
+		}
+	}
+
+	// Run after or error hooks
+	if len(matchedHooks) > 0 {
+		env.InHook = true
+
+		response := ""
+		if r := params.JustGet("response"); r != nil {
+			response = responseToString(r)
+		}
+		params.Update("__response", response)
+
+		if execErr != nil {
+			exitCode := 1
+			if aux4Err, ok := execErr.(core.Aux4Error); ok {
+				exitCode = aux4Err.ExitCode
+			}
+			params.Update("__error", execErr.Error())
+			params.Update("__exitCode", fmt.Sprintf("%d", exitCode))
+
+			for _, entry := range matchedHooks {
+				if len(entry.Hook.Error) > 0 {
+					if err := validateHookSteps(entry.Hook.Error, "error"); err != nil {
+						output.Out(output.StdErr).Println(output.Yellow("[hook warning]"), err)
+						continue
+					}
+					if err := executeHookSteps(env, command, actions, params, entry.Hook.Error); err != nil {
+						output.Out(output.StdErr).Println(output.Yellow("[hook warning]"), err)
+					}
+				}
+			}
+		} else {
+			params.Update("__exitCode", "0")
+
+			for _, entry := range matchedHooks {
+				if len(entry.Hook.After) > 0 {
+					if err := validateHookSteps(entry.Hook.After, "after"); err != nil {
+						output.Out(output.StdErr).Println(output.Yellow("[hook warning]"), err)
+						continue
+					}
+					if err := executeHookSteps(env, command, actions, params, entry.Hook.After); err != nil {
+						output.Out(output.StdErr).Println(output.Yellow("[hook warning]"), err)
+					}
+				}
 			}
 		}
+		env.InHook = false
+	}
+
+	if execErr != nil {
+		return execErr
 	}
 
 	if err := renderResponse(env, command, actions, params); err != nil {
@@ -144,6 +275,18 @@ func MainExecute(env *engine.VirtualEnvironment, actions []string, params *param
 	}
 
 	return nil
+}
+
+func splitPackageRef(packageRef string) (string, string) {
+	ref := packageRef
+	if strings.Contains(ref, "@") {
+		ref = strings.Split(ref, "@")[0]
+	}
+	if strings.Contains(ref, "/") {
+		parts := strings.SplitN(ref, "/", 2)
+		return parts[0], parts[1]
+	}
+	return "", ref
 }
 
 func renderResponse(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {

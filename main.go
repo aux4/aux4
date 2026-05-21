@@ -39,6 +39,7 @@ func main() {
 	registry.RegisterExecutor("aux4.autoinstall", &executor.Aux4AutoInstallExecutor{})
 	registry.RegisterExecutor("aux4.completion", &executor.Aux4CompletionExecutor{})
 	registry.RegisterExecutor("aux4.autocomplete", &executor.Aux4AutocompleteExecutor{})
+	registry.RegisterExecutor("aux4.hooks", &executor.Aux4HooksExecutor{})
 
 	env, err := engine.InitializeVirtualEnvironment(library, registry)
 	if err != nil {

@@ -31,6 +31,7 @@ func DefaultAux4() string {
             {
               "name": "autoinstall",
               "private": true,
+              "noHooks": true,
               "help": {
                 "text": "Auto install aux4"
               }
@@ -38,6 +39,7 @@ func DefaultAux4() string {
             {
               "name": "completion",
               "private": true,
+              "noHooks": true,
               "help": {
                 "text": "Generate shell completion script",
                 "variables": [
@@ -53,6 +55,7 @@ func DefaultAux4() string {
             {
               "name": "autocomplete",
               "private": true,
+              "noHooks": true,
               "help": {
                 "text": "Get autocomplete suggestions for a command",
                 "variables": [
@@ -67,12 +70,14 @@ func DefaultAux4() string {
             },
             {
               "name": "version",
+              "noHooks": true,
               "help": {
                 "text": "Display the version of aux4"
               }
             },
             {
               "name": "man",
+              "noHooks": true,
               "execute": [
                 "set:help=true",
                 "profile:main"
@@ -83,6 +88,7 @@ func DefaultAux4() string {
             },
             {
               "name": "source",
+              "noHooks": true,
               "execute": [
                 "set:showSource=true",
                 "profile:main"
@@ -93,6 +99,7 @@ func DefaultAux4() string {
             },
             {
               "name": "which",
+              "noHooks": true,
               "execute": [
                 "set:whereIsIt=true",
                 "profile:main"
@@ -103,8 +110,27 @@ func DefaultAux4() string {
             },
 						{
 							"name": "shell",
+							"noHooks": true,
 							"help": {
 								"text": "Start an aux4 shell"
+							}
+						},
+						{
+							"name": "hooks",
+							"noHooks": true,
+							"help": {
+								"text": "List registered hooks",
+								"hasMan": true,
+								"variables": [
+									{
+										"name": "command",
+										"text": "Filter hooks by command pattern"
+									},
+									{
+										"name": "package",
+										"text": "Filter hooks by package name"
+									}
+								]
 							}
 						}
           ]

@@ -212,6 +212,149 @@ checking port 8083
 | `object(name, age)` | Returns a JSON object with the specified fields |
 | `if(name)` | Conditional expression |
 
+## Hooks
+
+Hooks are cross-cutting interceptors that run before, after, or on error of any command — including commands from other packages. They are defined at the package level alongside `profiles`.
+
+```json
+{
+  "profiles": [],
+  "hooks": [
+    {
+      "command": "main/deploy",
+      "order": 10,
+      "before": [
+        "log:deploying to ${env}..."
+      ],
+      "after": [
+        "log:deployed successfully, response: ${__response}"
+      ],
+      "error": [
+        "log:deploy failed: ${__error}"
+      ]
+    }
+  ]
+}
+```
+
+### Hook Phases
+
+| Phase | When it runs | On failure |
+|-------|-------------|------------|
+| `before` | Before command executes | Aborts command, runs error hooks |
+| `after` | After command succeeds | Logs warning, original exit code preserved |
+| `error` | After command fails | Logs warning, original error propagates |
+
+### Command Patterns
+
+Hooks match commands using patterns with `*` as a wildcard:
+
+| Pattern | Matches |
+|---------|---------|
+| `main/deploy` | Exact profile and command |
+| `*/deploy` | Command `deploy` in any profile |
+| `deploy/*` | Any command in the `deploy` profile |
+| `*/*` | All commands |
+
+### Variables in Hooks
+
+Hook steps have access to all variables passed to the intercepted command. Additionally, these built-in variables are available:
+
+| Variable | Phases | Description |
+|----------|--------|-------------|
+| `${__command}` | all | Full command path |
+| `${__scope}` | all | Package scope |
+| `${__package}` | all | Package name |
+| `${__response}` | `after`, `error` | stdout from command |
+| `${__error}` | `error` | Error message |
+| `${__exitCode}` | `after`, `error` | Exit code |
+
+### Variable Injection
+
+A `set:` in a `before` hook injects variables into the command's scope:
+
+```json
+{
+  "hooks": [
+    {
+      "command": "main/deploy",
+      "before": [
+        "set:timestamp=!date +%s"
+      ]
+    }
+  ]
+}
+```
+
+The `${timestamp}` variable is then available in the command and in `after`/`error` hooks.
+
+### Skipping Hooks
+
+Use `--noHooks` flag or `AUX4_NO_HOOKS=true` environment variable to skip all hooks:
+
+```bash
+> aux4 deploy --env production --noHooks
+> AUX4_NO_HOOKS=true aux4 deploy --env production
+```
+
+A command can also block hooks by setting `"noHooks": true` in its definition:
+
+```json
+{
+  "name": "internal-task",
+  "execute": ["echo secret"],
+  "noHooks": true
+}
+```
+
+### Hook Ordering
+
+Hooks run in order of their `order` field (lower first, default `0`). Hooks with the same order run by package installation order.
+
+### Conditional Hooks (params)
+
+Hooks can match based on variable values using the `params` field. All specified params must match (AND). Use `|` for alternatives (OR):
+
+```json
+{
+  "hooks": [
+    {
+      "command": "main/deploy",
+      "params": {
+        "env": "production"
+      },
+      "before": [
+        "confirm:Are you sure you want to deploy to production?"
+      ]
+    },
+    {
+      "command": "main/deploy",
+      "params": {
+        "env": "dev|staging"
+      },
+      "before": [
+        "log:deploying to non-prod ${env}"
+      ]
+    }
+  ]
+}
+```
+
+When `--env production` is passed, only the first hook fires. When `--env dev` or `--env staging`, only the second. Hooks without `params` always match.
+
+### Blocked Executors
+
+The `profile:` and `stdin:` executors are not allowed in hooks and will produce an error.
+
+### Hook Discovery
+
+```bash
+> aux4 aux4 hooks                                     # list all hooks
+> aux4 aux4 hooks --command "main/deploy"              # filter by command
+> aux4 aux4 hooks --package mycompany/deploy-hooks     # filter by package
+> aux4 deploy --showHooks                              # show hooks before running
+```
+
 ## Docs
 
 Full [documentation](https://aux4.io/docs).

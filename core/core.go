@@ -51,6 +51,7 @@ type Package struct {
 	Distribution []string   `json:"dist"`
 	Tags         []string   `json:"tags"`
 	Profiles     []Profile  `json:"profiles"`
+	Hooks        []Hook     `json:"hooks,omitempty"`
 }
 
 func (pack *Package) GetProfile(name string) (*Profile, bool) {
@@ -81,8 +82,18 @@ type Command struct {
 	Execute []string       `json:"execute"`
 	Help    *CommandHelp   `json:"help"`
 	Private bool           `json:"private"`
+	NoHooks bool           `json:"noHooks,omitempty"`
 	Render  *CommandRender `json:"render"`
 	Ref     CommandRef     `json:"ref"`
+}
+
+type Hook struct {
+	Command string            `json:"command"`
+	Order   int               `json:"order,omitempty"`
+	Params  map[string]string `json:"params,omitempty"`
+	Before  []string          `json:"before,omitempty"`
+	After   []string          `json:"after,omitempty"`
+	Error   []string          `json:"error,omitempty"`
 }
 
 type CommandRender struct {
