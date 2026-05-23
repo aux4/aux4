@@ -83,7 +83,7 @@ type Command struct {
 	Help    *CommandHelp   `json:"help"`
 	Private bool           `json:"private"`
 	NoHooks bool           `json:"noHooks,omitempty"`
-	Render  *CommandRender `json:"render"`
+	Render  CommandRender  `json:"render,omitempty"`
 	Ref     CommandRef     `json:"ref"`
 }
 
@@ -96,42 +96,7 @@ type Hook struct {
 	Error   []string          `json:"error,omitempty"`
 }
 
-type CommandRender struct {
-	Default string            `json:"default"`
-	Options map[string]string `json:"-"`
-}
-
-func (r *CommandRender) UnmarshalJSON(data []byte) error {
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-
-	r.Options = make(map[string]string)
-	for key, value := range raw {
-		var str string
-		if err := json.Unmarshal(value, &str); err != nil {
-			return err
-		}
-		if key == "default" {
-			r.Default = str
-		} else {
-			r.Options[key] = str
-		}
-	}
-	return nil
-}
-
-func (r CommandRender) MarshalJSON() ([]byte, error) {
-	raw := make(map[string]string)
-	if r.Default != "" {
-		raw["default"] = r.Default
-	}
-	for key, value := range r.Options {
-		raw[key] = value
-	}
-	return json.Marshal(raw)
-}
+type CommandRender map[string]string
 
 func (command *Command) SetRef(Path string, Package string, Profile string) {
 	command.Ref = CommandRef{

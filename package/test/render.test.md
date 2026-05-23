@@ -20,7 +20,7 @@
                         "json:cat data.json"
                     ],
                     "render": {
-                        "default": "table",
+                        "tty": "echo RENDERED_TABLE",
                         "table": "echo RENDERED_TABLE",
                         "json": "cat"
                     },
@@ -60,7 +60,7 @@ RENDERED_TABLE
                         "json:cat data.json"
                     ],
                     "render": {
-                        "default": "table",
+                        "tty": "echo RENDERED_TABLE",
                         "table": "echo RENDERED_TABLE",
                         "json": "cat"
                     },
@@ -109,7 +109,7 @@ aux4 list-json --render json
                         "json:cat data.json"
                     ],
                     "render": {
-                        "default": "table",
+                        "tty": "echo RENDERED_TABLE",
                         "table": "echo RENDERED_TABLE"
                     },
                     "help": {
@@ -153,7 +153,7 @@ aux4 list-raw --render none
                         "nout:echo 1.2.3"
                     ],
                     "render": {
-                        "default": "text",
+                        "tty": "cat",
                         "text": "cat"
                     },
                     "help": {
@@ -194,7 +194,6 @@ aux4 get-version --render text
                         "json:cat data.json"
                     ],
                     "render": {
-                        "default": "text",
                         "text": "echo FORMAT_${format}"
                     },
                     "help": {
@@ -242,7 +241,6 @@ FORMAT_csv
                         "json:cat data.json"
                     ],
                     "render": {
-                        "default": "upper",
                         "upper": "tr '[:lower:]' '[:upper:]'"
                     },
                     "help": {
@@ -316,7 +314,7 @@ Hello, World!
                         "json:cat data.json"
                     ],
                     "render": {
-                        "default": "table",
+                        "tty": "echo RENDERED_TABLE",
                         "table": "echo RENDERED_TABLE"
                     },
                     "help": {
@@ -357,7 +355,7 @@ aux4 list-piped | cat
                         "nout:echo data"
                     ],
                     "render": {
-                        "default": "table",
+                        "tty": "echo RENDERED_TABLE",
                         "table": "echo TABLE"
                     },
                     "help": {

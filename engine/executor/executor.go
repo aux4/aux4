@@ -290,7 +290,7 @@ func splitPackageRef(packageRef string) (string, string) {
 }
 
 func renderResponse(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
-	if command.Render == nil {
+	if len(command.Render) == 0 {
 		return nil
 	}
 
@@ -317,7 +317,9 @@ func renderResponse(env *engine.VirtualEnvironment, command core.Command, action
 		stat, err := os.Stdout.Stat()
 		isTTY := err == nil && (stat.Mode()&os.ModeCharDevice) != 0
 		if isTTY {
-			renderName = command.Render.Default
+			if _, exists := command.Render["tty"]; exists {
+				renderName = "tty"
+			}
 		}
 	}
 
@@ -326,7 +328,7 @@ func renderResponse(env *engine.VirtualEnvironment, command core.Command, action
 		return nil
 	}
 
-	renderCmd, exists := command.Render.Options[renderName]
+	renderCmd, exists := command.Render[renderName]
 	if !exists {
 		return core.InternalError(fmt.Sprintf("render format '%s' is not defined", renderName), nil)
 	}
