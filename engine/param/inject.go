@@ -40,6 +40,11 @@ func InjectParameters(command core.Command, instruction string, actions []string
 		return "", err
 	}
 
+	instruction, err = resolveExists(command, instruction, actions, params)
+	if err != nil {
+		return "", err
+	}
+
 	// Phase 3: Resolve function-style parameter references.
 	// These produce quoted/escaped output that should not be further processed.
 	instruction, err = resolveValueVariables(command, instruction, actions, params)
@@ -63,6 +68,11 @@ func InjectParameters(command core.Command, instruction string, actions []string
 	}
 
 	instruction, err = resolveObjectVariables(command, instruction, actions, params)
+	if err != nil {
+		return "", err
+	}
+
+	instruction, err = resolveNvlVariables(command, instruction, actions, params)
 	if err != nil {
 		return "", err
 	}
@@ -226,6 +236,77 @@ func resolveObjectVariables(command core.Command, instruction string, actions []
 	return replaceVariables(expr, instruction, variables), nil
 }
 
+func resolveNvlVariables(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
+	const variableRegex = "nvl\\(([^)]+)\\)"
+
+	expr := regexp.MustCompile(variableRegex)
+	matches := expr.FindAllSubmatch([]byte(instruction), -1)
+
+	variables := map[string]any{}
+	for _, match := range matches {
+		variableExpression := string(match[0])
+		candidates := strings.Split(string(match[1]), ",")
+
+		result := ""
+		for _, candidate := range candidates {
+			candidate = strings.TrimSpace(candidate)
+			if candidate == "" {
+				continue
+			}
+
+			// Quoted string — strip quotes, use as literal
+			if (strings.HasPrefix(candidate, "'") && strings.HasSuffix(candidate, "'")) ||
+				(strings.HasPrefix(candidate, "\"") && strings.HasSuffix(candidate, "\"")) {
+				result = candidate[1 : len(candidate)-1]
+				break
+			}
+
+			// Unquoted numeric or boolean literal
+			if isLiteral(candidate) {
+				result = candidate
+				break
+			}
+
+			// Variable lookup
+			value, err := getVariableValueAsString(command, actions, params, candidate, false)
+			if err == nil && value != "" {
+				result = value
+				break
+			}
+		}
+
+		variables[variableExpression] = result
+	}
+
+	return replaceVariables(expr, instruction, variables), nil
+}
+
+func isLiteral(candidate string) bool {
+	if candidate == "true" || candidate == "false" || candidate == "null" {
+		return true
+	}
+	if len(candidate) == 0 {
+		return false
+	}
+	hasDigit := false
+	hasDot := false
+	for i, c := range candidate {
+		if c == '-' && i == 0 {
+			continue
+		}
+		if c == '.' && !hasDot {
+			hasDot = true
+			continue
+		}
+		if c >= '0' && c <= '9' {
+			hasDigit = true
+			continue
+		}
+		return false
+	}
+	return hasDigit
+}
+
 func parseObject(command core.Command, actions []string, params *Parameters, fieldList string) (string, error) {
 	result := make(map[string]string)
 
@@ -236,7 +317,15 @@ func parseObject(command core.Command, actions []string, params *Parameters, fie
 			continue
 		}
 
-		value, err := getVariableValueAsString(command, actions, params, field, false)
+		variablePath := field
+		alias := ""
+		if strings.Contains(field, ":") {
+			parts := strings.SplitN(field, ":", 2)
+			variablePath = strings.TrimSpace(parts[0])
+			alias = strings.TrimSpace(parts[1])
+		}
+
+		value, err := getVariableValueAsString(command, actions, params, variablePath, false)
 		if err != nil {
 			if strings.Contains(err.Error(), "Variable not found") {
 				continue
@@ -245,7 +334,10 @@ func parseObject(command core.Command, actions []string, params *Parameters, fie
 		}
 
 		if value != "" {
-			jsonKey := strings.ReplaceAll(field, ".", "_")
+			jsonKey := alias
+			if jsonKey == "" {
+				jsonKey = strings.ReplaceAll(variablePath, ".", "_")
+			}
 			result[jsonKey] = value
 		}
 	}
@@ -367,6 +459,30 @@ func resolveConditional(command core.Command, instruction string, actions []stri
 		}
 
 		variables[variableExpression] = expressionValue
+	}
+
+	return replaceVariables(expr, instruction, variables), nil
+}
+
+func resolveExists(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
+	const variableRegex = "exists\\(([^)]+)\\)"
+
+	expr := regexp.MustCompile(variableRegex)
+	matches := expr.FindAllSubmatch([]byte(instruction), -1)
+
+	variables := map[string]any{}
+	for _, match := range matches {
+		variableExpression := string(match[0])
+		variablePath := strings.TrimSpace(string(match[1]))
+
+		value, err := getVariableValueAsString(command, actions, params, variablePath, true)
+		if err != nil {
+			if !strings.Contains(err.Error(), "Variable not found") {
+				return "", err
+			}
+		}
+
+		variables[variableExpression] = fmt.Sprintf("[ -f '%s' ]", value)
 	}
 
 	return replaceVariables(expr, instruction, variables), nil

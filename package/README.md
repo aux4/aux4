@@ -209,7 +209,9 @@ checking port 8083
 | `values(name, age)` | Returns multiple variable values each wrapped in single quotes |
 | `param(name)` | Returns `--name 'value'` format |
 | `params(name, age)` | Returns multiple params in `--name 'value' --age 'value'` format |
-| `object(name, age)` | Returns a JSON object with the specified fields |
+| `object(name, age)` | Returns a JSON object with the specified fields (supports aliases: `object(data.name:name)`) |
+| `nvl(var1, var2, 'fallback')` | Returns the first non-null, non-empty value |
+| `exists(file)` | Checks if file at variable path exists |
 | `if(name)` | Conditional expression |
 
 ## Hooks

@@ -723,3 +723,45 @@ aux4 print --name John --age 23 --city NYC --fields 'name,age'
 ```expect
 cmd {"age":"23","name":"John"}
 ```
+
+## object with aliases
+
+```file:data.json
+{
+  "name": "Joe",
+  "age": 20,
+  "address": {
+    "city": "New York"
+  }
+}
+```
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "print",
+          "execute": [
+            "json:cat data.json",
+            "log:cmd object(response.name:name, response.age:age, response.address.city:city)"
+          ],
+          "help": {
+            "text": "print object with aliases"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 print
+```
+
+```expect
+cmd {"age":"20","city":"New York","name":"Joe"}
+```

@@ -662,6 +662,20 @@ func (executor *SetCommandExecutor) Execute(env *engine.VirtualEnvironment, comm
 			}
 
 			params.Update(name, strings.TrimSpace(stdout))
+		} else if strings.HasPrefix(valueExpression, "json:") {
+			jsonExpression := strings.TrimPrefix(valueExpression, "json:")
+
+			value, err := param.InjectParameters(command, jsonExpression, actions, params)
+			if err != nil {
+				return err
+			}
+
+			var data interface{}
+			err = json.Unmarshal([]byte(value), &data)
+			if err != nil {
+				return core.InternalError(fmt.Sprintf("set: failed to parse JSON for '%s'", name), err)
+			}
+			params.Update(name, data)
 		} else if strings.HasPrefix(valueExpression, "$") && strings.Count(valueExpression, "${") <= 1 {
 			// Single variable expression - use direct lookup
 			value, err := params.Expr(command, actions, valueExpression)

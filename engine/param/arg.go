@@ -267,6 +267,10 @@ func (p *Parameters) Expr(command core.Command, actions []string, originalExpres
 		value = result
 	}
 
+	if value == nil {
+		return nil, nil
+	}
+
 	if index != -1 {
 		typeOfValue := reflect.TypeOf(value)
 		indexable := typeOfValue != nil && (typeOfValue.Kind() == reflect.Slice || typeOfValue.Kind() == reflect.Array)
@@ -285,30 +289,34 @@ func (p *Parameters) Expr(command core.Command, actions []string, originalExpres
 			if len(value.([]any)) > index {
 				value = value.([]any)[index]
 			} else {
-				return nil, core.InternalError("Index out of range: "+expression, nil)
+				return nil, nil
 			}
 		} else {
-			return nil, core.InternalError("Index out of range: "+expression, nil)
+			return nil, nil
 		}
 	} else if key != "" {
 		if orderedMap, ok := value.(*io.OrderedMap); ok {
 			if keyValue, exists := orderedMap.Get(key); exists {
 				value = keyValue
 			} else {
-				return nil, core.InternalError("Key not found: "+expression, nil)
+				return nil, nil
 			}
 		} else if valueMap, ok := value.(map[string]any); ok {
 			if keyValue, exists := valueMap[key]; exists {
 				value = keyValue
 			} else {
-				return nil, core.InternalError("Key not found: "+expression, nil)
+				return nil, nil
 			}
 		} else {
-			return nil, core.InternalError("Cannot apply key lookup: "+expression, nil)
+			return nil, nil
 		}
 	}
 
 	if jsonExpr != "" {
+		if value == nil {
+			return nil, nil
+		}
+
 		if strValue, ok := value.(string); ok {
 			strValue = strings.TrimSpace(strValue)
 			if (strings.HasPrefix(strValue, "{") && strings.HasSuffix(strValue, "}")) ||
@@ -328,11 +336,11 @@ func (p *Parameters) Expr(command core.Command, actions []string, originalExpres
 		} else {
 			jsonValue, err = jsonpath.Read(value, "$."+jsonExpr)
 		}
-		
+
 		if err != nil {
-			return nil, core.InternalError("Error trying to access field '"+jsonExpr+"' from "+fmt.Sprintf("'%v'", value), err)
+			return nil, nil
 		}
-		
+
 		value = jsonValue
 	}
 
