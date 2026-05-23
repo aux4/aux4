@@ -35,6 +35,10 @@ func ExecuteCommandLineWithStdIn(instruction string) (string, string, error) {
 	return executeCommand(instruction, true, true)
 }
 
+func ExecuteCommandLineNoOutputWithStdIn(instruction string) (string, string, error) {
+	return executeCommand(instruction, false, true)
+}
+
 func ExecuteCommandWithPipedStdin(instruction string, stdinData string) error {
 	var shell = os.Getenv("SHELL")
 	if shell == "" {

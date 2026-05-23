@@ -418,6 +418,10 @@ func commandExecutorFactory(command string) engine.VirtualCommandExecutor {
 		return &DebugCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "alias:") {
 		return &AliasCommandExecutor{Command: command}
+	} else if strings.HasPrefix(command, "nout:stdin:") || strings.HasPrefix(command, "stdin:nout:") {
+		return &NoutStdinCommandExecutor{Command: command}
+	} else if strings.HasPrefix(command, "json:stdin:") || strings.HasPrefix(command, "stdin:json:") {
+		return &JsonStdinCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "json:") {
 		return &JsonCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "range:") {
@@ -745,6 +749,66 @@ func (executor *StdinCommandExecutor) Execute(env *engine.VirtualEnvironment, co
 	}
 
 	stdout, _, err := cmd.ExecuteCommandLineWithStdIn(instruction)
+	if err != nil {
+		return err
+	}
+
+	params.Update("response", strings.TrimSpace(stdout))
+
+	return nil
+}
+
+type JsonStdinCommandExecutor struct {
+	Command string
+}
+
+func (executor *JsonStdinCommandExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
+	expression := executor.Command
+	if strings.HasPrefix(expression, "json:stdin:") {
+		expression = strings.TrimPrefix(expression, "json:stdin:")
+	} else {
+		expression = strings.TrimPrefix(expression, "stdin:json:")
+	}
+
+	instruction, err := param.InjectParameters(command, expression, actions, params)
+	if err != nil {
+		return err
+	}
+
+	stdout, _, err := cmd.ExecuteCommandLineNoOutputWithStdIn(instruction)
+	if err != nil {
+		return err
+	}
+
+	var data interface{}
+	err = json.Unmarshal([]byte(stdout), &data)
+	if err != nil {
+		return err
+	}
+
+	params.Update("response", data)
+
+	return nil
+}
+
+type NoutStdinCommandExecutor struct {
+	Command string
+}
+
+func (executor *NoutStdinCommandExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
+	expression := executor.Command
+	if strings.HasPrefix(expression, "nout:stdin:") {
+		expression = strings.TrimPrefix(expression, "nout:stdin:")
+	} else {
+		expression = strings.TrimPrefix(expression, "stdin:nout:")
+	}
+
+	instruction, err := param.InjectParameters(command, expression, actions, params)
+	if err != nil {
+		return err
+	}
+
+	stdout, _, err := cmd.ExecuteCommandLineNoOutputWithStdIn(instruction)
 	if err != nil {
 		return err
 	}
