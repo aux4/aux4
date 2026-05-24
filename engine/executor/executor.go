@@ -426,6 +426,8 @@ func commandExecutorFactory(command string) engine.VirtualCommandExecutor {
 		return &JsonStdinCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "json:") {
 		return &JsonCommandExecutor{Command: command}
+	} else if strings.HasPrefix(command, "file:") {
+		return &FileCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "range:") {
 		return &RangeCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "nout:") {
@@ -830,6 +832,58 @@ func (executor *NoutStdinCommandExecutor) Execute(env *engine.VirtualEnvironment
 	}
 
 	params.Update("response", strings.TrimSpace(stdout))
+
+	return nil
+}
+
+type FileCommandExecutor struct {
+	Command string
+}
+
+func (executor *FileCommandExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
+	expression := strings.TrimPrefix(executor.Command, "file:")
+
+	// Split into path and content at the first ":"
+	parts := strings.SplitN(expression, ":", 2)
+	if len(parts) != 2 {
+		return core.InternalError("file: requires format file:<path>:<content>", nil)
+	}
+
+	pathExpr := parts[0]
+	contentExpr := parts[1]
+
+	filePath, err := param.InjectParameters(command, pathExpr, actions, params)
+	if err != nil {
+		return err
+	}
+
+	append := false
+	if strings.HasPrefix(contentExpr, "+") {
+		append = true
+		contentExpr = contentExpr[1:]
+	}
+
+	content, err := param.InjectParameters(command, contentExpr, actions, params)
+	if err != nil {
+		return err
+	}
+
+	if append {
+		f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return core.InternalError("file: error opening file "+filePath, err)
+		}
+		defer f.Close()
+		_, err = f.WriteString(content + "\n")
+		if err != nil {
+			return core.InternalError("file: error appending to file "+filePath, err)
+		}
+	} else {
+		err := os.WriteFile(filePath, []byte(content+"\n"), 0644)
+		if err != nil {
+			return core.InternalError("file: error writing file "+filePath, err)
+		}
+	}
 
 	return nil
 }
