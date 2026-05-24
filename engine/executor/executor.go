@@ -645,7 +645,7 @@ func (executor *SetCommandExecutor) Execute(env *engine.VirtualEnvironment, comm
 	expression := strings.TrimPrefix(executor.Command, "set:")
 	multiple := strings.Split(expression, ";")
 	for _, pair := range multiple {
-		parts := strings.Split(pair, "=")
+		parts := strings.SplitN(pair, "=", 2)
 		name := parts[0]
 		valueExpression := parts[1]
 
