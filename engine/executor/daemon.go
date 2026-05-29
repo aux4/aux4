@@ -52,9 +52,7 @@ func daemonStart(socketPath string) error {
 	}
 
 	cmd := exec.Command(execPath, "-daemon-server", socketPath)
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setsid: true,
-	}
+	setDetachedProcess(cmd)
 
 	// Redirect daemon output to log file
 	logPath := socketPath + ".log"
