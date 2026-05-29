@@ -58,7 +58,9 @@ func main() {
 	registry.RegisterExecutor("aux4.completion", &executor.Aux4CompletionExecutor{})
 	registry.RegisterExecutor("aux4.autocomplete", &executor.Aux4AutocompleteExecutor{})
 	registry.RegisterExecutor("aux4.hooks", &executor.Aux4HooksExecutor{})
-	registry.RegisterExecutor("aux4.daemon", &executor.Aux4DaemonExecutor{})
+	registry.RegisterExecutor("aux4:daemon.start", &executor.Aux4DaemonStartExecutor{})
+	registry.RegisterExecutor("aux4:daemon.stop", &executor.Aux4DaemonStopExecutor{})
+	registry.RegisterExecutor("aux4:daemon.status", &executor.Aux4DaemonStatusExecutor{})
 
 	env, err := engine.InitializeVirtualEnvironment(library, registry)
 	if err != nil {
@@ -185,7 +187,9 @@ func buildDaemonEnvironment() *engine.VirtualEnvironment {
 	registry.RegisterExecutor("aux4.completion", &executor.Aux4CompletionExecutor{})
 	registry.RegisterExecutor("aux4.autocomplete", &executor.Aux4AutocompleteExecutor{})
 	registry.RegisterExecutor("aux4.hooks", &executor.Aux4HooksExecutor{})
-	registry.RegisterExecutor("aux4.daemon", &executor.Aux4DaemonExecutor{})
+	registry.RegisterExecutor("aux4:daemon.start", &executor.Aux4DaemonStartExecutor{})
+	registry.RegisterExecutor("aux4:daemon.stop", &executor.Aux4DaemonStopExecutor{})
+	registry.RegisterExecutor("aux4:daemon.status", &executor.Aux4DaemonStatusExecutor{})
 
 	env, err := engine.InitializeVirtualEnvironment(library, registry)
 	if err != nil {

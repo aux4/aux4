@@ -1,7 +1,6 @@
 package executor
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"strconv"
@@ -14,38 +13,16 @@ import (
 	"aux4.dev/aux4/output"
 )
 
-type Aux4DaemonExecutor struct {
-}
+type Aux4DaemonStartExecutor struct{}
 
-func (executor *Aux4DaemonExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
-	if len(actions) < 2 {
-		output.Out(output.StdOut).Println("Usage: aux4 aux4 daemon <start|stop|status>")
-		return nil
-	}
-
-	subcommand := actions[1]
+func (executor *Aux4DaemonStartExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
 	socketPath := daemon.FindSocketPath(".")
 
-	switch subcommand {
-	case "start":
-		return daemonStart(socketPath)
-	case "stop":
-		return daemonStop(socketPath)
-	case "status":
-		return daemonStatus(socketPath)
-	default:
-		return core.InternalError(fmt.Sprintf("unknown daemon command: %s", subcommand), nil)
-	}
-}
-
-func daemonStart(socketPath string) error {
-	// Check if already running
 	if daemon.Ping(socketPath) {
 		output.Out(output.StdOut).Println("daemon is already running at", socketPath)
 		return nil
 	}
 
-	// Start daemon in background by re-executing aux4 with a special flag
 	execPath, err := os.Executable()
 	if err != nil {
 		return core.InternalError("failed to find aux4 executable", err)
@@ -54,7 +31,6 @@ func daemonStart(socketPath string) error {
 	cmd := exec.Command(execPath, "-daemon-server", socketPath)
 	setDetachedProcess(cmd)
 
-	// Redirect daemon output to log file
 	logPath := socketPath + ".log"
 	logFile, err := os.Create(logPath)
 	if err != nil {
@@ -71,8 +47,6 @@ func daemonStart(socketPath string) error {
 	}
 
 	pid := cmd.Process.Pid
-
-	// Detach from the process
 	cmd.Process.Release()
 	logFile.Close()
 
@@ -83,10 +57,13 @@ func daemonStart(socketPath string) error {
 	return nil
 }
 
-func daemonStop(socketPath string) error {
+type Aux4DaemonStopExecutor struct{}
+
+func (executor *Aux4DaemonStopExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
+	socketPath := daemon.FindSocketPath(".")
+
 	err := daemon.Shutdown(socketPath)
 	if err != nil {
-		// Try to kill by PID file as fallback
 		pidPath := socketPath + ".pid"
 		data, readErr := os.ReadFile(pidPath)
 		if readErr == nil {
@@ -110,7 +87,11 @@ func daemonStop(socketPath string) error {
 	return nil
 }
 
-func daemonStatus(socketPath string) error {
+type Aux4DaemonStatusExecutor struct{}
+
+func (executor *Aux4DaemonStatusExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
+	socketPath := daemon.FindSocketPath(".")
+
 	if daemon.Ping(socketPath) {
 		pidPath := socketPath + ".pid"
 		data, err := os.ReadFile(pidPath)

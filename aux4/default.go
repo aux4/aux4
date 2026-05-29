@@ -136,21 +136,42 @@ func DefaultAux4() string {
 						{
 							"name": "daemon",
 							"noHooks": true,
+							"execute": [
+								"profile:aux4:daemon"
+							],
 							"help": {
 								"text": "Manage aux4 daemon for faster command execution",
-								"hasMan": true,
-								"variables": [
-									{
-										"name": "action",
-										"text": "Daemon action: start, stop, or status",
-										"arg": true,
-										"options": ["start", "stop", "status"]
-									}
-								]
+								"hasMan": true
 							}
 						}
           ]
-        }
+        },
+				{
+					"name": "aux4:daemon",
+					"commands": [
+						{
+							"name": "start",
+							"noHooks": true,
+							"help": {
+								"text": "Start the daemon process"
+							}
+						},
+						{
+							"name": "stop",
+							"noHooks": true,
+							"help": {
+								"text": "Stop the daemon process"
+							}
+						},
+						{
+							"name": "status",
+							"noHooks": true,
+							"help": {
+								"text": "Show daemon status"
+							}
+						}
+					]
+				}
       ]
     }
   `
