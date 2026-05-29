@@ -132,6 +132,22 @@ func DefaultAux4() string {
 									}
 								]
 							}
+						},
+						{
+							"name": "daemon",
+							"noHooks": true,
+							"help": {
+								"text": "Manage aux4 daemon for faster command execution",
+								"hasMan": true,
+								"variables": [
+									{
+										"name": "action",
+										"text": "Daemon action: start, stop, or status",
+										"arg": true,
+										"options": ["start", "stop", "status"]
+									}
+								]
+							}
 						}
           ]
         }

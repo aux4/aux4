@@ -130,6 +130,11 @@ func (params *Aux4Parameters) NoPackages() bool {
 	return ok && value == "true"
 }
 
+func (params *Aux4Parameters) Has(name string) bool {
+	_, ok := params.params[name]
+	return ok
+}
+
 type Parameters struct {
 	params  map[string][]any
 	lookups []ParameterLookup
