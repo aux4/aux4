@@ -436,6 +436,8 @@ func commandExecutorFactory(command string) engine.VirtualCommandExecutor {
 		return &StdinCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "aux4:") || (strings.HasPrefix(command, "aux4 ") && !strings.Contains(command, "&") && !strings.Contains(command, "|") && !strings.Contains(command, ">")) {
 		return &Aux4CommandExecutor{Command: command}
+	} else if strings.HasPrefix(command, "when:") {
+		return &WhenCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "#") {
 		return &CommentExecutor{Command: command}
 	}
@@ -938,6 +940,137 @@ type CommentExecutor struct {
 func (executor *CommentExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
 	// Comments starting with # are ignored, just skip execution
 	return nil
+}
+
+type WhenCommandExecutor struct {
+	Command string
+}
+
+func (executor *WhenCommandExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
+	expression := strings.TrimPrefix(executor.Command, "when:")
+
+	// Inject parameters to resolve variables
+	resolved, err := param.InjectParameters(command, expression, actions, params)
+	if err != nil {
+		return err
+	}
+
+	// Find the first unescaped colon that separates condition from command
+	colonIdx := -1
+	for i, c := range resolved {
+		if c == ':' {
+			colonIdx = i
+			break
+		}
+	}
+
+	if colonIdx == -1 {
+		return nil
+	}
+
+	condition := resolved[:colonIdx]
+	cmdToRun := resolved[colonIdx+1:]
+
+	if cmdToRun == "" {
+		return nil
+	}
+
+	if !evaluateWhenCondition(condition) {
+		return nil
+	}
+
+	cmdExecutor := commandExecutorFactory(cmdToRun)
+	return cmdExecutor.Execute(env, command, actions, params)
+}
+
+func evaluateWhenCondition(condition string) bool {
+	condition = strings.TrimSpace(condition)
+
+	// Handle && (AND) — split and evaluate both sides
+	if idx := strings.Index(condition, "&&"); idx != -1 {
+		left := condition[:idx]
+		right := condition[idx+2:]
+		return evaluateWhenCondition(left) && evaluateWhenCondition(right)
+	}
+
+	// Handle || (OR) — split and evaluate both sides
+	if idx := strings.Index(condition, "||"); idx != -1 {
+		left := condition[:idx]
+		right := condition[idx+2:]
+		return evaluateWhenCondition(left) || evaluateWhenCondition(right)
+	}
+
+	// Single condition
+	return evaluateSingleCondition(condition)
+}
+
+func evaluateSingleCondition(condition string) bool {
+	condition = strings.TrimSpace(condition)
+
+	if condition == "" {
+		return false
+	}
+
+	// != (not equals)
+	if strings.Contains(condition, "!=") {
+		parts := strings.SplitN(condition, "!=", 2)
+		return strings.TrimSpace(parts[0]) != strings.TrimSpace(parts[1])
+	}
+
+	// == (equals)
+	if strings.Contains(condition, "==") {
+		parts := strings.SplitN(condition, "==", 2)
+		return strings.TrimSpace(parts[0]) == strings.TrimSpace(parts[1])
+	}
+
+	// >= (greater than or equal)
+	if strings.Contains(condition, ">=") {
+		parts := strings.SplitN(condition, ">=", 2)
+		return compareNumeric(strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])) >= 0
+	}
+
+	// <= (less than or equal)
+	if strings.Contains(condition, "<=") {
+		parts := strings.SplitN(condition, "<=", 2)
+		return compareNumeric(strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])) <= 0
+	}
+
+	// > (greater than)
+	if strings.Contains(condition, ">") {
+		parts := strings.SplitN(condition, ">", 2)
+		return compareNumeric(strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])) > 0
+	}
+
+	// < (less than)
+	if strings.Contains(condition, "<") {
+		parts := strings.SplitN(condition, "<", 2)
+		return compareNumeric(strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])) < 0
+	}
+
+	// No operator — check if non-empty (truthy)
+	return condition != ""
+}
+
+func compareNumeric(a, b string) int {
+	na, errA := strconv.ParseFloat(a, 64)
+	nb, errB := strconv.ParseFloat(b, 64)
+
+	if errA != nil || errB != nil {
+		// Fall back to string comparison
+		if a < b {
+			return -1
+		} else if a > b {
+			return 1
+		}
+		return 0
+	}
+
+	if na < nb {
+		return -1
+	} else if na > nb {
+		return 1
+	}
+	return 0
 }
 
 type CommandLineExecutor struct {
