@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"sync"
-	"syscall"
 	"time"
 )
 
@@ -178,12 +177,12 @@ func Flush() {
 
 	// Lock the file to prevent concurrent processes from losing each other's data
 	lockPath := filePath + ".lock"
-	lockFile, err := os.OpenFile(lockPath, os.O_CREATE|os.O_WRONLY, 0644)
+	lf, err := os.OpenFile(lockPath, os.O_CREATE|os.O_WRONLY, 0644)
 	if err == nil {
-		syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX)
+		lockFile(lf)
 		defer func() {
-			syscall.Flock(int(lockFile.Fd()), syscall.LOCK_UN)
-			lockFile.Close()
+			unlockFile(lf)
+			lf.Close()
 		}()
 	}
 
