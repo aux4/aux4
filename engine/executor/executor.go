@@ -9,10 +9,12 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"aux4.dev/aux4/cmd"
 	"aux4.dev/aux4/config"
 	"aux4.dev/aux4/core"
+	"aux4.dev/aux4/coverage"
 	"aux4.dev/aux4/engine"
 	"aux4.dev/aux4/engine/param"
 	"aux4.dev/aux4/man"
@@ -201,10 +203,25 @@ func MainExecute(env *engine.VirtualEnvironment, actions []string, params *param
 	}
 
 	// Run command execute steps
+	trackCov := coverage.IsEnabled()
 	var execErr error
-	for _, commandLine := range command.Execute {
+	for stepIndex, commandLine := range command.Execute {
 		executor := commandExecutorFactory(commandLine)
+
+		if trackCov {
+			setCoverageContext(command, stepIndex)
+		}
+
+		var stepStart time.Time
+		if trackCov {
+			stepStart = time.Now()
+		}
 		err := executor.Execute(env, command, actions, params)
+
+		if trackCov && !selfReportsCoverage(commandLine) {
+			coverage.RecordStep(command.Ref.Package, command.Ref.Profile, command.Name, stepIndex, commandLine, time.Since(stepStart))
+		}
+
 		if err != nil {
 			execErr = err
 			break
@@ -405,6 +422,25 @@ func responseToString(response any) string {
 	return string(data)
 }
 
+// Coverage context passed to self-reporting executors (each:, when:)
+var covCtx struct {
+	pkg     string
+	profile string
+	command string
+	index   int
+}
+
+func setCoverageContext(cmd core.Command, stepIndex int) {
+	covCtx.pkg = cmd.Ref.Package
+	covCtx.profile = cmd.Ref.Profile
+	covCtx.command = cmd.Name
+	covCtx.index = stepIndex
+}
+
+func selfReportsCoverage(commandLine string) bool {
+	return strings.HasPrefix(commandLine, "each:") || strings.HasPrefix(commandLine, "when:")
+}
+
 func commandExecutorFactory(command string) engine.VirtualCommandExecutor {
 	if strings.HasPrefix(command, "profile:") {
 		return &ProfileCommandExecutor{Command: command}
@@ -571,6 +607,15 @@ func (executor *EachCommandExecutor) Execute(env *engine.VirtualEnvironment, com
 		return core.InternalError("response is not array", nil)
 	}
 
+	trackCoverage := coverage.IsEnabled()
+	var iterDurations []time.Duration
+	var eachStart time.Time
+	if trackCoverage {
+		iterDurations = make([]time.Duration, 0, len(list))
+		eachStart = time.Now()
+	}
+	iterCount := 0
+
 	for index, item := range list {
 		if item == "" {
 			continue
@@ -584,10 +629,22 @@ func (executor *EachCommandExecutor) Execute(env *engine.VirtualEnvironment, com
 			return err
 		}
 
+		var iterStart time.Time
+		if trackCoverage {
+			iterStart = time.Now()
+		}
 		_, _, err = cmd.ExecuteCommandLineWithStdIn(instruction)
+		if trackCoverage {
+			iterDurations = append(iterDurations, time.Since(iterStart))
+			iterCount++
+		}
 		if err != nil && !ignoreErrors {
 			return err
 		}
+	}
+
+	if trackCoverage {
+		coverage.RecordIteration(covCtx.pkg, covCtx.profile, covCtx.command, covCtx.index, executor.Command, time.Since(eachStart), iterCount, iterDurations)
 	}
 
 	return nil
@@ -948,6 +1005,11 @@ type WhenCommandExecutor struct {
 
 func (executor *WhenCommandExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
 	expression := strings.TrimPrefix(executor.Command, "when:")
+	trackCov := coverage.IsEnabled()
+	var whenStart time.Time
+	if trackCov {
+		whenStart = time.Now()
+	}
 
 	// Inject parameters to resolve variables
 	resolved, err := param.InjectParameters(command, expression, actions, params)
@@ -965,6 +1027,9 @@ func (executor *WhenCommandExecutor) Execute(env *engine.VirtualEnvironment, com
 	}
 
 	if colonIdx == -1 {
+		if trackCov {
+			coverage.RecordBranch(covCtx.pkg, covCtx.profile, covCtx.command, covCtx.index, executor.Command, "false", time.Since(whenStart))
+		}
 		return nil
 	}
 
@@ -972,15 +1037,25 @@ func (executor *WhenCommandExecutor) Execute(env *engine.VirtualEnvironment, com
 	cmdToRun := resolved[colonIdx+1:]
 
 	if cmdToRun == "" {
+		if trackCov {
+			coverage.RecordBranch(covCtx.pkg, covCtx.profile, covCtx.command, covCtx.index, executor.Command, "false", time.Since(whenStart))
+		}
 		return nil
 	}
 
 	if !evaluateWhenCondition(condition) {
+		if trackCov {
+			coverage.RecordBranch(covCtx.pkg, covCtx.profile, covCtx.command, covCtx.index, executor.Command, "false", time.Since(whenStart))
+		}
 		return nil
 	}
 
 	cmdExecutor := commandExecutorFactory(cmdToRun)
-	return cmdExecutor.Execute(env, command, actions, params)
+	err = cmdExecutor.Execute(env, command, actions, params)
+	if trackCov {
+		coverage.RecordBranch(covCtx.pkg, covCtx.profile, covCtx.command, covCtx.index, executor.Command, "true", time.Since(whenStart))
+	}
+	return err
 }
 
 func evaluateWhenCondition(condition string) bool {

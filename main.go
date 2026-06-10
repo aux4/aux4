@@ -8,6 +8,7 @@ import (
 	"aux4.dev/aux4/cmd"
 	"aux4.dev/aux4/config"
 	"aux4.dev/aux4/core"
+	"aux4.dev/aux4/coverage"
 	"aux4.dev/aux4/daemon"
 	"aux4.dev/aux4/engine"
 	"aux4.dev/aux4/engine/executor"
@@ -16,13 +17,22 @@ import (
 )
 
 func main() {
+	cmd.OnAbort = coverage.Flush
 	cmd.AbortOnCtrlC()
 
+	exitCode := run()
+	coverage.Flush()
+	if exitCode != 0 {
+		os.Exit(exitCode)
+	}
+}
+
+func run() int {
 	// Handle daemon server mode (launched by `aux4 aux4 daemon start`)
 	if len(os.Args) >= 3 && os.Args[1] == "-daemon-server" {
 		socketPath := os.Args[2]
 		startDaemonServer(socketPath)
-		return
+		return 0
 	}
 
 	aux4Params, actions, params := param.ParseArgs(os.Args[1:])
@@ -31,8 +41,7 @@ func main() {
 	if !isDaemonCommand(actions) {
 		socketPath := daemon.FindSocketPath(".")
 		if conn := daemon.Connect(socketPath); conn != nil {
-			exitCode := daemon.Forward(conn, os.Args[1:])
-			os.Exit(exitCode)
+			return daemon.Forward(conn, os.Args[1:])
 		}
 	}
 
@@ -40,7 +49,7 @@ func main() {
 
 	if err := library.Load("", "aux4", []byte(aux4.DefaultAux4())); err != nil {
 		output.Out(output.StdErr).Println(err)
-		os.Exit(err.(core.Aux4Error).ExitCode)
+		return err.(core.Aux4Error).ExitCode
 	}
 
 	var aux4Files = config.ListAux4Files(".", aux4Params)
@@ -65,7 +74,7 @@ func main() {
 	env, err := engine.InitializeVirtualEnvironment(library, registry)
 	if err != nil {
 		output.Out(output.StdErr).Println(output.Red(err))
-		os.Exit(err.(core.Aux4Error).ExitCode)
+		return err.(core.Aux4Error).ExitCode
 	}
 
 	if err := executor.MainExecute(env, actions, &params); err != nil {
@@ -73,11 +82,12 @@ func main() {
 			if aux4Err.Message != "" {
 				output.Out(output.StdErr).Println(output.Red(aux4Err.Message))
 			}
-			os.Exit(aux4Err.ExitCode)
-		} else {
-			os.Exit(1)
+			return aux4Err.ExitCode
 		}
+		return 1
 	}
+
+	return 0
 }
 
 // isDaemonCommand returns true if the command is managing the daemon itself

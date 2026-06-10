@@ -13,11 +13,16 @@ import (
 
 var commandsAvailable = map[string]bool{}
 
+var OnAbort func()
+
 func AbortOnCtrlC() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {
 		<-c
+		if OnAbort != nil {
+			OnAbort()
+		}
 		output.Out(output.StdErr).Println("Process aborted")
 		os.Exit(130)
 	}()
