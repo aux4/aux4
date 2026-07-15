@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 func ReadJsonFile(path string, object any) error {
@@ -49,25 +50,96 @@ func GetTemporaryDirectory(path string) (string, error) {
 	return dir, nil
 }
 
+// DownloadOptions tunes the hardened download path. Zero values fall back to
+// safe internal defaults (see defaultDownloadTimeout / defaultMaxDownloadSize).
+type DownloadOptions struct {
+	// Timeout is the overall time budget for the whole request/response.
+	Timeout time.Duration
+	// MaxSize is the maximum number of bytes that will be written to disk.
+	MaxSize int64
+}
+
+const (
+	// defaultDownloadTimeout caps the total download time to guard against
+	// hung / slowloris style connections without killing large legitimate
+	// artifact downloads.
+	defaultDownloadTimeout = 30 * time.Minute
+	// defaultMaxDownloadSize caps how many bytes we are willing to write to
+	// disk for a single download, guarding against decompression/abuse.
+	defaultMaxDownloadSize = int64(1) << 30 // 1 GiB
+)
+
+// DownloadFile downloads url to the given path using safe internal defaults
+// (timeout, size cap, redirect policy). The signature is preserved for existing
+// callers; use DownloadFileWithOptions to override the defaults.
 func DownloadFile(url, filepath string) error {
-	resp, err := http.Get(url)
+	return DownloadFileWithOptions(url, filepath, DownloadOptions{})
+}
+
+// DownloadFileWithOptions downloads url to dest applying a total timeout, a
+// maximum written-size cap and a redirect policy that refuses a downgrade from
+// https to http. It does not enforce the initial scheme — callers that require
+// https should validate the url before calling (see pkger installFromSpec).
+func DownloadFileWithOptions(url, dest string, opts DownloadOptions) error {
+	timeout := opts.Timeout
+	if timeout <= 0 {
+		timeout = defaultDownloadTimeout
+	}
+
+	maxSize := opts.MaxSize
+	if maxSize <= 0 {
+		maxSize = defaultMaxDownloadSize
+	}
+
+	client := &http.Client{
+		Timeout: timeout,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 10 {
+				return fmt.Errorf("stopped after 10 redirects")
+			}
+			// Refuse a downgrade from https to http across a redirect chain.
+			if len(via) > 0 && via[0].URL.Scheme == "https" && req.URL.Scheme != "https" {
+				return fmt.Errorf("insecure redirect from https to %s refused", req.URL.Scheme)
+			}
+			return nil
+		},
+	}
+
+	resp, err := client.Get(url)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
-  if resp.StatusCode != http.StatusOK {
-    return core.InternalError(resp.Status, nil)
-  }
+	if resp.StatusCode != http.StatusOK {
+		return core.InternalError(resp.Status, nil)
+	}
 
-	out, err := os.Create(filepath)
+	// Reject artifacts that advertise a size beyond the cap up front.
+	if resp.ContentLength > maxSize {
+		return core.InternalError(fmt.Sprintf("download exceeds maximum allowed size of %d bytes", maxSize), nil)
+	}
+
+	out, err := os.Create(dest)
 	if err != nil {
 		return err
 	}
 	defer out.Close()
 
-	_, err = io.Copy(out, resp.Body)
-	return err
+	// Read at most maxSize+1 bytes: if we manage to write more than maxSize the
+	// server lied about (or omitted) Content-Length and we abort.
+	written, err := io.Copy(out, io.LimitReader(resp.Body, maxSize+1))
+	if err != nil {
+		return err
+	}
+
+	if written > maxSize {
+		out.Close()
+		os.Remove(dest)
+		return core.InternalError(fmt.Sprintf("download exceeds maximum allowed size of %d bytes", maxSize), nil)
+	}
+
+	return nil
 }
 
 func CopyFile(source string, target string) error {
