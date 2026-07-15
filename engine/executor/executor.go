@@ -42,7 +42,7 @@ func buildCommandPath(command core.Command) string {
 
 func executeHookSteps(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters, steps []string) error {
 	for _, step := range steps {
-		executor := commandExecutorFactory(step)
+		executor := commandExecutorFactory(step, false)
 		err := executor.Execute(env, command, actions, params)
 		if err != nil {
 			return err
@@ -206,7 +206,7 @@ func MainExecute(env *engine.VirtualEnvironment, actions []string, params *param
 	trackCov := coverage.IsEnabled()
 	var execErr error
 	for stepIndex, commandLine := range command.Execute {
-		executor := commandExecutorFactory(commandLine)
+		executor := commandExecutorFactory(commandLine, len(command.Render) > 0)
 
 		if trackCov {
 			setCoverageContext(command, stepIndex)
@@ -441,7 +441,7 @@ func selfReportsCoverage(commandLine string) bool {
 	return strings.HasPrefix(commandLine, "each:") || strings.HasPrefix(commandLine, "when:")
 }
 
-func commandExecutorFactory(command string) engine.VirtualCommandExecutor {
+func commandExecutorFactory(command string, silent bool) engine.VirtualCommandExecutor {
 	if strings.HasPrefix(command, "profile:") {
 		return &ProfileCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "set:") {
@@ -469,7 +469,7 @@ func commandExecutorFactory(command string) engine.VirtualCommandExecutor {
 	} else if strings.HasPrefix(command, "nout:") {
 		return &NoutCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "stdin:") {
-		return &StdinCommandExecutor{Command: command}
+		return &StdinCommandExecutor{Command: command, Silent: silent}
 	} else if strings.HasPrefix(command, "aux4:") || (strings.HasPrefix(command, "aux4 ") && !strings.Contains(command, "&") && !strings.Contains(command, "|") && !strings.Contains(command, ">")) {
 		return &Aux4CommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "when:") {
@@ -477,7 +477,7 @@ func commandExecutorFactory(command string) engine.VirtualCommandExecutor {
 	} else if strings.HasPrefix(command, "#") {
 		return &CommentExecutor{Command: command}
 	}
-	return &CommandLineExecutor{Command: command}
+	return &CommandLineExecutor{Command: command, Silent: silent}
 }
 
 type ProfileCommandExecutor struct {
@@ -815,6 +815,7 @@ func (executor *NoutCommandExecutor) Execute(env *engine.VirtualEnvironment, com
 
 type StdinCommandExecutor struct {
 	Command string
+	Silent  bool
 }
 
 func (executor *StdinCommandExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
@@ -825,7 +826,12 @@ func (executor *StdinCommandExecutor) Execute(env *engine.VirtualEnvironment, co
 		return err
 	}
 
-	stdout, _, err := cmd.ExecuteCommandLineWithStdIn(instruction)
+	var stdout string
+	if executor.Silent {
+		stdout, _, err = cmd.ExecuteCommandLineNoOutputWithStdIn(instruction)
+	} else {
+		stdout, _, err = cmd.ExecuteCommandLineWithStdIn(instruction)
+	}
 	if err != nil {
 		return err
 	}
@@ -1050,7 +1056,7 @@ func (executor *WhenCommandExecutor) Execute(env *engine.VirtualEnvironment, com
 		return nil
 	}
 
-	cmdExecutor := commandExecutorFactory(cmdToRun)
+	cmdExecutor := commandExecutorFactory(cmdToRun, len(command.Render) > 0)
 	err = cmdExecutor.Execute(env, command, actions, params)
 	if trackCov {
 		coverage.RecordBranch(covCtx.pkg, covCtx.profile, covCtx.command, covCtx.index, executor.Command, "true", time.Since(whenStart))
@@ -1150,6 +1156,7 @@ func compareNumeric(a, b string) int {
 
 type CommandLineExecutor struct {
 	Command string
+	Silent  bool
 }
 
 func (executor *CommandLineExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
@@ -1158,7 +1165,12 @@ func (executor *CommandLineExecutor) Execute(env *engine.VirtualEnvironment, com
 		return err
 	}
 
-	stdout, _, err := cmd.ExecuteCommandLine(instruction)
+	var stdout string
+	if executor.Silent {
+		stdout, _, err = cmd.ExecuteCommandLineNoOutput(instruction)
+	} else {
+		stdout, _, err = cmd.ExecuteCommandLine(instruction)
+	}
 	if err != nil {
 		return err
 	}

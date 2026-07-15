@@ -339,6 +339,158 @@ aux4 list-piped | cat
 ]
 ```
 
+## render with bare execute step
+
+### should show only the rendered result for a bare shell command
+
+```file:data.txt
+hello world
+```
+
+```file:.aux4
+{
+    "profiles": [
+        {
+            "name": "main",
+            "commands": [
+                {
+                    "name": "list-bare",
+                    "execute": [
+                        "cat data.txt"
+                    ],
+                    "render": {
+                        "tty": "tr '[:lower:]' '[:upper:]'",
+                        "upper": "tr '[:lower:]' '[:upper:]'"
+                    },
+                    "help": {
+                        "text": "bare execute with render"
+                    }
+                }
+            ]
+        }
+    ]
+}
+```
+
+```execute
+aux4 list-bare --render upper
+```
+
+```expect
+HELLO WORLD
+```
+
+### should show the raw response exactly once with render none
+
+```file:data.txt
+hello world
+```
+
+```file:.aux4
+{
+    "profiles": [
+        {
+            "name": "main",
+            "commands": [
+                {
+                    "name": "list-bare",
+                    "execute": [
+                        "cat data.txt"
+                    ],
+                    "render": {
+                        "tty": "tr '[:lower:]' '[:upper:]'",
+                        "upper": "tr '[:lower:]' '[:upper:]'"
+                    },
+                    "help": {
+                        "text": "bare execute with render"
+                    }
+                }
+            ]
+        }
+    ]
+}
+```
+
+```execute
+aux4 list-bare --render none
+```
+
+```expect
+hello world
+```
+
+## render with stdin execute step
+
+### should show only the rendered result for a stdin executor
+
+```file:.aux4
+{
+    "profiles": [
+        {
+            "name": "main",
+            "commands": [
+                {
+                    "name": "list-stdin",
+                    "execute": [
+                        "stdin:cat"
+                    ],
+                    "render": {
+                        "tty": "tr '[:lower:]' '[:upper:]'",
+                        "upper": "tr '[:lower:]' '[:upper:]'"
+                    },
+                    "help": {
+                        "text": "stdin execute with render"
+                    }
+                }
+            ]
+        }
+    ]
+}
+```
+
+```execute
+echo "hello world" | aux4 list-stdin --render upper
+```
+
+```expect
+HELLO WORLD
+```
+
+### should show the raw response exactly once with render none for a stdin executor
+
+```file:.aux4
+{
+    "profiles": [
+        {
+            "name": "main",
+            "commands": [
+                {
+                    "name": "list-stdin",
+                    "execute": [
+                        "stdin:cat"
+                    ],
+                    "render": {
+                        "tty": "tr '[:lower:]' '[:upper:]'",
+                        "upper": "tr '[:lower:]' '[:upper:]'"
+                    },
+                    "help": {
+                        "text": "stdin execute with render"
+                    }
+                }
+            ]
+        }
+    ]
+}
+```
+
+```execute
+echo "hello world" | aux4 list-stdin --render none
+```
+
+```expect
+hello world
+```
+
 ## render with invalid format
 
 ### should fail with undefined render format

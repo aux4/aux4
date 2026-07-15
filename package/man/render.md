@@ -6,8 +6,9 @@ The `render` field on a command definition enables post-execution output formatt
 - **Raw output** — use `--render none` to bypass rendering and print the raw response
 - **TTY auto-detection** — when stdout is not a TTY (piped or redirected), rendering is skipped and the raw response is printed automatically
 - **Parameter injection** — render commands support `${variable}` syntax for dynamic customization
+- **Automatic silent capture** — when a command has a `render` configuration, its execute steps never stream their output to the terminal during execution. Output is captured silently regardless of the executor prefix (plain shell commands, `stdin:`, `json:`, and `nout:` all behave the same), so the only thing printed is whatever the render step decides to show (the rendered result, or the raw response once via `--render none` / non-TTY passthrough).
 
-**Important:** The render only processes data captured in `response`. Commands must use `json:` or `nout:` executors to capture output silently. Using plain shell commands or `log:` with `render` causes double output — the original output streams during execution, then the rendered output prints afterward.
+**Note:** The render only processes data captured in `response`. The `log:` executor prints its text directly to stdout (in addition to setting `response`), and the `alias:` executor shares the terminal's stdio without capturing `response` at all — neither is suitable for use with `render`.
 
 #### Usage
 
