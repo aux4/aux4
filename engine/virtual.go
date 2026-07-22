@@ -207,6 +207,12 @@ func (env *VirtualEnvironment) Save(path string) error {
 		aux4Package.Profiles = append(aux4Package.Profiles, profile)
 	}
 
+	if env.Hooks != nil {
+		for _, entry := range env.Hooks.All() {
+			aux4Package.Hooks = append(aux4Package.Hooks, entry.Hook)
+		}
+	}
+
 	err := io.WriteJsonFile(path, &aux4Package)
 	if err != nil {
 		return core.InternalError("Error saving virtual environment", err)
