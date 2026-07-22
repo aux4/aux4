@@ -20,6 +20,22 @@ func InjectParameters(command core.Command, instruction string, actions []string
 	// Protect $$ escape sequences from variable resolution
 	instruction = strings.ReplaceAll(instruction, "$$", dollarEscapePlaceholder)
 
+	// Phase 0: Resolve self-contained generators (date/time/uuid) BEFORE variable
+	// expansion. These take no variables, so resolving them first means they only
+	// ever see the authored execute string — never values expanded from ${...} or
+	// command output — which keeps common tokens like uuid()/date(col) in
+	// interpolated data or SQL from being clobbered. Authored occurrences can be
+	// kept literal with a backslash (\uuid(), \date(...)).
+	instruction, err = resolveDateTimeVariables(instruction)
+	if err != nil {
+		return "", err
+	}
+
+	instruction, err = resolveUUIDVariables(instruction)
+	if err != nil {
+		return "", err
+	}
+
 	// Phase 1: Resolve variable references ($var and ${var})
 	instruction, err = resolveBareVariables(command, instruction, actions, params)
 	if err != nil {
@@ -97,99 +113,45 @@ func InjectParameters(command core.Command, instruction string, actions []string
 }
 
 func resolveValueVariables(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
-	const variableRegex = "value\\(([^)]+)\\)"
-
-	expr := regexp.MustCompile(variableRegex)
-	matches := expr.FindAllSubmatch([]byte(instruction), -1)
-
-	variables := map[string]any{}
-	for _, match := range matches {
-		variableExpression := string(match[0])
-
-		variablePath := string(match[1])
-		value, err := getVariableValueAsString(command, actions, params, variablePath, true)
-		if err != nil {
-			if !strings.Contains(err.Error(), "Variable not found") {
-				return "", err
-			}
+	return resolveFunction(instruction, "value\\(([^)]+)\\)", func(groups []string) (string, error) {
+		value, err := getVariableValueAsString(command, actions, params, groups[0], true)
+		if err != nil && !strings.Contains(err.Error(), "Variable not found") {
+			return "", err
 		}
-
-		variables[variableExpression] = fmt.Sprintf("'%s'", value)
-	}
-
-	return replaceVariables(expr, instruction, variables), nil
+		return fmt.Sprintf("'%s'", value), nil
+	})
 }
 
 func resolveValuesVariables(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
-	const variableRegex = "values\\(([^)]+)\\)"
-
-	expr := regexp.MustCompile(variableRegex)
-	matches := expr.FindAllSubmatch([]byte(instruction), -1)
-
-	variables := map[string]any{}
-	for _, match := range matches {
-		variableExpression := string(match[0])
+	return resolveFunction(instruction, "values\\(([^)]+)\\)", func(groups []string) (string, error) {
 		expressionValue := ""
-
-		variableList := strings.Split(string(match[1]), ",")
+		variableList := strings.Split(groups[0], ",")
 		for i := 0; i < len(variableList); i++ {
 			variablePath := strings.TrimSpace(variableList[i])
 			variableValue, err := getVariableValueAsString(command, actions, params, variablePath, true)
-			if err != nil {
-				if !strings.Contains(err.Error(), "Variable not found") {
-					return "", err
-				}
+			if err != nil && !strings.Contains(err.Error(), "Variable not found") {
+				return "", err
 			}
 
 			if i > 0 {
 				expressionValue += " "
 			}
-
 			expressionValue += fmt.Sprintf("'%s'", variableValue)
 		}
-
-		variables[variableExpression] = expressionValue
-	}
-
-	return replaceVariables(expr, instruction, variables), nil
+		return expressionValue, nil
+	})
 }
 
 func resolveParamVariables(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
-	const variableRegex = "param\\(([^)]+)\\)"
-
-	expr := regexp.MustCompile(variableRegex)
-	matches := expr.FindAllSubmatch([]byte(instruction), -1)
-
-	variables := map[string]any{}
-	for _, match := range matches {
-		variableExpression := string(match[0])
-		variablePath := string(match[1])
-
-		expressionValue, err := parseParam(command, actions, params, variablePath, true)
-		if err != nil {
-			return "", err
-		}
-
-		variables[variableExpression] = expressionValue
-	}
-
-	return replaceVariables(expr, instruction, variables), nil
+	return resolveFunction(instruction, "param\\(([^)]+)\\)", func(groups []string) (string, error) {
+		return parseParam(command, actions, params, groups[0], true)
+	})
 }
 
 func resolveParamsVariables(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
-	const variableRegex = "params\\(([^)]+)\\)"
-
-	expr := regexp.MustCompile(variableRegex)
-	matches := expr.FindAllSubmatch([]byte(instruction), -1)
-
-	variables := map[string]any{}
-	for _, match := range matches {
-		variableExpression := string(match[0])
-		var expressionValue string
-
-		expressionValue = ""
-
-		variableList := strings.Split(string(match[1]), ",")
+	return resolveFunction(instruction, "params\\(([^)]+)\\)", func(groups []string) (string, error) {
+		expressionValue := ""
+		variableList := strings.Split(groups[0], ",")
 		for i := 0; i < len(variableList); i++ {
 			variablePath := strings.TrimSpace(variableList[i])
 
@@ -205,48 +167,21 @@ func resolveParamsVariables(command core.Command, instruction string, actions []
 			if i > 0 {
 				expressionValue += " "
 			}
-
 			expressionValue += variableValue
 		}
-
-		variables[variableExpression] = expressionValue
-	}
-
-	return replaceVariables(expr, instruction, variables), nil
+		return expressionValue, nil
+	})
 }
 
 func resolveObjectVariables(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
-	const variableRegex = "object\\(([^)]+)\\)"
-
-	expr := regexp.MustCompile(variableRegex)
-	matches := expr.FindAllSubmatch([]byte(instruction), -1)
-
-	variables := map[string]any{}
-	for _, match := range matches {
-		variableExpression := string(match[0])
-
-		expressionValue, err := parseObject(command, actions, params, string(match[1]))
-		if err != nil {
-			return "", err
-		}
-
-		variables[variableExpression] = expressionValue
-	}
-
-	return replaceVariables(expr, instruction, variables), nil
+	return resolveFunction(instruction, "object\\(([^)]+)\\)", func(groups []string) (string, error) {
+		return parseObject(command, actions, params, groups[0])
+	})
 }
 
 func resolveNvlVariables(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
-	const variableRegex = "nvl\\(([^)]+)\\)"
-
-	expr := regexp.MustCompile(variableRegex)
-	matches := expr.FindAllSubmatch([]byte(instruction), -1)
-
-	variables := map[string]any{}
-	for _, match := range matches {
-		variableExpression := string(match[0])
-		candidates := strings.Split(string(match[1]), ",")
-
+	return resolveFunction(instruction, "nvl\\(([^)]+)\\)", func(groups []string) (string, error) {
+		candidates := strings.Split(groups[0], ",")
 		result := ""
 		for _, candidate := range candidates {
 			candidate = strings.TrimSpace(candidate)
@@ -274,11 +209,8 @@ func resolveNvlVariables(command core.Command, instruction string, actions []str
 				break
 			}
 		}
-
-		variables[variableExpression] = result
-	}
-
-	return replaceVariables(expr, instruction, variables), nil
+		return result, nil
+	})
 }
 
 func isLiteral(candidate string) bool {
@@ -412,16 +344,8 @@ func parseParam(command core.Command, actions []string, params *Parameters, vari
 }
 
 func resolveConditional(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
-	const variableRegex = "if\\(([^)]+)\\)"
-
-	expr := regexp.MustCompile(variableRegex)
-	matches := expr.FindAllSubmatch([]byte(instruction), -1)
-
-	variables := map[string]any{}
-	for _, match := range matches {
-		variableExpression := string(match[0])
-
-		variablePath := string(match[1])
+	return resolveFunction(instruction, "if\\(([^)]+)\\)", func(groups []string) (string, error) {
+		variablePath := groups[0]
 		conditionalSymbol := ""
 		conditionalNot := ""
 		expectedValue := ""
@@ -443,60 +367,63 @@ func resolveConditional(command core.Command, instruction string, actions []stri
 			variablePath = strings.TrimSpace(variablePath[1:])
 		}
 
-		var expressionValue string
-
 		value, err := getVariableValueAsString(command, actions, params, variablePath, true)
-		if err != nil {
-			if !strings.Contains(err.Error(), "Variable not found") {
-				return "", err
-			}
+		if err != nil && !strings.Contains(err.Error(), "Variable not found") {
+			return "", err
 		}
 
 		if conditionalSymbol == "" {
-			expressionValue = fmt.Sprintf("[ %s'%s' ]", conditionalNot, value)
-		} else {
-			expressionValue = fmt.Sprintf("[ %s'%s' %s '%s' ]", conditionalNot, value, conditionalSymbol, expectedValue)
+			return fmt.Sprintf("[ %s'%s' ]", conditionalNot, value), nil
 		}
-
-		variables[variableExpression] = expressionValue
-	}
-
-	return replaceVariables(expr, instruction, variables), nil
+		return fmt.Sprintf("[ %s'%s' %s '%s' ]", conditionalNot, value, conditionalSymbol, expectedValue), nil
+	})
 }
 
 func resolveExists(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
-	const variableRegex = "exists\\(([^)]+)\\)"
-
-	expr := regexp.MustCompile(variableRegex)
-	matches := expr.FindAllSubmatch([]byte(instruction), -1)
-
-	variables := map[string]any{}
-	for _, match := range matches {
-		variableExpression := string(match[0])
-		variablePath := strings.TrimSpace(string(match[1]))
-
+	return resolveFunction(instruction, "exists\\(([^)]+)\\)", func(groups []string) (string, error) {
+		variablePath := strings.TrimSpace(groups[0])
 		value, err := getVariableValueAsString(command, actions, params, variablePath, true)
-		if err != nil {
-			if !strings.Contains(err.Error(), "Variable not found") {
-				return "", err
-			}
+		if err != nil && !strings.Contains(err.Error(), "Variable not found") {
+			return "", err
 		}
-
-		variables[variableExpression] = fmt.Sprintf("[ -f '%s' ]", value)
-	}
-
-	return replaceVariables(expr, instruction, variables), nil
+		return fmt.Sprintf("[ -f '%s' ]", value), nil
+	})
 }
 
-func replaceVariables(expr *regexp.Regexp, instruction string, variables map[string]any) string {
-	return expr.ReplaceAllStringFunc(instruction, func(match string) string {
-		value, exists := variables[match]
-		if !exists {
+// resolveFunction resolves function-style calls of the form name(args) in the
+// instruction. `inner` is the function-specific regex; its capture groups are
+// handed to resolve() as `groups`. A leading backslash escapes a call — it is
+// emitted literally (without the backslash) and resolve() is not invoked — which
+// lets authored text keep tokens like \uuid() or \date(col) untouched (e.g. a
+// database's own functions in an inline query). This is the single place the
+// escape prefix and skip live, so individual resolvers only describe their own
+// pattern and how to compute the value.
+func resolveFunction(instruction, inner string, resolve func(groups []string) (string, error)) (string, error) {
+	expr := regexp.MustCompile(`(\\)?` + inner)
+
+	var resolveErr error
+	result := expr.ReplaceAllStringFunc(instruction, func(match string) string {
+		if resolveErr != nil {
 			return match
 		}
 
-		return fmt.Sprintf("%v", value)
+		groups := expr.FindStringSubmatch(match)
+		if groups[1] != "" {
+			return match[1:] // escaped — emit the literal without the backslash
+		}
+
+		value, err := resolve(groups[2:])
+		if err != nil {
+			resolveErr = err
+			return match
+		}
+		return value
 	})
+
+	if resolveErr != nil {
+		return "", resolveErr
+	}
+	return result, nil
 }
 
 func resolveBareVariables(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
@@ -639,70 +566,48 @@ func escapeValue(value any) string {
 }
 
 func resolveArgVariable(instruction string, actions []string) (string, error) {
-	const variableRegex = `arg\((\d+)\)`
-
-	expr := regexp.MustCompile(variableRegex)
-	matches := expr.FindAllSubmatch([]byte(instruction), -1)
-
-	variables := map[string]any{}
-	for _, match := range matches {
-		variableExpression := string(match[0])
-		indexStr := string(match[1])
-
+	return resolveFunction(instruction, `arg\((\d+)\)`, func(groups []string) (string, error) {
 		index := 0
-		for _, c := range indexStr {
+		for _, c := range groups[0] {
 			index = index*10 + int(c-'0')
 		}
-
 		if index < len(actions) {
-			variables[variableExpression] = actions[index]
-		} else {
-			variables[variableExpression] = ""
+			return actions[index], nil
 		}
-	}
-
-	return replaceVariables(expr, instruction, variables), nil
+		return "", nil
+	})
 }
 
 func resolveArgsVariable(instruction string, actions []string) (string, error) {
-	const variableRegex = `args\(([^)]+)\)`
-
-	expr := regexp.MustCompile(variableRegex)
-	matches := expr.FindAllSubmatch([]byte(instruction), -1)
-
-	variables := map[string]any{}
-	for _, match := range matches {
-		variableExpression := string(match[0])
-		content := strings.TrimSpace(string(match[1]))
+	return resolveFunction(instruction, `args\(([^)]+)\)`, func(groups []string) (string, error) {
+		content := strings.TrimSpace(groups[0])
 
 		if content == "*" {
 			jsonBytes, err := json.Marshal(actions)
 			if err != nil {
 				return "", err
 			}
-			variables[variableExpression] = string(jsonBytes)
-		} else {
-			indices := strings.Split(content, ",")
-			result := []string{}
-			for _, indexStr := range indices {
-				indexStr = strings.TrimSpace(indexStr)
-				index := 0
-				for _, c := range indexStr {
-					index = index*10 + int(c-'0')
-				}
-				if index < len(actions) {
-					result = append(result, actions[index])
-				} else {
-					result = append(result, "")
-				}
-			}
-			jsonBytes, err := json.Marshal(result)
-			if err != nil {
-				return "", err
-			}
-			variables[variableExpression] = string(jsonBytes)
+			return string(jsonBytes), nil
 		}
-	}
 
-	return replaceVariables(expr, instruction, variables), nil
+		indices := strings.Split(content, ",")
+		result := []string{}
+		for _, indexStr := range indices {
+			indexStr = strings.TrimSpace(indexStr)
+			index := 0
+			for _, c := range indexStr {
+				index = index*10 + int(c-'0')
+			}
+			if index < len(actions) {
+				result = append(result, actions[index])
+			} else {
+				result = append(result, "")
+			}
+		}
+		jsonBytes, err := json.Marshal(result)
+		if err != nil {
+			return "", err
+		}
+		return string(jsonBytes), nil
+	})
 }

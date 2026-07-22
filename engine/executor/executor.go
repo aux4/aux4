@@ -450,6 +450,8 @@ func commandExecutorFactory(command string, silent bool) engine.VirtualCommandEx
 		return &EachCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "confirm:") {
 		return &ConfirmCommandExecutor{Command: command}
+	} else if strings.HasPrefix(command, "exit:") {
+		return &ExitCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "log:") {
 		return &LogCommandExecutor{Command: command}
 	} else if strings.HasPrefix(command, "debug:") {
@@ -680,6 +682,50 @@ func (executor *ConfirmCommandExecutor) Execute(env *engine.VirtualEnvironment, 
 	return nil
 }
 
+type ExitCommandExecutor struct {
+	Command string
+}
+
+func (executor *ExitCommandExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
+	expression := strings.TrimPrefix(executor.Command, "exit:")
+
+	instruction, err := param.InjectParameters(command, expression, actions, params)
+	if err != nil {
+		return err
+	}
+
+	// exit:<code>:<message> — the code is everything before the first colon,
+	// the message is the rest (colons in the message are preserved). Either part
+	// may be omitted: "exit:1" is code-only, and a non-numeric leading token is
+	// treated as the message with the default code 1 ("exit:boom" -> 1, "boom").
+	code := 1
+	message := ""
+	if before, after, found := strings.Cut(instruction, ":"); found {
+		if n, convErr := strconv.Atoi(strings.TrimSpace(before)); convErr == nil {
+			code = n
+			message = strings.TrimSpace(after)
+		} else {
+			message = strings.TrimSpace(instruction)
+		}
+	} else if n, convErr := strconv.Atoi(strings.TrimSpace(instruction)); convErr == nil {
+		code = n
+	} else {
+		message = strings.TrimSpace(instruction)
+	}
+
+	// A zero exit is a clean early stop, not a failure: print the message to
+	// stdout (not red on stderr) and return success. main.go only calls os.Exit
+	// for non-zero codes, so returning here stops the pipeline cleanly.
+	if code == 0 {
+		if message != "" {
+			output.Out(output.StdOut).Println(message)
+		}
+		return core.Aux4Error{ExitCode: 0}
+	}
+
+	return core.Aux4Error{Message: message, ExitCode: code}
+}
+
 type LogCommandExecutor struct {
 	Command string
 }
@@ -722,7 +768,7 @@ func (executor *SetCommandExecutor) Execute(env *engine.VirtualEnvironment, comm
 				return err
 			}
 
-			params.Update(name, strings.TrimSpace(stdout))
+			params.UpdateField(name, strings.TrimSpace(stdout))
 		} else if strings.HasPrefix(valueExpression, "json:") {
 			jsonExpression := strings.TrimPrefix(valueExpression, "json:")
 
@@ -736,21 +782,21 @@ func (executor *SetCommandExecutor) Execute(env *engine.VirtualEnvironment, comm
 			if err != nil {
 				return core.InternalError(fmt.Sprintf("set: failed to parse JSON for '%s'", name), err)
 			}
-			params.Update(name, data)
+			params.UpdateField(name, data)
 		} else if strings.HasPrefix(valueExpression, "$") && strings.Count(valueExpression, "${") <= 1 {
 			// Single variable expression - use direct lookup
 			value, err := params.Expr(command, actions, valueExpression)
 			if err != nil {
 				return err
 			}
-			params.Update(name, value)
+			params.UpdateField(name, value)
 		} else {
 			// Static values or concatenated variables - use full parameter injection
 			value, err := param.InjectParameters(command, valueExpression, actions, params)
 			if err != nil {
 				return err
 			}
-			params.Update(name, value)
+			params.UpdateField(name, value)
 		}
 	}
 	return nil

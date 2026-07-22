@@ -201,6 +201,94 @@ checking port 8082
 checking port 8083
 ```
 
+### `date()` / `time()` / `datetime()` / `utc()` / `epoch()` — Current date and time
+
+Return the current date/time. With no argument they produce ISO output; pass a format string to customize it.
+
+| Function | Default output | Example |
+|----------|----------------|---------|
+| `date()` | `2026-07-21` | ISO date (local) |
+| `time()` | `15:04:05` | ISO time (local) |
+| `datetime()` | `2026-07-21T15:04:05` | ISO date-time (local, no offset) |
+| `utc()` | `2026-07-21T22:04:05Z` | ISO date-time in UTC (Zulu) |
+| `epoch()` | `1784665271` | Unix timestamp (seconds) |
+
+`date()`, `time()`, `datetime()` and `utc()` accept an optional format built from moment-style tokens (e.g. `date(MMM, DD, YY)` → `Jul, 21, 26`, `time(H:m)` → `15:4`). Because `utc()` also takes a format, one function covers every UTC need: `utc(YYYY-MM-DD)` for a UTC date, `utc(HH:mm)` for a UTC time. `epoch()` accepts an optional unit: `epoch(ms)` (milliseconds) or `epoch(ns)` (nanoseconds); the default is seconds.
+
+| Token | Meaning | Token | Meaning |
+|-------|---------|-------|---------|
+| `YYYY` / `YY` | 4- / 2-digit year | `HH` / `H` | hour 24h, padded / not |
+| `MMMM` / `MMM` | month name / abbrev | `hh` / `h` | hour 12h, padded / not |
+| `MM` / `M` | month number, padded / not | `mm` / `m` | minute, padded / not |
+| `DD` / `D` | day, padded / not | `ss` / `s` | second, padded / not |
+| `dddd` / `ddd` | weekday name / abbrev | `A` / `a` | AM-PM / am-pm |
+| `Z` / `ZZ` | UTC offset `±HH:MM` / `±HHMM` | | |
+
+Doubled tokens are zero-padded; single tokens are not. Any non-token character (`-`, `:`, `/`, `T`…) passes through verbatim; wrap text in square brackets to emit token letters literally, e.g. `date(YYYY-MM-DD[T]HH:mm)`. The format must be a literal — it cannot come from a variable. A single call captures one timestamp, so `date()` and `time()` used in the same command stay consistent.
+
+**Data safety.** These functions (and `uuid()` below) resolve only in the text you write in the `execute` array — they are applied before variables are expanded, so tokens that arrive at runtime inside a `${variable}`, command output, or a file are left untouched. That means data or SQL flowing through a variable is safe.
+
+**Escaping (any function).** A leading backslash keeps *any* function call literal — the backslash is stripped and the call emitted verbatim. This works for every function (`\value(...)`, `\nvl(...)`, `\uuid()`, `\date(...)`, …), which is handy for a database's own `date()`/`uuid()` in an inline query:
+
+```json
+"execute": [
+  "db query \"SELECT \\uuid(), \\date(created_at) FROM events\""
+]
+```
+
+→ `SELECT uuid(), date(created_at) FROM events`. Since a `.aux4` file is JSON, write `\\` (which becomes `\` in the command). A quoted string does **not** protect a call — `'uuid()'` still resolves; only the backslash does.
+
+```json
+{
+  "name": "stamp",
+  "execute": [
+    "log:built on date() at time()"
+  ],
+  "help": {
+    "text": "print a build stamp"
+  }
+}
+```
+
+```bash
+> aux4 stamp
+```
+
+```text
+built on 2026-07-21 at 15:04:05
+```
+
+### `uuid()` — Generate a UUID
+
+Generates a UUID. Defaults to **v7** (time-ordered, RFC 9562), which sorts chronologically and makes a good database key. Pass `uuid(4)` for a classic random v4. Each occurrence produces a fresh value.
+
+| Call | Result |
+|------|--------|
+| `uuid()` | `019f8661-8b26-7a0c-9d10-501669d7aa67` (v7) |
+| `uuid(7)` | v7 (explicit) |
+| `uuid(4)` | `27f0ae22-0961-4f34-8179-64bcf4e39dbc` (v4) |
+
+```json
+{
+  "name": "new-record",
+  "execute": [
+    "set:id=uuid()",
+    "log:created record ${id}"
+  ],
+  "help": {
+    "text": "create a record with a generated id"
+  }
+}
+```
+
+```bash
+> aux4 new-record
+```
+
+```text
+created record 019f8661-8b26-7a0c-9d10-501669d7aa67
+```
+
 ### Other functions
 
 | Function | Description |

@@ -158,6 +158,29 @@ func (p *Parameters) Update(name string, value any) {
 	p.params[name] = append(p.params[name], value)
 }
 
+// UpdateField stores value under name, treating a dotted name as a field path
+// into an object (e.g. "obj.name" sets the "name" field on the "obj" object).
+// An existing object is preserved and merged into; otherwise a new one is
+// created. Non-dotted names behave exactly like Update.
+func (p *Parameters) UpdateField(name string, value any) {
+	if !strings.Contains(name, ".") {
+		p.Update(name, value)
+		return
+	}
+
+	parts := strings.SplitN(name, ".", 2)
+	baseName := parts[0]
+	fieldPath := parts[1]
+
+	obj, ok := p.JustGet(baseName).(map[string]interface{})
+	if !ok {
+		obj = make(map[string]interface{})
+	}
+
+	setNestedField(obj, fieldPath, value)
+	p.Update(baseName, obj)
+}
+
 func (p *Parameters) Has(name string) bool {
 	return p.params[name] != nil
 }
