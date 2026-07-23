@@ -3,13 +3,52 @@ package param
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"aux4.dev/aux4/core"
 	"aux4.dev/aux4/io"
 )
+
+// coerceType converts a string value into a typed value according to a
+// variable's declared "type". Unknown types or unparseable values fall back to
+// the original string, so a bad declaration never loses data.
+//
+//	number  -> json.Number (keeps the exact numeric text, e.g. "12.50")
+//	boolean -> bool
+//	json    -> parsed JSON value (object, array, number, ...)
+//	(other) -> unchanged string
+func coerceType(value string, typeName string) any {
+	switch typeName {
+	case "number":
+		trimmed := strings.TrimSpace(value)
+		if _, err := strconv.ParseFloat(trimmed, 64); err == nil {
+			return json.Number(trimmed)
+		}
+		return value
+	case "boolean", "bool":
+		switch strings.TrimSpace(value) {
+		case "true":
+			return true
+		case "false":
+			return false
+		}
+		return value
+	case "json":
+		decoder := json.NewDecoder(strings.NewReader(value))
+		decoder.UseNumber()
+		var parsed any
+		if err := decoder.Decode(&parsed); err == nil {
+			return parsed
+		}
+		return value
+	default:
+		return value
+	}
+}
 
 // placeholder for $$ escape — chosen to be unlikely in real instructions
 const dollarEscapePlaceholder = "\x00DOLLAR\x00"
@@ -89,6 +128,11 @@ func InjectParameters(command core.Command, instruction string, actions []string
 	}
 
 	instruction, err = resolveNvlVariables(command, instruction, actions, params)
+	if err != nil {
+		return "", err
+	}
+
+	instruction, err = resolvePathVariables(command, instruction, actions, params)
 	if err != nil {
 		return "", err
 	}
@@ -213,6 +257,90 @@ func resolveNvlVariables(command core.Command, instruction string, actions []str
 	})
 }
 
+// resolvePathVariables resolves path(seg1/seg2/...) into an absolute path.
+// Each segment is joined with the OS separator and the result is made absolute
+// (relative paths resolve against the current working directory). Segments are:
+//   - a bare word         -> resolved as a variable value
+//   - ".." or "."         -> kept as a literal path segment
+//   - a quoted string     -> kept as a literal (quotes stripped)
+// An empty result stays empty, matching the shell `case` idiom it replaces.
+func resolvePathVariables(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
+	return resolveFunction(instruction, "path\\(([^)]+)\\)", func(groups []string) (string, error) {
+		parts := []string{}
+		for _, segment := range splitPathSegments(groups[0]) {
+			segment = strings.TrimSpace(segment)
+			if segment == "" {
+				continue
+			}
+
+			// "." and ".." are literal path segments, never variable names.
+			if segment == "." || segment == ".." {
+				parts = append(parts, segment)
+				continue
+			}
+
+			// Quoted string — strip quotes, use as a literal segment.
+			if (strings.HasPrefix(segment, "'") && strings.HasSuffix(segment, "'")) ||
+				(strings.HasPrefix(segment, "\"") && strings.HasSuffix(segment, "\"")) {
+				parts = append(parts, segment[1:len(segment)-1])
+				continue
+			}
+
+			// Otherwise resolve it as a variable value.
+			value, err := getVariableValueAsString(command, actions, params, segment, false)
+			if err != nil {
+				if strings.Contains(err.Error(), "Variable not found") {
+					continue
+				}
+				return "", err
+			}
+			if value != "" {
+				parts = append(parts, value)
+			}
+		}
+
+		if len(parts) == 0 {
+			return "", nil
+		}
+
+		absolute, err := filepath.Abs(filepath.Join(parts...))
+		if err != nil {
+			return "", err
+		}
+		return absolute, nil
+	})
+}
+
+// splitPathSegments splits a path() argument on "/" while keeping quoted
+// segments (which may themselves contain "/") intact.
+func splitPathSegments(fieldList string) []string {
+	segments := []string{}
+	current := strings.Builder{}
+	var quote rune
+
+	for _, ch := range fieldList {
+		if quote != 0 {
+			current.WriteRune(ch)
+			if ch == quote {
+				quote = 0
+			}
+			continue
+		}
+		switch ch {
+		case '\'', '"':
+			quote = ch
+			current.WriteRune(ch)
+		case '/':
+			segments = append(segments, current.String())
+			current.Reset()
+		default:
+			current.WriteRune(ch)
+		}
+	}
+	segments = append(segments, current.String())
+	return segments
+}
+
 func isLiteral(candidate string) bool {
 	if candidate == "true" || candidate == "false" || candidate == "null" {
 		return true
@@ -240,7 +368,7 @@ func isLiteral(candidate string) bool {
 }
 
 func parseObject(command core.Command, actions []string, params *Parameters, fieldList string) (string, error) {
-	result := make(map[string]string)
+	result := make(map[string]any)
 
 	fields := strings.Split(fieldList, ",")
 	for _, field := range fields {
@@ -257,7 +385,31 @@ func parseObject(command core.Command, actions []string, params *Parameters, fie
 			alias = strings.TrimSpace(parts[1])
 		}
 
-		value, err := getVariableValueAsString(command, actions, params, variablePath, false)
+		// "*" collects every current parameter. Bare "*" spreads them into the
+		// object itself; "*:key" nests them under that key as an object.
+		if variablePath == "*" {
+			all := make(map[string]any)
+			for name, values := range params.params {
+				if len(values) == 0 {
+					continue
+				}
+				if len(values) == 1 {
+					all[name] = values[0]
+				} else {
+					all[name] = values
+				}
+			}
+			if alias == "" {
+				for key, value := range all {
+					result[key] = value
+				}
+			} else {
+				result[alias] = all
+			}
+			continue
+		}
+
+		value, err := getVariableValue(command, actions, params, variablePath)
 		if err != nil {
 			if strings.Contains(err.Error(), "Variable not found") {
 				continue
@@ -265,13 +417,17 @@ func parseObject(command core.Command, actions []string, params *Parameters, fie
 			return "", err
 		}
 
-		if value != "" {
-			jsonKey := alias
-			if jsonKey == "" {
-				jsonKey = strings.ReplaceAll(variablePath, ".", "_")
-			}
-			result[jsonKey] = value
+		// Skip empty string values (an unset variable), but keep any typed
+		// value — a number, boolean or parsed JSON — so it stays typed.
+		if strValue, ok := value.(string); ok && strValue == "" {
+			continue
 		}
+
+		jsonKey := alias
+		if jsonKey == "" {
+			jsonKey = strings.ReplaceAll(variablePath, ".", "_")
+		}
+		result[jsonKey] = value
 	}
 
 	jsonBytes, err := json.Marshal(result)
@@ -484,24 +640,36 @@ func getVariableValueAsString(command core.Command, actions []string, params *Pa
 		return valueToString(allVars, escape), nil
 	}
 
-	value, err := params.Expr(command, actions, variableName)
+	value, err := getVariableValue(command, actions, params, variableName)
 	if err != nil {
 		return "", err
 	}
 
+	return valueToString(value, escape), nil
+}
+
+// getVariableValue resolves a variable to its raw (typed) value, applying secret
+// resolution but without stringifying. Callers that build JSON (e.g. object())
+// use this so a variable declared `type: number` stays a number.
+func getVariableValue(command core.Command, actions []string, params *Parameters, variableName string) (any, error) {
+	value, err := params.Expr(command, actions, variableName)
+	if err != nil {
+		return nil, err
+	}
+
 	if value == nil {
-		return "", core.VariableNotFoundError(variableName)
+		return nil, core.VariableNotFoundError(variableName)
 	}
 
 	if strValue, ok := value.(string); ok && strings.HasPrefix(strValue, secretPrefix) {
 		resolved, err := ResolveSingleSecret(strValue)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		value = resolved
 	}
 
-	return valueToString(value, escape), nil
+	return value, nil
 }
 
 func valueToString(value any, escape bool) string {

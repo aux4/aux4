@@ -138,6 +138,7 @@ type CommandHelpVariable struct {
 	Name     string   `json:"name"`
 	Text     string   `json:"text"`
 	Default  *string  `json:"default"`
+	Type     string   `json:"type,omitempty"`
 	Arg      bool     `json:"arg"`
 	Multiple bool     `json:"multiple"`
 	Hide     bool     `json:"hide"`
