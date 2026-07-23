@@ -367,6 +367,17 @@ func isLiteral(candidate string) bool {
 	return hasDigit
 }
 
+// hasDeclaredType reports whether the base variable of a field path declares a
+// type (number/boolean/json) in the command's help.
+func hasDeclaredType(command core.Command, variablePath string) bool {
+	baseName := variablePath
+	if i := strings.IndexAny(baseName, ".["); i != -1 {
+		baseName = baseName[:i]
+	}
+	variable, exists := command.Help.GetVariable(baseName)
+	return exists && variable.Type != ""
+}
+
 func parseObject(command core.Command, actions []string, params *Parameters, fieldList string) (string, error) {
 	result := make(map[string]any)
 
@@ -417,8 +428,15 @@ func parseObject(command core.Command, actions []string, params *Parameters, fie
 			return "", err
 		}
 
-		// Skip empty string values (an unset variable), but keep any typed
-		// value — a number, boolean or parsed JSON — so it stays typed.
+		// A value only stays typed (number, boolean or parsed JSON) when its
+		// variable declares a type; otherwise it is stringified. This keeps
+		// values from a JSON source (naturally typed) as strings unless a type
+		// was explicitly declared.
+		if !hasDeclaredType(command, variablePath) {
+			value = valueToString(value, false)
+		}
+
+		// Skip empty string values (an unset variable).
 		if strValue, ok := value.(string); ok && strValue == "" {
 			continue
 		}
