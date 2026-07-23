@@ -196,7 +196,17 @@ func (p *Parameters) Get(command core.Command, actions []string, name string) (a
 	if p.params[name] != nil {
 		variable, exists := command.Help.GetVariable(name)
 		if !exists || !variable.Encrypt {
-			return p.params[name][(len(p.params[name]) - 1)], nil
+			last := len(p.params[name]) - 1
+			value := p.params[name][last]
+			// Coerce a not-yet-typed value to the variable's declared type and
+			// cache it back, so every later reader sees the typed value.
+			if exists && variable.Type != "" {
+				if strValue, ok := value.(string); ok {
+					value = coerceType(strValue, variable.Type)
+					p.params[name][last] = value
+				}
+			}
+			return value, nil
 		}
 	}
 
@@ -209,6 +219,11 @@ func (p *Parameters) Get(command core.Command, actions []string, name string) (a
 		}
 
 		if result != nil {
+			if variable, exists := command.Help.GetVariable(name); exists && variable.Type != "" {
+				if strValue, ok := result.(string); ok {
+					result = coerceType(strValue, variable.Type)
+				}
+			}
 			p.Set(name, result)
 			value = result
 			break

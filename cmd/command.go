@@ -6,12 +6,43 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"regexp"
 
 	"aux4.dev/aux4/core"
 	"aux4.dev/aux4/output"
 )
 
 var commandsAvailable = map[string]bool{}
+
+// redirectTokenPattern matches the aux4 output-redirect shortcuts as standalone
+// shell tokens. It requires a separator (start, whitespace, ';', '&', '(') before
+// the '>' and a separator (end, whitespace, ';', '&', '|', ')') after the token,
+// so it never touches a real redirect like `2>ignore` or `>ignore.log`.
+var redirectTokenPattern = regexp.MustCompile(`(^|[\s;&(])>ignore(Error|Output)?($|[\s;&|)])`)
+
+// expandRedirects rewrites the aux4 redirect shortcuts into shell redirections
+// just before the command reaches the shell:
+//
+//	>ignore        -> >/dev/null 2>&1   (discard stdout and stderr)
+//	>ignoreError   -> 2>/dev/null       (discard stderr)
+//	>ignoreOutput  -> >/dev/null        (discard stdout)
+func expandRedirects(instruction string) string {
+	return redirectTokenPattern.ReplaceAllStringFunc(instruction, func(match string) string {
+		groups := redirectTokenPattern.FindStringSubmatch(match)
+		lead, kind, trail := groups[1], groups[2], groups[3]
+
+		var replacement string
+		switch kind {
+		case "Error":
+			replacement = "2>/dev/null"
+		case "Output":
+			replacement = ">/dev/null"
+		default:
+			replacement = ">/dev/null 2>&1"
+		}
+		return lead + replacement + trail
+	})
+}
 
 var OnAbort func()
 
@@ -50,6 +81,7 @@ func ExecuteCommandWithPipedStdin(instruction string, stdinData string) error {
 		shell = "/bin/sh"
 	}
 
+	instruction = expandRedirects(instruction)
 	cmd := exec.Command(shell, "-c", instruction)
 	cmd.Stdin = bytes.NewBufferString(stdinData)
 	cmd.Stdout = os.Stdout
@@ -77,6 +109,7 @@ func executeCommand(instruction string, withStdOut bool, withStdIn bool) (string
 		shell = "/bin/sh"
 	}
 
+	instruction = expandRedirects(instruction)
 	cmd = exec.Command(shell, "-c", instruction)
 	cmd.Env = append(os.Environ(), "CLICOLOR_FORCE=1")
 
