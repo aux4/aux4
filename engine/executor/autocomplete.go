@@ -20,7 +20,7 @@ func (executor *Aux4AutocompleteExecutor) Execute(env *engine.VirtualEnvironment
 	}
 
 	cmdStr := fmt.Sprintf("%v", cmdInput)
-	
+
 	args := param.ExtractArgs(cmdStr)
 	if len(args) == 0 {
 		return nil
@@ -38,10 +38,10 @@ func (executor *Aux4AutocompleteExecutor) Execute(env *engine.VirtualEnvironment
 
 	endsWithOption := len(args) > 0 && strings.HasPrefix(args[len(args)-1], "--")
 	endsWithPartialFlag := len(args) > 0 && strings.HasPrefix(args[len(args)-1], "-") && !strings.HasPrefix(args[len(args)-1], "--")
-	
+
 	currentProfile := "main"
 	currentActions := make([]string, 0)
-	
+
 	for i, arg := range args {
 		if strings.HasPrefix(arg, "-") {
 			if i == len(args)-1 && (endsWithOption || endsWithPartialFlag) {
@@ -134,7 +134,7 @@ func findCommandInProfile(env *engine.VirtualEnvironment, profileName string, ac
 	}
 
 	currentProfile := profileName
-	
+
 	for i, action := range actions {
 		profile := env.GetProfile(currentProfile)
 		if profile == nil {
@@ -165,9 +165,11 @@ func getCommandVariables(command core.Command, partial string) []string {
 	}
 
 	suggestions := make([]string, 0)
-	
+
 	for _, variable := range command.Help.Variables {
-		if variable.Hide {
+		// hide keeps a secret value off the screen; private keeps the variable
+		// itself unadvertised. Neither should be suggested.
+		if variable.Hide || variable.Private {
 			continue
 		}
 

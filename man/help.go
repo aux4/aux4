@@ -72,7 +72,12 @@ func HelpCommand(command core.Command, json bool, long bool, leftPadding string)
 		}
 	}
 
-	if command.Help != nil && command.Help.Variables != nil && len(command.Help.Variables) > 0 {
+	// Filter before rendering rather than skipping inside the loop: the
+	// separator below keys off the index, and the section header must not be
+	// written at all when every variable is private.
+	visibleVariables := command.Help.VisibleVariables()
+
+	if len(visibleVariables) > 0 {
 		outputHelp.WriteString("\n")
 		if long {
 			outputHelp.WriteString("\n")
@@ -80,7 +85,7 @@ func HelpCommand(command core.Command, json bool, long bool, leftPadding string)
 
 		variablesHelp := strings.Builder{}
 
-		for i, variable := range command.Help.Variables {
+		for i, variable := range visibleVariables {
 			if i > 0 {
 				if long {
 					variablesHelp.WriteString("\n")
@@ -185,25 +190,23 @@ func helpCommandJson(command core.Command) {
 	if command.Help != nil {
 		man.Text = periodEnd(command.Help.Text)
 
-		if command.Help.Variables != nil && len(command.Help.Variables) > 0 {
-			for _, v := range command.Help.Variables {
-				variable := ManParameter{
-					Name:     v.Name,
-					Text:     periodEnd(v.Text),
-					Env:      v.Env,
-					Arg:      v.Arg,
-					Multiple: v.Multiple,
-					Options:  v.Options,
-				}
-
-				if v.Default != nil {
-					variable.Default = v.Default
-				}
-
-				variable.Hide = v.Hide
-
-				man.Parameters = append(man.Parameters, variable)
+		for _, v := range command.Help.VisibleVariables() {
+			variable := ManParameter{
+				Name:     v.Name,
+				Text:     periodEnd(v.Text),
+				Env:      v.Env,
+				Arg:      v.Arg,
+				Multiple: v.Multiple,
+				Options:  v.Options,
 			}
+
+			if v.Default != nil {
+				variable.Default = v.Default
+			}
+
+			variable.Hide = v.Hide
+
+			man.Parameters = append(man.Parameters, variable)
 		}
 	}
 

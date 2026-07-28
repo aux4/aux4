@@ -78,13 +78,13 @@ func (profile *Profile) GetCommand(name string) (*Command, bool) {
 }
 
 type Command struct {
-	Name    string         `json:"name"`
-	Execute []string       `json:"execute"`
-	Help    *CommandHelp   `json:"help"`
-	Private bool           `json:"private"`
-	NoHooks bool           `json:"noHooks,omitempty"`
-	Render  CommandRender  `json:"render,omitempty"`
-	Ref     CommandRef     `json:"ref"`
+	Name    string        `json:"name"`
+	Execute []string      `json:"execute"`
+	Help    *CommandHelp  `json:"help"`
+	Private bool          `json:"private"`
+	NoHooks bool          `json:"noHooks,omitempty"`
+	Render  CommandRender `json:"render,omitempty"`
+	Ref     CommandRef    `json:"ref"`
 }
 
 type Hook struct {
@@ -143,6 +143,27 @@ type CommandHelpVariable struct {
 	Multiple bool     `json:"multiple"`
 	Hide     bool     `json:"hide"`
 	Encrypt  bool     `json:"encrypt"`
+	Private  bool     `json:"private"`
 	Env      string   `json:"env"`
 	Options  []string `json:"options"`
+}
+
+// VisibleVariables returns the variables a user should be shown. A private
+// variable still resolves like any other -- it can be passed, has its default,
+// and binds to env and config -- it is simply not advertised.
+//
+// This is not the same as hide, which masks a variable's value when prompting
+// and leaves the variable itself listed in the help.
+func (help *CommandHelp) VisibleVariables() []*CommandHelpVariable {
+	if help == nil || help.Variables == nil {
+		return nil
+	}
+
+	visible := make([]*CommandHelpVariable, 0, len(help.Variables))
+	for _, variable := range help.Variables {
+		if !variable.Private {
+			visible = append(visible, variable)
+		}
+	}
+	return visible
 }

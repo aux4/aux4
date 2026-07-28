@@ -108,6 +108,35 @@ The decision is taken in this order:
 > NO_COLOR=1 aux4 json describe < data.json # plain, even in a terminal
 ```
 
+## Private Variables
+
+A variable marked `private` is not advertised. It is left out of the command help, the man
+output and the autocomplete suggestions, but it resolves exactly like any other variable —
+it can be passed on the command line, keeps its default, and binds to env and config as
+usual. Use it for plumbing a command needs but a user should not have to read about.
+
+```json
+{
+  "name": "internalToken",
+  "text": "internal plumbing, not for users",
+  "default": "tok-default",
+  "private": true
+}
+```
+
+```bash
+> aux4 greet --help                       # --internalToken is not listed
+> aux4 greet                              # still resolves, uses tok-default
+> aux4 greet --internalToken tok-override # still accepts a value
+```
+
+This is different from `hide`, which masks a variable's *value* when aux4 prompts for it
+and leaves the variable itself listed in the help. `private` hides the variable; `hide`
+hides what you type into it.
+
+Commands support `private` in the same way, keeping a command out of the help while leaving
+it callable.
+
 ## Docs
 
 Full [documentation](https://aux4.io/docs).
