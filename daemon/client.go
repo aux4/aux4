@@ -7,6 +7,8 @@ import (
 	"net"
 	"os"
 	"sync"
+
+	"aux4.dev/aux4/output"
 )
 
 // Connect attempts to connect to the daemon socket.
@@ -42,6 +44,11 @@ func Forward(conn net.Conn, args []string) int {
 			env[parts[0]] = parts[1]
 		}
 	}
+
+	// The client is the process that owns the real terminal, so it is the one
+	// that can resolve the color policy. The daemon inherits the decision
+	// through NO_COLOR / CLICOLOR_FORCE (its own stdout is always a pipe).
+	output.ColorEnvMap(env)
 
 	req := &Request{
 		Action: "execute",

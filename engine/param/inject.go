@@ -401,7 +401,7 @@ func parseObject(command core.Command, actions []string, params *Parameters, fie
 		if variablePath == "*" {
 			all := make(map[string]any)
 			for name, values := range params.params {
-				if len(values) == 0 {
+				if len(values) == 0 || IsReservedParameter(name) {
 					continue
 				}
 				if len(values) == 1 {
@@ -647,6 +647,9 @@ func getVariableValueAsString(command core.Command, actions []string, params *Pa
 	if variableName == "*" {
 		allVars := make(map[string]any)
 		for name, values := range params.params {
+			if IsReservedParameter(name) {
+				continue
+			}
 			if len(values) > 0 {
 				if len(values) == 1 {
 					allVars[name] = values[0]

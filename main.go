@@ -37,6 +37,8 @@ func run() int {
 
 	aux4Params, actions, params := param.ParseArgs(os.Args[1:])
 
+	output.SetPrettify(params.IsEnabled(output.PrettifyParameter))
+
 	// Check if daemon is running and forward the command
 	if !isDaemonCommand(actions) {
 		socketPath := daemon.FindSocketPath(".")
@@ -120,6 +122,11 @@ func startDaemonServer(socketPath string) {
 		os.Stderr = stderrW
 		os.Stdin = stdinR
 
+		// The daemon serves each request with the client's environment, so the
+		// color decision has to be taken again per request instead of using the
+		// one cached when the daemon started.
+		output.ResolveColor()
+
 		// Stream pipe output to the writers
 		done := make(chan struct{}, 3)
 		go func() {
@@ -139,6 +146,7 @@ func startDaemonServer(socketPath string) {
 
 		// Parse and execute
 		_, actions, params := param.ParseArgs(args)
+		output.SetPrettify(params.IsEnabled(output.PrettifyParameter))
 		env.SetProfile("main")
 
 		exitCode := 0

@@ -61,6 +61,53 @@ To run the `hello` command:
 Hello World
 ```
 
+## Prettify JSON Output
+
+Most commands return JSON on a single line, which is compact to pass around but hard to
+read. `--prettify` is a global parameter available on every command: aux4 indents the JSON
+the command produced before showing it to you.
+
+```bash
+> aux4 json get '$.orders' --prettify
+```
+
+```text
+[
+  {
+    "id": 10,
+    "total": 42
+  }
+]
+```
+
+- Works with a single JSON document and with a stream of JSON values (one per line).
+- Keys stay in the order the command produced them; they are never sorted.
+- Output that is not JSON is passed through unchanged, so the flag is at worst a no-op.
+- The parameter is consumed by aux4 and never reaches the command itself.
+
+With `--prettify` the output is held until the command finishes, so it is not streamed.
+
+## Color Output
+
+aux4 decides once whether to use color, and passes that decision to every command it runs
+through the `NO_COLOR` and `CLICOLOR_FORCE` environment variables. It never rewrites the
+output of a command, so piping binary data or downloads stays byte-for-byte intact.
+
+The decision is taken in this order:
+
+1. `NO_COLOR` is set — color is disabled everywhere, including for the commands aux4 runs.
+2. `CLICOLOR_FORCE` is set — color is enabled. This is how a command that runs `aux4` keeps
+   the color of the terminal that started the outer command.
+3. `TERM=dumb` — color is disabled.
+4. aux4 writes to a terminal — color is enabled, otherwise it is disabled.
+
+```bash
+> aux4 json describe < data.json          # colored in a terminal
+> aux4 json describe < data.json | cat    # plain, because the output is a pipe
+> aux4 json describe < data.json > out.txt # plain, because the output is a file
+> NO_COLOR=1 aux4 json describe < data.json # plain, even in a terminal
+```
+
 ## Docs
 
 Full [documentation](https://aux4.io/docs).

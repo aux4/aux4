@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -330,18 +331,14 @@ func renderResponse(env *engine.VirtualEnvironment, command core.Command, action
 		}
 	}
 
-	if renderName == "" {
-		stat, err := os.Stdout.Stat()
-		isTTY := err == nil && (stat.Mode()&os.ModeCharDevice) != 0
-		if isTTY {
-			if _, exists := command.Render["tty"]; exists {
-				renderName = "tty"
-			}
+	if renderName == "" && output.IsTerminal(os.Stdout) {
+		if _, exists := command.Render["tty"]; exists {
+			renderName = "tty"
 		}
 	}
 
 	if renderName == "" || renderName == "none" {
-		fmt.Fprintln(os.Stdout, responseStr)
+		output.PrintResponse(responseStr)
 		return nil
 	}
 
@@ -824,11 +821,27 @@ func (executor *AliasCommandExecutor) Execute(env *engine.VirtualEnvironment, co
 	}
 
 	cmd := exec.Command("bash", "-c", instruction)
+	cmd.Env = output.ChildEnv()
 	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	if err := cmd.Run(); err != nil {
+	// --prettify buffers the output so it can be indented once it is complete.
+	var buffer bytes.Buffer
+	prettify := output.PrettifyEnabled()
+
+	if prettify {
+		cmd.Stdout = &buffer
+	} else {
+		cmd.Stdout = os.Stdout
+	}
+
+	err = cmd.Run()
+
+	if prettify {
+		output.WriteOutput(os.Stdout, buffer.Bytes())
+	}
+
+	if err != nil {
 		return core.InternalError("Error executing command", err)
 	}
 

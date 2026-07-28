@@ -83,11 +83,29 @@ func ExecuteCommandWithPipedStdin(instruction string, stdinData string) error {
 
 	instruction = expandRedirects(instruction)
 	cmd := exec.Command(shell, "-c", instruction)
+	cmd.Env = output.ChildEnv()
 	cmd.Stdin = bytes.NewBufferString(stdinData)
-	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	if err := cmd.Run(); err != nil {
+	// With --prettify the output has to be complete before it can be indented,
+	// so it is buffered instead of streamed. That is the accepted trade-off:
+	// asking for prettified output means you are reading it, not piping it.
+	var buffer bytes.Buffer
+	prettify := output.PrettifyEnabled()
+
+	if prettify {
+		cmd.Stdout = &buffer
+	} else {
+		cmd.Stdout = os.Stdout
+	}
+
+	err := cmd.Run()
+
+	if prettify {
+		output.WriteOutput(os.Stdout, buffer.Bytes())
+	}
+
+	if err != nil {
 		exitError, ok := err.(*exec.ExitError)
 		if ok {
 			return core.Aux4Error{
@@ -111,13 +129,21 @@ func executeCommand(instruction string, withStdOut bool, withStdIn bool) (string
 
 	instruction = expandRedirects(instruction)
 	cmd = exec.Command(shell, "-c", instruction)
-	cmd.Env = append(os.Environ(), "CLICOLOR_FORCE=1")
+	cmd.Env = output.ChildEnv()
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
+	// This path already captures stdout, so --prettify only costs the live
+	// stream: the output is held back and indented once the command is done.
+	prettify := withStdOut && output.PrettifyEnabled()
+
 	if withStdOut {
-		cmd.Stdout = io.MultiWriter(&stdout, os.Stdout)
+		if prettify {
+			cmd.Stdout = &stdout
+		} else {
+			cmd.Stdout = io.MultiWriter(&stdout, os.Stdout)
+		}
 		cmd.Stderr = io.MultiWriter(&stderr, os.Stderr)
 	} else {
 		cmd.Stdout = &stdout
@@ -128,7 +154,13 @@ func executeCommand(instruction string, withStdOut bool, withStdIn bool) (string
 		cmd.Stdin = os.Stdin
 	}
 
-	if err := cmd.Run(); err != nil {
+	err := cmd.Run()
+
+	if prettify {
+		output.WriteOutput(os.Stdout, stdout.Bytes())
+	}
+
+	if err != nil {
 		exitError, ok := err.(*exec.ExitError)
 		if ok {
 			return stdout.String(), stderr.String(), core.Aux4Error{

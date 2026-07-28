@@ -43,6 +43,7 @@ func runBatchMode(env *engine.VirtualEnvironment) error {
 		args := parseInputAsArgs(input)
 
 		_, shellActions, shellParams := param.ParseArgs(args)
+		output.SetPrettify(shellParams.IsEnabled(output.PrettifyParameter))
 
 		env.SetProfile("main")
 
@@ -98,6 +99,7 @@ func runInteractiveMode(env *engine.VirtualEnvironment) error {
 		args := parseInputAsArgs(input)
 
 		_, shellActions, shellParams := param.ParseArgs(args)
+		output.SetPrettify(shellParams.IsEnabled(output.PrettifyParameter))
 
 		env.SetProfile("main")
 

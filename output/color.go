@@ -51,7 +51,7 @@ var ansiColors = map[string]string{
 var ansiCodeRegex = regexp.MustCompile(`\033\[[0-9;]*m`)
 
 func ColorText(text string, snippet string, color string) string {
-	if snippet == "" {
+	if snippet == "" || !ColorEnabled() {
 		return text
 	}
 
@@ -103,42 +103,56 @@ func joinArgs(args ...interface{}) string {
 	return strings.ReplaceAll(strings.Join(strs, ""), ansiReset, "")
 }
 
+// colorize wraps the joined arguments in an ANSI code, unless the resolved
+// color policy says aux4 should not emit color (see colorpolicy.go), in which
+// case the plain text is returned.
+func colorize(ansiCode string, args ...interface{}) string {
+	text := joinArgs(args...)
+	if !ColorEnabled() {
+		return text
+	}
+	return ansiCode + text + ansiReset
+}
+
 func Gray(args ...interface{}) string {
-	return ansiGray + joinArgs(args...) + ansiReset
+	return colorize(ansiGray, args...)
 }
 
 func Red(args ...interface{}) string {
-	return ansiRed + joinArgs(args...) + ansiReset
+	return colorize(ansiRed, args...)
 }
 
 func Green(args ...interface{}) string {
-	return ansiGreen + joinArgs(args...) + ansiReset
+	return colorize(ansiGreen, args...)
 }
 
 func Yellow(args ...interface{}) string {
-	return ansiYellow + joinArgs(args...) + ansiReset
+	return colorize(ansiYellow, args...)
 }
 
 func Blue(args ...interface{}) string {
-	return ansiBlue + joinArgs(args...) + ansiReset
+	return colorize(ansiBlue, args...)
 }
 
 func Cyan(args ...interface{}) string {
-	return ansiCyan + joinArgs(args...) + ansiReset
+	return colorize(ansiCyan, args...)
 }
 
 func Magenta(args ...interface{}) string {
-	return ansiMagenta + joinArgs(args...) + ansiReset
+	return colorize(ansiMagenta, args...)
 }
 
 func Bold(args ...interface{}) string {
-	return ansiBold + joinArgs(args...) + ansiReset
+	return colorize(ansiBold, args...)
 }
 
 func Italic(args ...interface{}) string {
-	return ansiItalic + joinArgs(args...) + ansiReset
+	return colorize(ansiItalic, args...)
 }
 
 func FormatReset() string {
+	if !ColorEnabled() {
+		return ""
+	}
 	return ansiReset
 }

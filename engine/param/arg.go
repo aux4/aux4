@@ -185,6 +185,23 @@ func (p *Parameters) Has(name string) bool {
 	return p.params[name] != nil
 }
 
+// IsEnabled reports whether a flag-style parameter is on. `--flag` alone is
+// parsed as "true"; an explicit "false", "0", "no", "off" or an empty value
+// turns it off.
+func (p *Parameters) IsEnabled(name string) bool {
+	value := p.JustGet(name)
+	if value == nil {
+		return false
+	}
+
+	switch strings.ToLower(strings.TrimSpace(fmt.Sprint(value))) {
+	case "", "false", "0", "no", "off":
+		return false
+	}
+
+	return true
+}
+
 func (p *Parameters) JustGet(name string) any {
 	if p.params[name] != nil {
 		return p.params[name][(len(p.params[name]) - 1)]
@@ -429,9 +446,25 @@ func setNestedField(obj map[string]interface{}, path string, value interface{}) 
 	setNestedField(child, parts[1], value)
 }
 
+// reservedParameters are consumed by aux4 core itself and must never reach the
+// command being executed — not as an argument, and not through the collectors
+// that spread every parameter (`value(*)`, `object(*)`, alias forwarding).
+var reservedParameters = map[string]bool{
+	"prettify": true,
+}
+
+// IsReservedParameter reports whether a parameter belongs to aux4 core.
+func IsReservedParameter(name string) bool {
+	return reservedParameters[name]
+}
+
 func (p *Parameters) String() string {
 	var builder strings.Builder
 	for name, values := range p.params {
+		if IsReservedParameter(name) {
+			continue
+		}
+
 		for _, value := range values {
 			if builder.Len() > 0 {
 				builder.WriteString(" ")
