@@ -1,2 +1,2 @@
 package aux4
-var Version = "5.1.34"
+var Version = "5.2.0"
