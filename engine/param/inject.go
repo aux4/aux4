@@ -53,11 +53,71 @@ func coerceType(value string, typeName string) any {
 // placeholder for $$ escape — chosen to be unlikely in real instructions
 const dollarEscapePlaceholder = "\x00DOLLAR\x00"
 
+// Placeholders that neutralise the parentheses of a resolved VALUE.
+//
+// A variable's value is data, not instruction syntax. Once it has been
+// substituted into the instruction, a later resolver would otherwise scan it
+// and treat text that merely looks like a call — "Review the object(s)" or
+// "use nvl(a, b)" — as a real one, silently rewriting what the user typed.
+//
+// Only the parentheses are protected, because they are what turns a preceding
+// identifier into a call. That keeps the deliberate indirection where a
+// variable supplies the ARGUMENTS of an authored call (e.g. object($key),
+// value($rules)) working, since those values carry no parentheses of their own.
+const (
+	openParenPlaceholder  = "\x00LPAREN\x00"
+	closeParenPlaceholder = "\x00RPAREN\x00"
+)
+
+// protectValue hides the parentheses of a resolved value so that subsequent
+// resolvers cannot read it as instruction syntax.
+func protectValue(value string) string {
+	if !strings.ContainsAny(value, "()") {
+		return value
+	}
+	value = strings.ReplaceAll(value, "(", openParenPlaceholder)
+	return strings.ReplaceAll(value, ")", closeParenPlaceholder)
+}
+
+// restoreValues puts the protected parentheses back, verbatim.
+func restoreValues(instruction string) string {
+	instruction = strings.ReplaceAll(instruction, openParenPlaceholder, "(")
+	return strings.ReplaceAll(instruction, closeParenPlaceholder, ")")
+}
+
+// quotedValues holds output from the resolvers that already emit shell-safe
+// text — value(), values(), param(), params() quote and escape, and object()
+// marshals to JSON. Such output needs no further processing, so it is set aside
+// behind a placeholder and put back only once the instruction has been fully
+// resolved AND normalised.
+//
+// That ordering is the point: the trailing whitespace collapse exists so that an
+// unquoted value cannot split an instruction into several shell lines, but a
+// quoted value carries no such risk, and collapsing it would silently destroy
+// the paragraphs of anything a user typed (a --description, a commit message).
+type quotedValues struct {
+	values []string
+}
+
+func (quoted *quotedValues) protect(value string) string {
+	quoted.values = append(quoted.values, value)
+	return fmt.Sprintf("\x00QUOTED%d\x00", len(quoted.values)-1)
+}
+
+func (quoted *quotedValues) restore(instruction string) string {
+	for index := len(quoted.values) - 1; index >= 0; index-- {
+		instruction = strings.ReplaceAll(instruction, fmt.Sprintf("\x00QUOTED%d\x00", index), quoted.values[index])
+	}
+	return instruction
+}
+
 func InjectParameters(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
 	var err error
 
 	// Protect $$ escape sequences from variable resolution
 	instruction = strings.ReplaceAll(instruction, "$$", dollarEscapePlaceholder)
+
+	quoted := &quotedValues{}
 
 	// Phase 0: Resolve self-contained generators (date/time/uuid) BEFORE variable
 	// expansion. These take no variables, so resolving them first means they only
@@ -102,27 +162,27 @@ func InjectParameters(command core.Command, instruction string, actions []string
 
 	// Phase 3: Resolve function-style parameter references.
 	// These produce quoted/escaped output that should not be further processed.
-	instruction, err = resolveValueVariables(command, instruction, actions, params)
+	instruction, err = resolveValueVariables(command, instruction, actions, params, quoted)
 	if err != nil {
 		return "", err
 	}
 
-	instruction, err = resolveValuesVariables(command, instruction, actions, params)
+	instruction, err = resolveValuesVariables(command, instruction, actions, params, quoted)
 	if err != nil {
 		return "", err
 	}
 
-	instruction, err = resolveParamVariables(command, instruction, actions, params)
+	instruction, err = resolveParamVariables(command, instruction, actions, params, quoted)
 	if err != nil {
 		return "", err
 	}
 
-	instruction, err = resolveParamsVariables(command, instruction, actions, params)
+	instruction, err = resolveParamsVariables(command, instruction, actions, params, quoted)
 	if err != nil {
 		return "", err
 	}
 
-	instruction, err = resolveObjectVariables(command, instruction, actions, params)
+	instruction, err = resolveObjectVariables(command, instruction, actions, params, quoted)
 	if err != nil {
 		return "", err
 	}
@@ -150,23 +210,30 @@ func InjectParameters(command core.Command, instruction string, actions []string
 	// Restore $$ escape sequences to literal $
 	instruction = strings.ReplaceAll(instruction, dollarEscapePlaceholder, "$")
 
+	// Restore the parentheses of resolved values, now that no resolver can
+	// mistake them for instruction syntax.
+	instruction = restoreValues(instruction)
+
 	instruction = strings.TrimSpace(instruction)
 	instruction = regexp.MustCompile(`\s+`).ReplaceAllString(instruction, " ")
+
+	// Shell-safe values go back last, so normalisation never touched them.
+	instruction = quoted.restore(instruction)
 
 	return instruction, nil
 }
 
-func resolveValueVariables(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
+func resolveValueVariables(command core.Command, instruction string, actions []string, params *Parameters, quoted *quotedValues) (string, error) {
 	return resolveFunction(instruction, "value\\(([^)]+)\\)", func(groups []string) (string, error) {
 		value, err := getVariableValueAsString(command, actions, params, groups[0], true)
 		if err != nil && !strings.Contains(err.Error(), "Variable not found") {
 			return "", err
 		}
-		return fmt.Sprintf("'%s'", value), nil
+		return quoted.protect(fmt.Sprintf("'%s'", value)), nil
 	})
 }
 
-func resolveValuesVariables(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
+func resolveValuesVariables(command core.Command, instruction string, actions []string, params *Parameters, quoted *quotedValues) (string, error) {
 	return resolveFunction(instruction, "values\\(([^)]+)\\)", func(groups []string) (string, error) {
 		expressionValue := ""
 		variableList := strings.Split(groups[0], ",")
@@ -182,17 +249,21 @@ func resolveValuesVariables(command core.Command, instruction string, actions []
 			}
 			expressionValue += fmt.Sprintf("'%s'", variableValue)
 		}
-		return expressionValue, nil
+		return quoted.protect(expressionValue), nil
 	})
 }
 
-func resolveParamVariables(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
+func resolveParamVariables(command core.Command, instruction string, actions []string, params *Parameters, quoted *quotedValues) (string, error) {
 	return resolveFunction(instruction, "param\\(([^)]+)\\)", func(groups []string) (string, error) {
-		return parseParam(command, actions, params, groups[0], true)
+		value, err := parseParam(command, actions, params, groups[0], true)
+		if err != nil {
+			return "", err
+		}
+		return quoted.protect(value), nil
 	})
 }
 
-func resolveParamsVariables(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
+func resolveParamsVariables(command core.Command, instruction string, actions []string, params *Parameters, quoted *quotedValues) (string, error) {
 	return resolveFunction(instruction, "params\\(([^)]+)\\)", func(groups []string) (string, error) {
 		expressionValue := ""
 		variableList := strings.Split(groups[0], ",")
@@ -213,13 +284,17 @@ func resolveParamsVariables(command core.Command, instruction string, actions []
 			}
 			expressionValue += variableValue
 		}
-		return expressionValue, nil
+		return quoted.protect(expressionValue), nil
 	})
 }
 
-func resolveObjectVariables(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
+func resolveObjectVariables(command core.Command, instruction string, actions []string, params *Parameters, quoted *quotedValues) (string, error) {
 	return resolveFunction(instruction, "object\\(([^)]+)\\)", func(groups []string) (string, error) {
-		return parseObject(command, actions, params, groups[0])
+		value, err := parseObject(command, actions, params, groups[0])
+		if err != nil {
+			return "", err
+		}
+		return quoted.protect(value), nil
 	})
 }
 
@@ -263,6 +338,7 @@ func resolveNvlVariables(command core.Command, instruction string, actions []str
 //   - a bare word         -> resolved as a variable value
 //   - ".." or "."         -> kept as a literal path segment
 //   - a quoted string     -> kept as a literal (quotes stripped)
+//
 // An empty result stays empty, matching the shell `case` idiom it replaces.
 func resolvePathVariables(command core.Command, instruction string, actions []string, params *Parameters) (string, error) {
 	return resolveFunction(instruction, "path\\(([^)]+)\\)", func(groups []string) (string, error) {
@@ -591,7 +667,7 @@ func resolveFunction(instruction, inner string, resolve func(groups []string) (s
 			resolveErr = err
 			return match
 		}
-		return value
+		return protectValue(value)
 	})
 
 	if resolveErr != nil {
@@ -629,7 +705,7 @@ func resolveExpression(expr string, command core.Command, instruction string, ac
 				return fullMatch
 			}
 			changed = true
-			return val
+			return protectValue(val)
 		})
 		if innerErr != nil {
 			return "", innerErr
