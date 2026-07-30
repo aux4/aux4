@@ -100,6 +100,14 @@ type quotedValues struct {
 }
 
 func (quoted *quotedValues) protect(value string) string {
+	// An empty result must not become a placeholder. A placeholder is not
+	// whitespace, so it holds apart the spaces around it and survives the
+	// collapse below — leaving the gap where the value used to be. That is how
+	// "cmd param(a) param(undefined)" ended up with a trailing space once
+	// param() started protecting its output.
+	if value == "" {
+		return ""
+	}
 	quoted.values = append(quoted.values, value)
 	return fmt.Sprintf("\x00QUOTED%d\x00", len(quoted.values)-1)
 }

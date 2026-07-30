@@ -302,6 +302,19 @@ created record 019f8661-8b26-7a0c-9d10-501669d7aa67
 | `exists(file)` | Checks if file at variable path exists |
 | `if(name)` | Conditional expression |
 
+**A value is data, not syntax.** Once a variable's value has been substituted it is never
+scanned again, so text that merely looks like a call is left alone — a `--description` of
+`"Review the object(s)"` stays exactly that, and is not read as an `object(...)` call. Only
+the calls you write in the `execute` array resolve. A variable that supplies the *arguments*
+of a call you authored still works, as in `object($key)` or `value($rules)`.
+
+**Whitespace.** `value()`, `values()`, `param()`, `params()` and `object()` already produce
+shell-safe output, so their result is preserved verbatim — a multi-line `--description` or
+commit message keeps its newlines and indentation. A raw `${variable}` is *not* quoted, so
+its whitespace runs are collapsed to single spaces to stop a value splitting the instruction
+into several shell lines. Reach for `value(name)` rather than `'${name}'` when the content
+has formatting worth keeping.
+
 ## Hooks
 
 Hooks are cross-cutting interceptors that run before, after, or on error of any command — including commands from other packages. They are defined at the package level alongside `profiles`.

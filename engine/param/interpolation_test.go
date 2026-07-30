@@ -211,3 +211,18 @@ func TestAuthoredWhitespaceStillCollapses(t *testing.T) {
 		t.Errorf("authored whitespace = %q, want %q", got, want)
 	}
 }
+
+// An empty result must not leave a placeholder behind. A placeholder is not
+// whitespace, so it would hold apart the spaces around it and survive the
+// collapse, leaving a gap where the value used to be.
+func TestEmptyProtectedValueLeavesNoGap(t *testing.T) {
+	got := inject(t, "cmd param(name) param(age) param(undefined)", map[string]string{
+		"name": "Joe",
+		"age":  "20",
+	})
+
+	want := "cmd --name 'Joe' --age '20'"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
