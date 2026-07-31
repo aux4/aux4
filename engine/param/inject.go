@@ -504,7 +504,7 @@ func parseObject(command core.Command, actions []string, params *Parameters, fie
 			continue
 		}
 
-		value, err := getVariableValue(command, actions, params, variablePath)
+		value, err := getVariableValue(command, actions, params, variablePath, true)
 		if err != nil {
 			if strings.Contains(err.Error(), "Variable not found") {
 				continue
@@ -745,18 +745,33 @@ func getVariableValueAsString(command core.Command, actions []string, params *Pa
 		return valueToString(allVars, escape), nil
 	}
 
-	value, err := getVariableValue(command, actions, params, variableName)
+	value, err := getVariableValue(command, actions, params, variableName, true)
 	if err != nil {
 		return "", err
 	}
 
-	return valueToString(value, escape), nil
+	str := valueToString(value, false)
+
+	// value()/param()/values()/params() (escape=true): recursively interpolate
+	// ${...} in the resolved value so builtin-based defaults (e.g. the
+	// ${aux4HomeDir} in a tokenFile default) resolve just like ${var} — then
+	// shell-escape. Secrets are guarded (see interpolateNestedNonSecret). The
+	// bare-${var} phase (escape=false) is unchanged.
+	if escape {
+		str, err = interpolateNestedNonSecret(command, actions, params, str)
+		if err != nil {
+			return "", err
+		}
+		str = escapeValue(str)
+	}
+
+	return str, nil
 }
 
 // getVariableValue resolves a variable to its raw (typed) value, applying secret
 // resolution but without stringifying. Callers that build JSON (e.g. object())
 // use this so a variable declared `type: number` stays a number.
-func getVariableValue(command core.Command, actions []string, params *Parameters, variableName string) (any, error) {
+func getVariableValue(command core.Command, actions []string, params *Parameters, variableName string, resolveSecrets bool) (any, error) {
 	value, err := params.Expr(command, actions, variableName)
 	if err != nil {
 		return nil, err
@@ -766,15 +781,64 @@ func getVariableValue(command core.Command, actions []string, params *Parameters
 		return nil, core.VariableNotFoundError(variableName)
 	}
 
-	if strValue, ok := value.(string); ok && strings.HasPrefix(strValue, secretPrefix) {
-		resolved, err := ResolveSingleSecret(strValue)
-		if err != nil {
-			return nil, err
+	// Secret resolution is skipped for the nested interpolation pass (see
+	// interpolateNestedNonSecret): a ${ref} that appears *inside* an already
+	// resolved value — e.g. untrusted data naming a secret variable — must not
+	// be expanded into the output.
+	if resolveSecrets {
+		if strValue, ok := value.(string); ok && strings.HasPrefix(strValue, secretPrefix) {
+			resolved, err := ResolveSingleSecret(strValue)
+			if err != nil {
+				return nil, err
+			}
+			value = resolved
 		}
-		value = resolved
 	}
 
 	return value, nil
+}
+
+// interpolateNestedNonSecret recursively resolves ${...} references that appear
+// inside an already-resolved value, so value()/param()/values()/params() expand
+// builtin-based defaults like ${aux4HomeDir} just as ${var} does — but WITHOUT
+// resolving secrets. A reference that resolves to a secret:// value is left
+// literal, so data flowing through these (shell-escaped) functions can never
+// name a secret variable and exfiltrate it. Escaping happens after this pass.
+func interpolateNestedNonSecret(command core.Command, actions []string, params *Parameters, input string) (string, error) {
+	regex := regexp.MustCompile(`\$\{([^{}]+)\}`)
+	current := input
+	var innerErr error
+	// Bounded to avoid a runaway loop on a self-referential variable.
+	for i := 0; i < 50; i++ {
+		changed := false
+		next := regex.ReplaceAllStringFunc(current, func(fullMatch string) string {
+			if innerErr != nil {
+				return fullMatch
+			}
+			name := strings.TrimSpace(fullMatch[2 : len(fullMatch)-1])
+			raw, err := getVariableValue(command, actions, params, name, false)
+			if err != nil {
+				if strings.Contains(err.Error(), "Variable not found") {
+					return fullMatch
+				}
+				innerErr = err
+				return fullMatch
+			}
+			if s, ok := raw.(string); ok && strings.HasPrefix(s, secretPrefix) {
+				return fullMatch
+			}
+			changed = true
+			return valueToString(raw, false)
+		})
+		if innerErr != nil {
+			return "", innerErr
+		}
+		if !changed {
+			break
+		}
+		current = next
+	}
+	return current, nil
 }
 
 func valueToString(value any, escape bool) string {
