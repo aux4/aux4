@@ -745,7 +745,20 @@ type SetCommandExecutor struct {
 
 func (executor *SetCommandExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
 	expression := strings.TrimPrefix(executor.Command, "set:")
-	multiple := strings.Split(expression, ";")
+
+	// Check if this is a shell command (set:name=!...). Shell commands may
+	// contain semicolons that are part of the command itself, so we must not
+	// split on ";" in that case.
+	topParts := strings.SplitN(expression, "=", 2)
+	isShellCommand := len(topParts) == 2 && strings.HasPrefix(topParts[1], "!")
+
+	var multiple []string
+	if isShellCommand {
+		multiple = []string{expression}
+	} else {
+		multiple = strings.Split(expression, ";")
+	}
+
 	for _, pair := range multiple {
 		parts := strings.SplitN(pair, "=", 2)
 		name := parts[0]
