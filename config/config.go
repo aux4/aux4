@@ -30,6 +30,22 @@ func ListAux4Files(path string, aux4Params param.Aux4Parameters) []string {
 		}
 	}
 
+	// AUX4_AUX4_FILES points at extra .aux4 files (os.PathListSeparator-separated) to load
+	// on top of the discovered ones. It exists so tooling can contribute definitions —
+	// notably aux4/mock's command stubs, which register `replace` hooks — without editing
+	// the user's own .aux4 or depending on the working directory. Loaded last so those
+	// definitions are the most specific; missing paths are skipped silently.
+	if extra := os.Getenv("AUX4_AUX4_FILES"); extra != "" {
+		for _, extraFile := range filepath.SplitList(extra) {
+			if extraFile == "" {
+				continue
+			}
+			if _, err := os.Stat(extraFile); err == nil {
+				aux4Files = append(aux4Files, extraFile)
+			}
+		}
+	}
+
 	return aux4Files
 }
 
@@ -44,9 +60,9 @@ func listAux4Files(path string, list *[]string, recursive bool) {
 		*list = append([]string{aux4File}, *list...)
 	}
 
-  if !recursive {
-    return
-  }
+	if !recursive {
+		return
+	}
 
 	parent := filepath.Dir(dir)
 	if parent != dir {
