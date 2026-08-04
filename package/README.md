@@ -345,6 +345,7 @@ Hooks are cross-cutting interceptors that run before, after, or on error of any 
 | Phase | When it runs | On failure |
 |-------|-------------|------------|
 | `before` | Before command executes | Aborts command, runs error hooks |
+| `replace` | Instead of the command's own execute steps | Treated as the command failing |
 | `after` | After command succeeds | Logs warning, original exit code preserved |
 | `error` | After command fails | Logs warning, original error propagates |
 
@@ -361,11 +362,13 @@ Hooks match commands using patterns with `*` as a wildcard:
 
 ### Variables in Hooks
 
-Hook steps have access to all variables passed to the intercepted command. Additionally, these built-in variables are available:
+Hook steps have access to the variables passed to the intercepted command, **except those the command declares as `hide` or `encrypt`** — see [Hooks and sensitive variables](#hooks-and-sensitive-variables). Additionally, these built-in variables are available:
 
 | Variable | Phases | Description |
 |----------|--------|-------------|
-| `${__command}` | all | Full command path |
+| `${__command}` | all | Full command path (`profile/command`) |
+| `${__commandLine}` | all | The invocation as typed, e.g. `aux4 google gmail list` |
+| `${__params}` | all | The arguments as typed, e.g. `--query 'is:unread'` |
 | `${__scope}` | all | Package scope |
 | `${__package}` | all | Package name |
 | `${__response}` | `after`, `error` | stdout from command |
@@ -446,6 +449,55 @@ Hooks can match based on variable values using the `params` field. All specified
 When `--env production` is passed, only the first hook fires. When `--env dev` or `--env staging`, only the second. Hooks without `params` always match.
 
 ### Blocked Executors
+
+### Replacing a command
+
+A `replace` hook runs **instead of** the command's own execute steps, and succeeds normally —
+unlike a failing `before` hook, which aborts with an error. `before` and `after` still run, so a
+replaced command stays observable.
+
+```json
+{
+  "hooks": [
+    {
+      "command": "google:gmail/list",
+      "params": { "query": "is:unread" },
+      "replace": ["echo '{\"messages\": []}'"]
+    }
+  ]
+}
+```
+
+This makes it possible to stub any command — including one from another package — without that
+command needing an override of its own. Combined with `params`, a stub can be argument-aware.
+
+Because a `replace` hook stops the real command from running, keep its pattern narrow. Prefer an
+exact `profile/command` over a broad wildcard.
+
+### Hooks and sensitive variables
+
+Variables the command declares as `hide` or `encrypt` are **removed** before hook steps run, and
+cannot be resolved again from config, environment or any other lookup. They are dropped rather
+than masked, so a placeholder can never be mistaken for a real credential.
+
+```json
+{
+  "name": "password",
+  "text": "Database password",
+  "hide": true
+}
+```
+
+The command's own execute steps still receive these values — that is what they were passed for.
+A hook is an observer that runs around someone else's command, so it does not get them. This
+matters because `secret://` values are resolved into parameters *before* hooks run, so without
+this a hook could read a resolved secret.
+
+The exclusion covers every way a hook reads variables, including `${password}`, `object(*)` and
+`${__params}`.
+
+One channel is not filtered: `${__response}` carries the command's stdout. If a command prints a
+secret, a hook sees it — aux4 cannot know which bytes of arbitrary output are sensitive.
 
 The `profile:` and `stdin:` executors are not allowed in hooks and will produce an error.
 

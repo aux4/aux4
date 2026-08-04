@@ -42,9 +42,13 @@ func buildCommandPath(command core.Command) string {
 }
 
 func executeHookSteps(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters, steps []string) error {
+	// Hooks observe someone else's command, so they never see its hide/encrypt variables.
+	// The command's own execute steps still get them.
+	hookParams := params.ForHook(command)
+
 	for _, step := range steps {
 		executor := commandExecutorFactory(step, false)
-		err := executor.Execute(env, command, actions, params)
+		err := executor.Execute(env, command, actions, hookParams)
 		if err != nil {
 			return err
 		}
@@ -172,6 +176,16 @@ func MainExecute(env *engine.VirtualEnvironment, actions []string, params *param
 		params.Update("__command", commandPath)
 		params.Update("__scope", scopeName)
 		params.Update("__package", pkgName)
+		// __command identifies the command (profile/name); __commandLine and __params are
+		// how it was actually invoked, so a hook can record or re-run the exact call.
+		if len(env.OriginalActions) > 0 {
+			params.Update("__commandLine", "aux4 "+strings.Join(env.OriginalActions, " "))
+		}
+		if env.OriginalParams != nil {
+			// Filtered against the command actually being hooked: __params is raw argv, so
+			// blocking the variable alone would still leak the value through this string.
+			params.Update("__params", env.OriginalParams.ForHook(command).String())
+		}
 	}
 
 	// Run before hooks

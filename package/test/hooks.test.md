@@ -690,3 +690,172 @@ before hook
 replaced output
 after hook
 ```
+
+## sensitive variables are not exposed to hooks
+
+Variables declared `hide` or `encrypt` are removed before hook steps run. The command's own
+execute steps still receive them — a hook is an observer of someone else's command, and
+`secret://` values are resolved into parameters before hooks run, so without this a hook
+could read a resolved secret.
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "login",
+          "execute": [
+            "log:command sees user=${user} password=${password} token=${token}"
+          ],
+          "help": {
+            "text": "log in",
+            "variables": [
+              { "name": "user", "text": "user", "default": "" },
+              { "name": "password", "text": "password", "default": "", "hide": true },
+              { "name": "token", "text": "token", "default": "", "encrypt": true }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "hooks": [
+    {
+      "command": "main/login",
+      "after": [
+        "log:hook sees user=${user} password=${password} token=${token}"
+      ]
+    }
+  ]
+}
+```
+
+### should keep hide and encrypt out of the hook, but not out of the command
+
+```execute
+aux4 login --user alice --password s3cr3t --token t0ken
+```
+
+```expect
+command sees user=alice password=s3cr3t token=
+hook sees user=alice password=${password} token=${token}
+```
+
+An `encrypt` variable is not read from parameters even by the command itself — that is
+existing behaviour, it resolves through lookups instead. `hide` is the one the command
+receives and the hook does not.
+
+## invocation variables in hooks
+
+`__command` identifies the command as `profile/command`; `__commandLine` is the command as
+typed (the path only — arguments are in `__params`).
+`__params` is what the caller typed, so it carries no `packageDir`/`configDir` and nothing
+resolved from config.yaml — and no `hide`/`encrypt` values either.
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "greet",
+          "execute": [
+            "log:hello"
+          ],
+          "help": {
+            "text": "greet",
+            "variables": [
+              { "name": "name", "text": "name", "default": "" },
+              { "name": "password", "text": "password", "default": "", "hide": true }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "hooks": [
+    {
+      "command": "main/greet",
+      "after": [
+        "log:cmd=${__command} line=${__commandLine} params=${__params}"
+      ]
+    }
+  ]
+}
+```
+
+### should expose the invocation without sensitive arguments
+
+```execute
+aux4 greet --name alice --password s3cr3t
+```
+
+```expect
+hello
+cmd=main/greet line=aux4 greet params=--name 'alice'
+```
+
+## sensitive variables still reach nested commands from execute
+
+Excluding `hide` from hooks must not stop the command from using it. The value has to keep
+flowing through the execute steps, including into another command the execute step calls.
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "login",
+          "execute": [
+            "aux4 store --secret ${password} --user ${user}"
+          ],
+          "help": {
+            "text": "log in",
+            "variables": [
+              { "name": "user", "text": "user", "default": "" },
+              { "name": "password", "text": "password", "default": "", "hide": true }
+            ]
+          }
+        },
+        {
+          "name": "store",
+          "execute": [
+            "log:stored ${user} with secret=${secret}"
+          ],
+          "help": {
+            "text": "store",
+            "variables": [
+              { "name": "user", "text": "user", "default": "" },
+              { "name": "secret", "text": "secret", "default": "" }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "hooks": [
+    {
+      "command": "main/login",
+      "after": [
+        "log:hook sees password=${password}"
+      ]
+    }
+  ]
+}
+```
+
+### should pass the hidden value to the nested command while the hook sees nothing
+
+```execute
+aux4 login --user alice --password s3cr3t
+```
+
+```expect
+stored alice with secret=s3cr3t
+hook sees password=${password}
+```

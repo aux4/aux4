@@ -79,6 +79,12 @@ func run() int {
 		return err.(core.Aux4Error).ExitCode
 	}
 
+	// Keep the invocation as typed, for hooks. params still holds argv only at this
+	// point — MainExecute injects packageDir/aux4HomeDir/configDir later, and config.yaml
+	// values are resolved lazily on Get — so this captures the command line and nothing else.
+	env.OriginalActions = actions
+	env.OriginalParams = params.Clone()
+
 	if err := executor.MainExecute(env, actions, &params); err != nil {
 		if aux4Err, ok := err.(core.Aux4Error); ok {
 			if aux4Err.Message != "" {

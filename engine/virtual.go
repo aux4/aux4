@@ -30,8 +30,8 @@ func (profile *VirtualProfile) GetProfile() core.Profile {
 }
 
 type HookEntry struct {
-	Hook        core.Hook
-	PackageName string
+	Hook         core.Hook
+	PackageName  string
 	InstallOrder int
 }
 
@@ -167,7 +167,17 @@ type VirtualEnvironment struct {
 	Registry       *VirtualExecutorRegisty
 	Hooks          *HookRegistry
 	InHook         bool
-	profiles       map[string]*VirtualProfile
+	// The invocation as the caller typed it, captured before aux4 injects anything.
+	// Profile routing consumes actions as it descends (MainExecute(env, actions[1:], ...)),
+	// so by the time a hook runs the original path is gone — it is kept here instead.
+	// OriginalParams is a snapshot taken straight after argument parsing, so it holds only
+	// what came from the command line: no packageDir/aux4HomeDir/configDir, no `index` from
+	// an each block, and nothing resolved later from config.yaml. It is kept structured
+	// rather than rendered, so hide/encrypt variables can still be filtered out of it once
+	// the command being hooked is known.
+	OriginalActions []string
+	OriginalParams  *param.Parameters
+	profiles        map[string]*VirtualProfile
 }
 
 func (env *VirtualEnvironment) ListCommandsAvailable(profileName string) []string {

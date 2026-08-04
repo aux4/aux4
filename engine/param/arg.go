@@ -138,6 +138,63 @@ func (params *Aux4Parameters) Has(name string) bool {
 type Parameters struct {
 	params  map[string][]any
 	lookups []ParameterLookup
+	// Names that must never resolve, whatever the source. Removing a value from params is
+	// not enough on its own: a lookup would fetch it again from config or the environment.
+	blocked map[string]bool
+}
+
+// ForHook returns a copy with every variable the command declares as hide or encrypt
+// removed, and blocked from resolving again through config, env or any other lookup.
+//
+// A command's own execute steps still receive these values — they are what the command
+// was given them for. A hook is an observer: it runs around someone else's command, so
+// handing it credentials is a leak, and `secret://` cannot prevent it because secrets are
+// resolved into params before hooks run. Values are dropped rather than masked, so nothing
+// downstream can mistake a placeholder for a real credential.
+//
+// The copy is shallow by design: hook steps read the command's parameters, they do not
+// write back into the command being hooked.
+func (p *Parameters) ForHook(command core.Command) *Parameters {
+	blocked := make(map[string]bool)
+	if command.Help != nil {
+		for _, variable := range command.Help.Variables {
+			if variable != nil && (variable.Hide || variable.Encrypt) {
+				blocked[variable.Name] = true
+			}
+		}
+	}
+
+	if len(blocked) == 0 {
+		return p
+	}
+
+	params := make(map[string][]any, len(p.params))
+	for name, values := range p.params {
+		if blocked[name] {
+			continue
+		}
+		params[name] = values
+	}
+
+	return &Parameters{params: params, lookups: p.lookups, blocked: blocked}
+}
+
+// Clone returns a snapshot with its own map, so later mutations of the original are not
+// reflected in it. Values are shared; only the mapping is copied.
+func (p *Parameters) Clone() *Parameters {
+	params := make(map[string][]any, len(p.params))
+	for name, values := range p.params {
+		copied := make([]any, len(values))
+		copy(copied, values)
+		params[name] = copied
+	}
+
+	blocked := make(map[string]bool, len(p.blocked))
+	for name := range p.blocked {
+		blocked[name] = true
+	}
+
+	return &Parameters{params: params, lookups: p.lookups, blocked: blocked}
 }
 
 func (p *Parameters) Set(name string, value any) {
@@ -182,6 +239,9 @@ func (p *Parameters) UpdateField(name string, value any) {
 }
 
 func (p *Parameters) Has(name string) bool {
+	if p.blocked[name] {
+		return false
+	}
 	return p.params[name] != nil
 }
 
@@ -203,6 +263,9 @@ func (p *Parameters) IsEnabled(name string) bool {
 }
 
 func (p *Parameters) JustGet(name string) any {
+	if p.blocked[name] {
+		return nil
+	}
 	if p.params[name] != nil {
 		return p.params[name][(len(p.params[name]) - 1)]
 	}
@@ -210,6 +273,9 @@ func (p *Parameters) JustGet(name string) any {
 }
 
 func (p *Parameters) Get(command core.Command, actions []string, name string) (any, error) {
+	if p.blocked[name] {
+		return nil, nil
+	}
 	if p.params[name] != nil {
 		variable, exists := command.Help.GetVariable(name)
 		if !exists || !variable.Encrypt {
@@ -251,6 +317,9 @@ func (p *Parameters) Get(command core.Command, actions []string, name string) (a
 }
 
 func (p *Parameters) GetMultiple(command core.Command, actions []string, name string) ([]any, error) {
+	if p.blocked[name] {
+		return make([]any, 0), nil
+	}
 	if p.params[name] != nil {
 		return p.params[name], nil
 	}
@@ -410,7 +479,7 @@ func (p *Parameters) Expr(command core.Command, actions []string, originalExpres
 func navigateOrderedMap(om *io.OrderedMap, path string) (interface{}, error) {
 	parts := strings.Split(path, ".")
 	current := interface{}(om)
-	
+
 	for _, part := range parts {
 		if orderedMap, ok := current.(*io.OrderedMap); ok {
 			value, exists := orderedMap.Get(part)
@@ -428,7 +497,7 @@ func navigateOrderedMap(om *io.OrderedMap, path string) (interface{}, error) {
 			return nil, fmt.Errorf("cannot navigate into non-object type %T", current)
 		}
 	}
-	
+
 	return current, nil
 }
 
