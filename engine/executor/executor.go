@@ -203,38 +203,64 @@ func MainExecute(env *engine.VirtualEnvironment, actions []string, params *param
 		env.InHook = false
 	}
 
-	// Run command execute steps
-	trackCov := coverage.IsEnabled()
-	var execErr error
-	for stepIndex, commandLine := range command.Execute {
-		executor := commandExecutorFactory(commandLine, len(command.Render) > 0)
-
-		if trackCov {
-			setCoverageContext(command, stepIndex)
-		}
-
-		var stepStart time.Time
-		if trackCov {
-			stepStart = time.Now()
-		}
-		err := executor.Execute(env, command, actions, params)
-
-		if trackCov && !selfReportsCoverage(commandLine) {
-			coverage.RecordStep(command.Ref.Package, command.Ref.Profile, command.Name, stepIndex, commandLine, time.Since(stepStart))
-		}
-
-		if err != nil {
-			execErr = err
+	// A `replace` hook stands in for the command itself: its steps run instead of the
+	// command's execute steps, and the command's own body never runs. Unlike a failing
+	// `before` hook (which aborts with an error), this short-circuits *successfully*, so
+	// the caller sees a normal result. That makes command-level mocking possible — a test
+	// can stub any command without the command needing to support an override of its own.
+	// `after` hooks still run, so replacement stays observable.
+	var replaceSteps []string
+	for _, entry := range matchedHooks {
+		if len(entry.Hook.Replace) > 0 {
+			replaceSteps = entry.Hook.Replace
 			break
 		}
 	}
 
-	if execErr == nil && len(command.Execute) == 0 {
-		key := fmt.Sprintf("%s.%s", virtualProfile.Name, command.Name)
-		executor, exists := env.Registry.GetExecutor(key)
-		if exists {
-			execErr = executor.Execute(env, command, actions, params)
+	// Run command execute steps
+	trackCov := coverage.IsEnabled()
+	var execErr error
+
+	if len(replaceSteps) > 0 {
+		if err := validateHookSteps(replaceSteps, "replace"); err != nil {
+			return err
 		}
+		env.InHook = true
+		execErr = executeHookSteps(env, command, actions, params, replaceSteps)
+		env.InHook = false
+	} else {
+
+		for stepIndex, commandLine := range command.Execute {
+			executor := commandExecutorFactory(commandLine, len(command.Render) > 0)
+
+			if trackCov {
+				setCoverageContext(command, stepIndex)
+			}
+
+			var stepStart time.Time
+			if trackCov {
+				stepStart = time.Now()
+			}
+			err := executor.Execute(env, command, actions, params)
+
+			if trackCov && !selfReportsCoverage(commandLine) {
+				coverage.RecordStep(command.Ref.Package, command.Ref.Profile, command.Name, stepIndex, commandLine, time.Since(stepStart))
+			}
+
+			if err != nil {
+				execErr = err
+				break
+			}
+		}
+
+		if execErr == nil && len(command.Execute) == 0 {
+			key := fmt.Sprintf("%s.%s", virtualProfile.Name, command.Name)
+			executor, exists := env.Registry.GetExecutor(key)
+			if exists {
+				execErr = executor.Execute(env, command, actions, params)
+			}
+		}
+
 	}
 
 	// Run after or error hooks

@@ -636,3 +636,57 @@ aux4 deploy --env test
 ```expect
 deploying to test
 ```
+
+## replace hook
+
+A `replace` hook stands in for the command: its steps run instead of the command's own
+execute steps, and it short-circuits *successfully* (unlike a failing `before` hook, which
+aborts with an error). This is what makes command-level mocking possible — a test can stub
+any command without that command needing to support an override of its own.
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "hello",
+          "execute": [
+            "log:real command"
+          ],
+          "help": {
+            "text": "say hello"
+          }
+        }
+      ]
+    }
+  ],
+  "hooks": [
+    {
+      "command": "main/hello",
+      "before": [
+        "log:before hook"
+      ],
+      "replace": [
+        "log:replaced output"
+      ],
+      "after": [
+        "log:after hook"
+      ]
+    }
+  ]
+}
+```
+
+### should run instead of the command, keeping before and after
+
+```execute
+aux4 hello
+```
+
+```expect
+before hook
+replaced output
+after hook
+```
