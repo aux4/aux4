@@ -92,6 +92,7 @@ type Hook struct {
 	Order   int               `json:"order,omitempty"`
 	Params  map[string]string `json:"params,omitempty"`
 	Before  []string          `json:"before,omitempty"`
+	Replace []string          `json:"replace,omitempty"`
 	After   []string          `json:"after,omitempty"`
 	Error   []string          `json:"error,omitempty"`
 }
