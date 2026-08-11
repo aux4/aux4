@@ -32,6 +32,17 @@ func VariableNotFoundError(variableName string) Aux4Error {
 	}
 }
 
+// UnknownParameterError is returned when a passed parameter is the same as a declared
+// variable once case and separators are ignored (e.g. --customer-id for a declared
+// customerId). It names the parameter that was meant, so a mistyped flag is corrected
+// rather than silently ignored.
+func UnknownParameterError(given string, suggestion string) Aux4Error {
+	return Aux4Error{
+		Message:  fmt.Sprintf("Unknown parameter --%s, did you mean --%s?", given, suggestion),
+		ExitCode: 1,
+	}
+}
+
 func UserAbortedError() Aux4Error {
   return Aux4Error{
     Message: "User aborted",

@@ -522,6 +522,74 @@ var reservedParameters = map[string]bool{
 	"prettify": true,
 }
 
+// injectedParameters are set by core onto the parameter set before a command runs
+// (see MainExecute). They are not user input, so the unknown-parameter check must
+// never flag them.
+var injectedParameters = map[string]bool{
+	"aux4HomeDir": true,
+	"packageDir":  true,
+	"configDir":   true,
+}
+
+// normalizeParameterName lowercases a name and drops every non-alphanumeric
+// character, so customerId, customer-id, customer_id and CUSTOMER_ID all collapse
+// to the same key. This is the comparison used to tell a real typo (a misspelling
+// of a declared variable) apart from a genuinely different, undeclared parameter.
+func normalizeParameterName(name string) string {
+	var b strings.Builder
+	for _, r := range strings.ToLower(name) {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
+// ValidateParameterNames errors when a passed parameter is the same as one the
+// command declares once case and separators are ignored — the sign of a mistyped
+// flag (--customer-id where the command declares customerId). Such a parameter was
+// almost certainly meant to be the declared one, and silently accepting it as an
+// undeclared extra means the declared variable never gets the value.
+//
+// A parameter that matches nothing declared is left alone: passing undeclared
+// variables is a supported feature, so this only ever fires on the near-miss
+// pattern, never on a genuinely new name. Core-injected and reserved parameters
+// are skipped because they are not user input.
+func ValidateParameterNames(command core.Command, params *Parameters) error {
+	if command.Help == nil || len(command.Help.Variables) == 0 {
+		return nil
+	}
+
+	declared := make(map[string]bool)
+	normalized := make(map[string]string)
+	for _, variable := range command.Help.Variables {
+		if variable == nil || variable.Name == "" {
+			continue
+		}
+		declared[variable.Name] = true
+		normalized[normalizeParameterName(variable.Name)] = variable.Name
+	}
+
+	for name := range params.params {
+		// Nested object fields (--obj.field) are stored under the base name already,
+		// but guard against a dotted key defensively.
+		base := name
+		if i := strings.Index(base, "."); i >= 0 {
+			base = base[:i]
+		}
+
+		if declared[base] || reservedParameters[base] || injectedParameters[base] || strings.HasPrefix(base, "__") {
+			continue
+		}
+
+		if canonical, ok := normalized[normalizeParameterName(base)]; ok && canonical != base {
+			return core.UnknownParameterError(base, canonical)
+		}
+	}
+
+	return nil
+}
+
 // IsReservedParameter reports whether a parameter belongs to aux4 core.
 func IsReservedParameter(name string) bool {
 	return reservedParameters[name]

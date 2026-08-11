@@ -143,6 +143,15 @@ func MainExecute(env *engine.VirtualEnvironment, actions []string, params *param
 		return nil
 	}
 
+	// Catch a mistyped flag (e.g. --event-id for a declared eventId) before the command
+	// runs, but only on a leaf command — a pure `profile:` router declares nothing itself
+	// and just forwards to the next level, where the real variables live.
+	if !isRoutingCommand(command) {
+		if err := param.ValidateParameterNames(command, params); err != nil {
+			return err
+		}
+	}
+
 	params.Set("aux4HomeDir", config.GetAux4HomeDirectory())
 	params.Set("packageDir", command.Ref.Dir)
 
@@ -333,6 +342,13 @@ func MainExecute(env *engine.VirtualEnvironment, actions []string, params *param
 	}
 
 	return nil
+}
+
+// isRoutingCommand reports whether a command only forwards to another profile
+// (its single step is a `profile:` executor). Such a command declares no variables
+// of its own, so parameter validation is deferred to the leaf it routes to.
+func isRoutingCommand(command core.Command) bool {
+	return len(command.Execute) == 1 && strings.HasPrefix(command.Execute[0], "profile:")
 }
 
 func splitPackageRef(packageRef string) (string, string) {
