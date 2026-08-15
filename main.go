@@ -35,15 +35,24 @@ func run() int {
 		return 0
 	}
 
-	aux4Params, actions, params := param.ParseArgs(os.Args[1:])
+	// The --noDaemon flag is an aux4-level flag consumed here. It is stripped
+	// from the raw argv before command parsing so it never leaks into actions
+	// or the command's parameters, and it never consumes the following argument
+	// (so `aux4 --noDaemon mcp` keeps `mcp` as the command). It applies only to
+	// this invocation and is not propagated to any subprocess.
+	noDaemon, args := daemon.ExtractNoDaemonFlag(os.Args[1:])
+
+	aux4Params, actions, params := param.ParseArgs(args)
 
 	output.SetPrettify(params.IsEnabled(output.PrettifyParameter))
 
-	// Check if daemon is running and forward the command
-	if !isDaemonCommand(actions) {
+	// Check if daemon is running and forward the command, unless the user opted
+	// out (--noDaemon or AUX4_NO_DAEMON=1) so a long-running server runs
+	// directly instead of holding the daemon's global mutex.
+	if !isDaemonCommand(actions) && !daemon.SkipForwarding(noDaemon) {
 		socketPath := daemon.FindSocketPath(".")
 		if conn := daemon.Connect(socketPath); conn != nil {
-			return daemon.Forward(conn, os.Args[1:])
+			return daemon.Forward(conn, args)
 		}
 	}
 
@@ -150,8 +159,10 @@ func startDaemonServer(socketPath string) {
 			done <- struct{}{}
 		}()
 
-		// Parse and execute
-		_, actions, params := param.ParseArgs(args)
+		// Parse and execute. Strip --noDaemon defensively so it never reaches
+		// the command even if a client forwarded it into the daemon.
+		_, cleanArgs := daemon.ExtractNoDaemonFlag(args)
+		_, actions, params := param.ParseArgs(cleanArgs)
 		output.SetPrettify(params.IsEnabled(output.PrettifyParameter))
 		env.SetProfile("main")
 

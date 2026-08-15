@@ -137,6 +137,35 @@ hides what you type into it.
 Commands support `private` in the same way, keeping a command out of the help while leaving
 it callable.
 
+## Daemon
+
+The daemon keeps the loaded environment in memory so repeated commands skip file loading and
+parsing. Start it with `aux4 aux4 daemon start`; while it runs, every command in that
+directory is transparently forwarded to it. See `aux4 aux4 man aux4 daemon` for the full
+lifecycle.
+
+A daemon runs one command at a time, so a long-running process (like a server that stays up
+for a whole session) would hold it for its entire lifetime and block every other command.
+The global `--noDaemon` flag runs a single command directly instead of forwarding it:
+
+```bash
+> aux4 --noDaemon mcp                     # runs directly, not forwarded to the daemon
+```
+
+`--noDaemon` is stripped before the command is parsed, so the command never sees it. It
+applies only to the invocation it is on and is **not** inherited by child processes: a server
+started with `aux4 --noDaemon mcp` runs directly, while the plain `aux4 <command>`
+subprocesses it spawns still forward to the daemon and keep daemon speed.
+
+To bypass the daemon for every command in the current shell, set `AUX4_NO_DAEMON=1`. Only the
+exact value `1` enables the bypass, and — unlike the flag — the environment variable is
+inherited by child processes.
+
+## Environment Variables
+
+- `AUX4_NO_DAEMON` — set to `1` to bypass the daemon and run commands directly (see [Daemon](#daemon)).
+- `NO_COLOR` — set to any value to disable colored output (see [Color Output](#color-output)).
+
 ## Docs
 
 Full [documentation](https://aux4.io/docs).

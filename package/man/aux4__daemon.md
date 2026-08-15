@@ -36,9 +36,30 @@ daemon is running
 daemon shutting down
 ```
 
+### Bypass the daemon for a single command
+
+When a daemon is running, every command in that directory is forwarded to it and the daemon runs one command at a time. A long-running process (for example a server that stays up for a whole session) would hold the daemon for its entire lifetime and block every other command — including the subprocesses it spawns.
+
+Use the global `--noDaemon` flag to run one command directly instead of forwarding it:
+
+```bash
+> aux4 --noDaemon mcp
+```
+
+The flag is stripped before the command is parsed, so the command never sees it. It applies only to the invocation it is on and is **not** inherited by child processes: a server started with `aux4 --noDaemon mcp` runs directly, while the plain `aux4 <command>` subprocesses it spawns still forward to the daemon and keep daemon speed.
+
+To bypass the daemon for every command in the current shell, set the environment variable:
+
+```bash
+> AUX4_NO_DAEMON=1 aux4 <command>
+```
+
+Only the exact value `1` enables the bypass. Unlike the flag, the environment variable is inherited by child processes, so it is an explicit escape hatch rather than the per-invocation mechanism.
+
 ### Notes
 
 - The daemon automatically shuts down after 30 minutes of inactivity
 - Each project directory has its own daemon (socket per project)
 - If the daemon is not running, commands work normally without any changes
 - The `.aux4.daemon.sock` file is created at the nearest parent directory containing a `.aux4` file
+- Use `--noDaemon` (or `AUX4_NO_DAEMON=1`) to run a command directly without forwarding it to the daemon

@@ -97,3 +97,37 @@ aux4 aux4 daemon start
 ```expect:partial
 daemon is already running *?
 ```
+
+## noDaemon flag
+
+### should run the command with the flag stripped
+
+```execute
+aux4 --noDaemon aux4 version --raw
+```
+
+```expect:partial
+*?
+```
+
+### should keep the command as an action and not swallow it
+
+```execute
+aux4 --noDaemon aux4 version
+```
+
+```expect:partial
+aux4 *?
+```
+
+## AUX4_NO_DAEMON env
+
+### should run the command directly when set to 1
+
+```execute
+AUX4_NO_DAEMON=1 aux4 aux4 version --raw
+```
+
+```expect:partial
+*?
+```
