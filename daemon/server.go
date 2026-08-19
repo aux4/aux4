@@ -2,6 +2,8 @@ package daemon
 
 import (
 	"bufio"
+	crand "crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,6 +17,13 @@ import (
 const SocketName = ".aux4.daemon.sock"
 const IdleTimeout = 30 * time.Minute
 
+// daemonSessionEnv carries a per-top-level-command token into the environment of
+// the command the daemon runs. Any `aux4` that command shells out inherits it
+// (see output.ChildEnv) and forwards it back, letting the server recognize the
+// re-entrant/nested call and run it WITHOUT waiting on the command mutex the
+// parent already holds — the fix for the nested-call deadlock.
+const daemonSessionEnv = "AUX4_DAEMON_SESSION"
+
 // ExecuteFunc is called by the server to execute a command.
 // It receives args, stdin reader, and stdout/stderr writers.
 // Returns the exit code.
@@ -24,9 +33,23 @@ type Server struct {
 	socketPath string
 	listener   net.Listener
 	executeFn  ExecuteFunc
-	mu         sync.Mutex
-	idleTimer  *time.Timer
-	done       chan struct{}
+	mu         sync.Mutex // serializes independent top-level commands
+	sessMu     sync.Mutex // guards activeSession
+	// activeSession is the token of the top-level command currently holding mu
+	// (empty when idle). A request carrying this token is a nested call from that
+	// command and is allowed to run re-entrantly without waiting on mu.
+	activeSession string
+	idleTimer     *time.Timer
+	done          chan struct{}
+}
+
+// newSessionID returns a random token identifying a top-level command run.
+func newSessionID() string {
+	b := make([]byte, 16)
+	if _, err := crand.Read(b); err != nil {
+		return fmt.Sprintf("sess-%d", time.Now().UnixNano())
+	}
+	return hex.EncodeToString(b)
 }
 
 func FindSocketPath(fromDir string) string {
@@ -162,8 +185,40 @@ func (s *Server) handleConnection(conn net.Conn) {
 }
 
 func (s *Server) executeCommand(conn net.Conn, reader *bufio.Reader, req *Request) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	// A nested `aux4` call — one shelled out by a command the daemon is already
+	// running — forwards back into the daemon carrying the parent's session token
+	// in its environment. It must NOT wait on s.mu: the parent holds it and is
+	// parked in the very shell-out that spawned this call, so blocking here would
+	// deadlock (and wedge the daemon for all later commands). Detect the token
+	// match and skip the lock. The parent is parked, so at most one execution is
+	// ever ACTIVELY touching the process-global cwd/env/stdio at a time.
+	reqSession := ""
+	if req.Env != nil {
+		reqSession = req.Env[daemonSessionEnv]
+	}
+
+	s.sessMu.Lock()
+	isNested := reqSession != "" && reqSession == s.activeSession
+	s.sessMu.Unlock()
+
+	var session string
+	if !isNested {
+		// Top-level command: serialize against other independent top-level
+		// commands (they share process-global cwd/env/stdio) and publish a fresh
+		// session token so this command's own nested calls re-enter.
+		s.mu.Lock()
+		defer s.mu.Unlock()
+
+		session = newSessionID()
+		s.sessMu.Lock()
+		s.activeSession = session
+		s.sessMu.Unlock()
+		defer func() {
+			s.sessMu.Lock()
+			s.activeSession = ""
+			s.sessMu.Unlock()
+		}()
+	}
 
 	// Change to requested working directory
 	if req.Cwd != "" {
@@ -183,6 +238,15 @@ func (s *Server) executeCommand(conn net.Conn, reader *bufio.Reader, req *Reques
 		for k, v := range req.Env {
 			os.Setenv(k, v)
 		}
+	}
+	// Publish the session token into the process environment of the command we
+	// run so any `aux4` it shells out inherits it (via output.ChildEnv) and
+	// re-enters instead of deadlocking. Restored with the rest of the env below.
+	if !isNested {
+		if origEnv == nil {
+			origEnv = os.Environ()
+		}
+		os.Setenv(daemonSessionEnv, session)
 	}
 
 	// Create a pipe for stdin — client sends stdin frames, we pipe them to the command

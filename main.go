@@ -118,13 +118,39 @@ func isDaemonCommand(actions []string) bool {
 
 // startDaemonServer builds the environment and starts the daemon server process
 func startDaemonServer(socketPath string) {
-	env := buildDaemonEnvironment()
-	if env == nil {
+	library, registry := buildDaemonLibrary()
+	if library == nil {
 		os.Exit(1)
 	}
 
 	executeFn := func(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {
-		// Redirect os.Stdout, os.Stderr, and os.Stdin
+		// Parse and execute. Strip --noDaemon defensively so it never reaches
+		// the command even if a client forwarded it into the daemon.
+		_, cleanArgs := daemon.ExtractNoDaemonFlag(args)
+		_, actions, params := param.ParseArgs(cleanArgs)
+
+		// Build a FRESH environment per request from the shared, already-parsed
+		// library. The expensive work (parsing global.aux4 + package .aux4 files)
+		// happened once in buildDaemonLibrary; this only rebuilds the in-memory
+		// profile maps, so it stays warm. A fresh env gives each request its own
+		// mutable state (CurrentProfile etc.) — essential for re-entrancy: a
+		// nested command must not corrupt the profile pointer of the parent that
+		// is parked waiting for it (see daemon.Server.executeCommand).
+		env, err := engine.InitializeVirtualEnvironment(library, registry)
+		if err != nil {
+			msg := "failed to initialize aux4 environment"
+			if aux4Err, ok := err.(core.Aux4Error); ok && aux4Err.Message != "" {
+				msg = aux4Err.Message
+			}
+			io.WriteString(stderr, msg+"\n")
+			return 1
+		}
+
+		// Redirect os.Stdout, os.Stderr, and os.Stdin. This is process-global,
+		// but the server only ever runs one execution ACTIVELY at a time (a
+		// nested call runs while its parent is parked in the shell-out that
+		// spawned it), and the save/restore below is stack-correct, so the
+		// redirection nests safely.
 		origStdout := os.Stdout
 		origStderr := os.Stderr
 		origStdin := os.Stdin
@@ -141,6 +167,7 @@ func startDaemonServer(socketPath string) {
 		// color decision has to be taken again per request instead of using the
 		// one cached when the daemon started.
 		output.ResolveColor()
+		output.SetPrettify(params.IsEnabled(output.PrettifyParameter))
 
 		// Stream pipe output to the writers
 		done := make(chan struct{}, 3)
@@ -158,13 +185,6 @@ func startDaemonServer(socketPath string) {
 			stdinW.Close()
 			done <- struct{}{}
 		}()
-
-		// Parse and execute. Strip --noDaemon defensively so it never reaches
-		// the command even if a client forwarded it into the daemon.
-		_, cleanArgs := daemon.ExtractNoDaemonFlag(args)
-		_, actions, params := param.ParseArgs(cleanArgs)
-		output.SetPrettify(params.IsEnabled(output.PrettifyParameter))
-		env.SetProfile("main")
 
 		exitCode := 0
 		if err := executor.MainExecute(env, actions, &params); err != nil {
@@ -198,12 +218,16 @@ func startDaemonServer(socketPath string) {
 	}
 }
 
-func buildDaemonEnvironment() *engine.VirtualEnvironment {
+// buildDaemonLibrary loads global.aux4 + the local .aux4 files ONCE (the
+// expensive parse) and returns the library + executor registry. The daemon then
+// builds a fresh VirtualEnvironment from these per request, so the parse cost is
+// paid once at startup while each request gets isolated mutable state.
+func buildDaemonLibrary() (*engine.Library, *engine.VirtualExecutorRegisty) {
 	library := engine.LocalLibrary()
 
 	if err := library.Load("", "aux4", []byte(aux4.DefaultAux4())); err != nil {
 		output.Out(output.StdErr).Println(output.Red(err))
-		return nil
+		return nil, nil
 	}
 
 	aux4Params := param.Aux4Parameters{}
@@ -226,11 +250,12 @@ func buildDaemonEnvironment() *engine.VirtualEnvironment {
 	registry.RegisterExecutor("aux4:daemon.stop", &executor.Aux4DaemonStopExecutor{})
 	registry.RegisterExecutor("aux4:daemon.status", &executor.Aux4DaemonStatusExecutor{})
 
-	env, err := engine.InitializeVirtualEnvironment(library, registry)
-	if err != nil {
+	// Validate the environment builds cleanly at startup (fail fast) rather than
+	// only discovering a broken package on the first request.
+	if _, err := engine.InitializeVirtualEnvironment(library, registry); err != nil {
 		output.Out(output.StdErr).Println(output.Red(err))
-		return nil
+		return nil, nil
 	}
 
-	return env
+	return library, registry
 }
