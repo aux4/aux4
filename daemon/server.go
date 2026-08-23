@@ -52,7 +52,19 @@ func newSessionID() string {
 	return hex.EncodeToString(b)
 }
 
+// SocketPathEnv, when set, is the absolute socket path used by both the daemon
+// server and its clients, overriding the CWD-relative discovery below. It lets a
+// caller place the socket in a known writable location (e.g. an api server that
+// starts a warm daemon in /tmp and points its command clients at it) WITHOUT
+// changing anyone's working directory — the read-only-CWD case (AWS Lambda) and
+// callers that must preserve CWD both rely on this.
+const SocketPathEnv = "AUX4_DAEMON_SOCKET"
+
 func FindSocketPath(fromDir string) string {
+	if sock := os.Getenv(SocketPathEnv); sock != "" {
+		return sock
+	}
+
 	dir, err := filepath.Abs(fromDir)
 	if err != nil {
 		dir = fromDir
