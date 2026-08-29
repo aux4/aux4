@@ -51,11 +51,32 @@ func (l *ConfigLookup) getParamOrDefault(parameters *Parameters, command core.Co
 		}
 	}
 
+	// Fall back to the environment so --configFile / --config can be set once
+	// (e.g. AUX4_CONFIG_FILE pointing at a synced config.yaml on a cloud VM)
+	// instead of being passed on every invocation. Precedence: arg > env > default.
+	if env := configEnvVar(name); env != "" {
+		if value := os.Getenv(env); value != "" {
+			return value
+		}
+	}
+
 	variable, ok := command.Help.GetVariable(name)
 	if ok && variable.Default != nil {
 		return *variable.Default
 	}
 
+	return ""
+}
+
+// configEnvVar maps the special config-integration params to the environment
+// variables that back them, matching the AUX4_CONFIG_FILE naming used elsewhere.
+func configEnvVar(name string) string {
+	switch name {
+	case "configFile":
+		return "AUX4_CONFIG_FILE"
+	case "config":
+		return "AUX4_CONFIG"
+	}
 	return ""
 }
 
