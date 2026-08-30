@@ -41,6 +41,39 @@ func buildCommandPath(command core.Command) string {
 	return command.Ref.Profile + "/" + command.Name
 }
 
+// visibleUnderSecurity reports whether a command reached at `prefix` (the
+// space-joined path already typed to get here, e.g. "db") with the given name
+// should be listed. A command the policy denies is hidden.
+func visibleUnderSecurity(env *engine.VirtualEnvironment, prefix, name string) bool {
+	if env.Security == nil || !env.Security.Active() {
+		return true
+	}
+	path := name
+	if prefix != "" {
+		path = prefix + " " + name
+	}
+	return env.Security.Visible(path)
+}
+
+// filterProfileBySecurity returns a copy of profile with denied commands removed,
+// so the help listing shows only what the policy exposes. The path prefix is the
+// invocation as typed (env.OriginalActions), which is exactly the profile the
+// listing belongs to after routing has descended into it.
+func filterProfileBySecurity(env *engine.VirtualEnvironment, profile core.Profile) core.Profile {
+	if env.Security == nil || !env.Security.Active() {
+		return profile
+	}
+	prefix := strings.Join(env.OriginalActions, " ")
+	filtered := make([]core.Command, 0, len(profile.Commands))
+	for _, command := range profile.Commands {
+		if visibleUnderSecurity(env, prefix, command.Name) {
+			filtered = append(filtered, command)
+		}
+	}
+	profile.Commands = filtered
+	return profile
+}
+
 func executeHookSteps(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters, steps []string) error {
 	// Hooks observe someone else's command, so they never see its hide/encrypt variables.
 	// The command's own execute steps still get them.
@@ -70,7 +103,7 @@ func MainExecute(env *engine.VirtualEnvironment, actions []string, params *param
 		isHelp := help == true || help == "true"
 
 		var profile = virtualProfile.GetProfile()
-		man.Help(profile, isJson, isHelp)
+		man.Help(filterProfileBySecurity(env, profile), isJson, isHelp)
 
 		return nil
 	}
@@ -104,6 +137,9 @@ func MainExecute(env *engine.VirtualEnvironment, actions []string, params *param
 						for _, profileCommand := range profile.CommandsOrdered {
 							cmd := profile.Commands[profileCommand]
 							if cmd.Private {
+								continue
+							}
+							if !visibleUnderSecurity(env, strings.Join(env.OriginalActions, " "), cmd.Name) {
 								continue
 							}
 							output.Out(output.StdOut).Println("")

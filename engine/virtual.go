@@ -3,6 +3,7 @@ package engine
 import (
 	"aux4.dev/aux4/core"
 	"aux4.dev/aux4/engine/param"
+	"aux4.dev/aux4/engine/security"
 	"aux4.dev/aux4/io"
 	"fmt"
 	"os"
@@ -167,6 +168,11 @@ type VirtualEnvironment struct {
 	Registry       *VirtualExecutorRegisty
 	Hooks          *HookRegistry
 	InHook         bool
+	// Security is the command-exposure policy in force for this invocation,
+	// resolved once at the entry point (env -> config -> param) and shared,
+	// unchanged, through profile routing and nested in-process calls. nil means
+	// no policy — everything is callable and listed.
+	Security *security.Policy
 	// The invocation as the caller typed it, captured before aux4 injects anything.
 	// Profile routing consumes actions as it descends (MainExecute(env, actions[1:], ...)),
 	// so by the time a hook runs the original path is gone — it is kept here instead.

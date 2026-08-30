@@ -1,55 +1,49 @@
 # Release notes
 
-## `replace` hook phase
+## Command exposure policy (`security`)
 
-A `before` hook could only let a command run or abort it with an error. There was no way to
-stand in for a command and return a *successful* result, so mocking an aux4 command required
-the command itself to support an override — an API URL variable, a flag — which most packages
-do not have.
+aux4 can now restrict which commands a CLI exposes, so several packages can be
+installed into one CLI (or one cloud deployment) while only a curated subset is
+callable — the rest stay available as internal building blocks.
 
-`replace` runs its steps instead of the command's execute steps and short-circuits
-successfully. `before` and `after` still fire, so a replaced command stays observable.
+The policy is a **runtime** decision, imposed by whoever runs the CLI (never
+declared inside a package), with three glob lists matched against the command
+path as typed after `aux4`:
 
-```json
-{
-  "command": "google:gmail/list",
-  "params": { "query": "is:unread" },
-  "replace": ["echo '{\"messages\": []}'"]
-}
+```yaml
+config:
+  security:
+    deny:  ["*"]
+    allow: ["db *"]
+    ask:   ["deploy *"]
 ```
 
-This gives aux4 a command-level mocking primitive: a test can stub any command without touching
-the package under test. Keep patterns narrow — a `replace` hook stops the real command running.
+* **deny hides** — a denied command is left out of `--help`, `--help --json` and
+  autocomplete, and reports `Command not found` if invoked directly.
+* **Internal calls are exempt** — an exposed command can still call a denied
+  command from its own execute steps, so denied commands remain usable building
+  blocks. (Exempt for the in-process form; a piped/redirected `aux4 x | ...`
+  shells out and is re-evaluated.)
+* **Most specific match wins**, ties resolve to deny (fail closed). Routers stay
+  navigable toward an allowed command.
+* **Cannot be loosened** — resolved with precedence `env → config → param`, the
+  reverse of aux4's normal param-wins rule. `AUX4_SECURITY` (env) is
+  authoritative and inherited by subprocess shell-outs; a config file protects
+  the top-level call; a param is only consulted when neither is set. A param can
+  tighten nothing it is given, but never widen an imposed policy.
 
-## Hooks no longer see `hide` or `encrypt` variables
+```bash
+export AUX4_SECURITY='{"deny":["*"],"allow":["db *"]}'
+aux4 db query                              # runs
+aux4 other                                 # Command not found
+aux4 other --security '{"allow":["*"]}'    # still Command not found (param cannot loosen)
+```
 
-Secrets are resolved into parameters *before* hooks run, so `secret://` did not protect them: a
-hook could read a resolved credential through `${password}` or `object(*)`.
+The `security` parameter is reserved: it never reaches a command and never
+forwards through `value(*)` / `object(*)`, so a package can neither read nor
+re-broadcast the policy it runs under.
 
-Variables a command declares as `hide` or `encrypt` are now removed before hook steps run, and
-blocked from resolving again through config, environment or any other lookup. They are dropped
-rather than masked, so a placeholder cannot be mistaken for a real credential.
+### Also in this release
 
-The command's own execute steps are unchanged — they still receive these values, including when
-passing them to another command.
-
-Not filtered: `${__response}` carries the command's stdout, so a command that *prints* a secret
-still exposes it.
-
-## New hook variables
-
-`__command` identifies the command; these describe how it was called:
-
-| Variable | Value |
-|---|---|
-| `${__commandLine}` | `aux4 google gmail list` |
-| `${__params}` | `--query 'is:unread'` |
-
-`__params` is captured from the command line before aux4 injects anything, so it contains no
-`packageDir`/`configDir`, nothing resolved from `config.yaml`, and no `hide`/`encrypt` values.
-
-## `AUX4_AUX4_FILES`
-
-Extra `.aux4` files to load, separated by the platform path separator. Tooling can contribute
-definitions — `aux4/mock` registers its command stubs this way — without editing the user's own
-`.aux4` or depending on the working directory.
+* `--help --json` now honors `private` on commands, matching the human-readable
+  listing and autocomplete (private commands no longer leak into the JSON help).

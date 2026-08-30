@@ -520,6 +520,10 @@ func setNestedField(obj map[string]interface{}, path string, value interface{}) 
 // that spread every parameter (`value(*)`, `object(*)`, alias forwarding).
 var reservedParameters = map[string]bool{
 	"prettify": true,
+	// security is the command-exposure policy, consumed by core at the entry
+	// point. It must never reach a command, or forward through value(*)/object(*),
+	// so a package can neither read nor re-broadcast the policy it runs under.
+	"security": true,
 }
 
 // injectedParameters are set by core onto the parameter set before a command runs

@@ -48,8 +48,10 @@ func run() int {
 
 	// Check if daemon is running and forward the command, unless the user opted
 	// out (--noDaemon or AUX4_NO_DAEMON=1) so a long-running server runs
-	// directly instead of holding the daemon's global mutex.
-	if !isDaemonCommand(actions) && !daemon.SkipForwarding(noDaemon) {
+	// directly instead of holding the daemon's global mutex. Also run directly
+	// when AUX4_SECURITY is set: the daemon started with its own environment and
+	// cannot see this invocation's policy, so forwarding would bypass it.
+	if !isDaemonCommand(actions) && !daemon.SkipForwarding(noDaemon) && os.Getenv("AUX4_SECURITY") == "" {
 		socketPath := daemon.FindSocketPath(".")
 		if conn := daemon.Connect(socketPath); conn != nil {
 			return daemon.Forward(conn, args)
@@ -93,6 +95,26 @@ func run() int {
 	// values are resolved lazily on Get — so this captures the command line and nothing else.
 	env.OriginalActions = actions
 	env.OriginalParams = params.Clone()
+
+	// Resolve the command-exposure policy once, before anything runs, and freeze
+	// it on the shared env so profile routing and nested in-process calls inherit
+	// it. Then block the top-level invocation if the policy forbids it.
+	policy, err := resolveSecurityPolicy(&params)
+	if err != nil {
+		output.Out(output.StdErr).Println(output.Red(err))
+		return 1
+	}
+	env.Security = policy
+
+	if err := enforceSecurity(policy, actions); err != nil {
+		if aux4Err, ok := err.(core.Aux4Error); ok {
+			if aux4Err.Message != "" {
+				output.Out(output.StdErr).Println(output.Red(aux4Err.Message))
+			}
+			return aux4Err.ExitCode
+		}
+		return 1
+	}
 
 	if err := executor.MainExecute(env, actions, &params); err != nil {
 		if aux4Err, ok := err.(core.Aux4Error); ok {
@@ -185,6 +207,29 @@ func startDaemonServer(socketPath string) {
 			stdinW.Close()
 			done <- struct{}{}
 		}()
+
+		// Resolve and enforce the exposure policy per request. AUX4_SECURITY-based
+		// policies never reach here (the client runs those directly instead of
+		// forwarding), so only config/param policies are resolved in the daemon.
+		policy, perr := resolveSecurityPolicy(&params)
+		if perr == nil {
+			env.Security = policy
+			if serr := enforceSecurity(policy, actions); serr != nil {
+				if aux4Err, ok := serr.(core.Aux4Error); ok {
+					if aux4Err.Message != "" {
+						stderrW.WriteString(aux4Err.Message + "\n")
+					}
+					stdoutW.Close()
+					stderrW.Close()
+					<-done
+					<-done
+					os.Stdout = origStdout
+					os.Stderr = origStderr
+					os.Stdin = origStdin
+					return aux4Err.ExitCode
+				}
+			}
+		}
 
 		exitCode := 0
 		if err := executor.MainExecute(env, actions, &params); err != nil {
