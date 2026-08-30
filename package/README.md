@@ -510,6 +510,61 @@ The `profile:` and `stdin:` executors are not allowed in hooks and will produce 
 > aux4 deploy --showHooks                              # show hooks before running
 ```
 
+## Security Policy
+
+When many packages are installed into one CLI, you often want to expose only a
+few commands and keep the rest available as internal building blocks. The
+`security` policy controls this. It is a **runtime** decision — imposed by
+whoever runs the CLI, never declared inside a package — with three glob lists:
+
+```yaml
+config:
+  security:
+    deny:  ["*"]        # nothing is directly callable...
+    allow: ["db *"]     # ...except commands under the db profile
+    ask:   ["deploy *"] # prompt before running (denied when non-interactive)
+```
+
+Patterns match the command path as typed after `aux4`, space-joined and without
+the `aux4` prefix: `db query`, `ai agent config *`, `*`.
+
+* **deny hides.** A denied command is left out of `--help`, `--help --json` and
+  autocomplete, and reports `Command not found` if invoked directly.
+* **Internal calls are exempt.** deny blocks *direct* invocation only. A command
+  that is exposed can still call a denied command from its own execute steps, so
+  the denied command remains a usable building block.
+* **Most specific match wins**, with a tie resolved to deny (fail closed). So
+  `deny: ["*"]` + `allow: ["db *"]` exposes only the db commands, and
+  `deny: ["db secret"]` + `allow: ["db *"]` exposes db but hides `db secret`.
+* **Routers stay navigable** toward an allowed command — `deny: ["*"]` +
+  `allow: ["grp *"]` still lists `grp` so you can reach `grp one`.
+
+### Sources and precedence
+
+A policy can be **tightened but never loosened** by a lower-trust source, so it
+is resolved with the precedence `env → config → param` (the reverse of aux4's
+normal param-wins rule):
+
+| Source | How | Notes |
+|---|---|---|
+| `AUX4_SECURITY` env | JSON string | Authoritative. Inherited by subprocess shell-outs and unreachable from a param — the real boundary, used in the cloud. |
+| Config file | `security:` key, read with `--configFile` / `--config` | Protects the top-level call; does not propagate to a subprocess shell-out, so it is for local use. |
+| Param | `--security '{...}'` or `--security.allow "db *"` | Only consulted when neither of the above defines a policy. |
+
+```bash
+# expose only db, from the environment (cannot be overridden by a flag)
+export AUX4_SECURITY='{"deny":["*"],"allow":["db *"]}'
+aux4 db query          # runs
+aux4 other             # Command not found
+
+# a param cannot loosen an imposed policy
+aux4 other --security '{"allow":["*"]}'   # still Command not found
+```
+
+> Internal calls are exempt only for the **in-process** form (`aux4 other` with
+> no shell metacharacters). A call piped or redirected (`aux4 other | jq`) shells
+> out to a fresh top-level process and is re-evaluated by the policy.
+
 ## Docs
 
 Full [documentation](https://aux4.io/docs).

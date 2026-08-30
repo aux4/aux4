@@ -172,11 +172,18 @@ func HelpCommand(command core.Command, json bool, long bool, leftPadding string)
 
 func helpJson(profile core.Profile) {
 	output.Out(output.StdOut).Print("[")
-	for i, command := range profile.Commands {
-		if i > 0 {
+	printed := false
+	for _, command := range profile.Commands {
+		// Honor private the same way the human-readable listing does, so a
+		// private (or policy-hidden) command never leaks through --help --json.
+		if command.Private {
+			continue
+		}
+		if printed {
 			output.Out(output.StdOut).Print(",")
 		}
 		helpCommandJson(command)
+		printed = true
 	}
 	output.Out(output.StdOut).Print("]")
 }

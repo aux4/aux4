@@ -31,7 +31,7 @@ func (executor *Aux4AutocompleteExecutor) Execute(env *engine.VirtualEnvironment
 	}
 
 	if len(args) == 0 {
-		suggestions := getProfileCommands(env, "main")
+		suggestions := getProfileCommands(env, "main", "")
 		outputSuggestions(suggestions)
 		return nil
 	}
@@ -63,7 +63,7 @@ func (executor *Aux4AutocompleteExecutor) Execute(env *engine.VirtualEnvironment
 		command, exists := profile.Commands[arg]
 		if !exists {
 			if i == len(args)-1 {
-				suggestions := getProfileCommands(env, currentProfile)
+				suggestions := getProfileCommands(env, currentProfile, strings.Join(currentActions, " "))
 				filtered := make([]string, 0)
 				for _, s := range suggestions {
 					if strings.HasPrefix(s, arg) {
@@ -80,7 +80,7 @@ func (executor *Aux4AutocompleteExecutor) Execute(env *engine.VirtualEnvironment
 		if i == len(args)-1 {
 			newProfile := getRedirectProfile(command)
 			if newProfile != "" {
-				suggestions := getProfileCommands(env, newProfile)
+				suggestions := getProfileCommands(env, newProfile, strings.Join(currentActions, " "))
 				outputSuggestions(suggestions)
 				return nil
 			} else {
@@ -111,7 +111,7 @@ func getRedirectProfile(command core.Command) string {
 	return ""
 }
 
-func getProfileCommands(env *engine.VirtualEnvironment, profileName string) []string {
+func getProfileCommands(env *engine.VirtualEnvironment, profileName string, prefix string) []string {
 	profile := env.GetProfile(profileName)
 	if profile == nil {
 		return []string{}
@@ -120,9 +120,13 @@ func getProfileCommands(env *engine.VirtualEnvironment, profileName string) []st
 	commands := make([]string, 0)
 	for _, cmdName := range profile.CommandsOrdered {
 		command := profile.Commands[cmdName]
-		if !command.Private {
-			commands = append(commands, cmdName)
+		if command.Private {
+			continue
 		}
+		if !visibleUnderSecurity(env, prefix, cmdName) {
+			continue
+		}
+		commands = append(commands, cmdName)
 	}
 
 	return commands
