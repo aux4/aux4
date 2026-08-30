@@ -59,6 +59,17 @@ func configSecurityValue(params *param.Parameters) any {
 		return nil
 	}
 
+	// Fast path: most config files carry no security policy at all, and the
+	// `aux4 config get` subprocess below is comparatively expensive. When we have
+	// a readable config file that does not even mention "security", skip it — no
+	// policy can be there. (A missing/unreadable file, or the --config-only case,
+	// falls through to the authoritative read.)
+	if configFile != "" {
+		if content, err := os.ReadFile(configFile); err == nil && !strings.Contains(string(content), "security") {
+			return nil
+		}
+	}
+
 	args := []string{}
 	if configFile != "" {
 		args = append(args, "--file "+configFile)
