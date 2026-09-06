@@ -50,6 +50,12 @@ func Forward(conn net.Conn, args []string) int {
 	// through NO_COLOR / CLICOLOR_FORCE (its own stdout is always a pipe).
 	output.ColorEnvMap(env)
 
+	// For the same reason the client is the only process that knows whether a
+	// human with a terminal is waiting on stdin: the daemon always reads stdin
+	// from a pipe. Record the decision so the daemon can refuse to prompt (and
+	// hang forever) when the caller is a script, CI or an agent.
+	output.StdinEnvMap(env)
+
 	req := &Request{
 		Action: "execute",
 		Args:   args,

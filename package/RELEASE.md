@@ -1,49 +1,37 @@
 # Release notes
 
-## Command exposure policy (`security`)
+## aux4 no longer hangs on a missing value when stdin is not a terminal
 
-aux4 can now restrict which commands a CLI exposes, so several packages can be
-installed into one CLI (or one cloud deployment) while only a curated subset is
-callable — the rest stay available as internal building blocks.
+A command variable that has no value from any source — argument, environment,
+config or default — is the point where aux4 prompts for it. Until now it prompted
+unconditionally, so in a script, CI job, agent or any other non-interactive shell
+the prompt waited for a line that never arrived and the command blocked **forever**.
 
-The policy is a **runtime** decision, imposed by whoever runs the CLI (never
-declared inside a package), with three glob lists matched against the command
-path as typed after `aux4`:
+A mistyped flag made this easy to hit: `aux4 kb add --title "..." --content "..."`
+passes `--title` where the command expects `--topic`. `--title` is simply an
+undeclared parameter (passing undeclared parameters is a supported aux4 feature),
+so `--topic` stays unset, aux4 falls through to the prompt, and the command hangs
+with no error and no hint which flag was wrong.
 
-```yaml
-config:
-  security:
-    deny:  ["*"]
-    allow: ["db *"]
-    ask:   ["deploy *"]
-```
-
-* **deny hides** — a denied command is left out of `--help`, `--help --json` and
-  autocomplete, and reports `Command not found` if invoked directly.
-* **Internal calls are exempt** — an exposed command can still call a denied
-  command from its own execute steps, so denied commands remain usable building
-  blocks. (Exempt for the in-process form; a piped/redirected `aux4 x | ...`
-  shells out and is re-evaluated.)
-* **Most specific match wins**, ties resolve to deny (fail closed). Routers stay
-  navigable toward an allowed command.
-* **Cannot be loosened** — resolved with precedence `env → config → param`, the
-  reverse of aux4's normal param-wins rule. `AUX4_SECURITY` (env) is
-  authoritative and inherited by subprocess shell-outs; a config file protects
-  the top-level call; a param is only consulted when neither is set. A param can
-  tighten nothing it is given, but never widen an imposed policy.
+aux4 now refuses to prompt when stdin is not a terminal. Instead it fails fast,
+exits non-zero, and names the flag that still needs a value:
 
 ```bash
-export AUX4_SECURITY='{"deny":["*"],"allow":["db *"]}'
-aux4 db query                              # runs
-aux4 other                                 # Command not found
-aux4 other --security '{"allow":["*"]}'    # still Command not found (param cannot loosen)
+aux4 kb add --title "..." --content "..." </dev/null
+# Missing required value for --topic: no value was provided and aux4 cannot
+# prompt because stdin is not a terminal
 ```
 
-The `security` parameter is reserved: it never reaches a command and never
-forwards through `value(*)` / `object(*)`, so a package can neither read nor
-re-broadcast the policy it runs under.
+* **Interactive use is unchanged.** A real terminal still prompts exactly as
+  before, including for commands run through the daemon: the daemon reads stdin
+  from a pipe and cannot see the terminal itself, so the client — which owns the
+  real stdin — now tells the daemon whether a human is waiting (mirroring how the
+  color decision is carried across the same hop).
+* **The terminal check is precise.** `/dev/null` and pipes are correctly treated
+  as non-interactive, so redirected and closed stdin fail fast rather than
+  blocking or racing an empty read.
 
-### Also in this release
-
-* `--help --json` now honors `private` on commands, matching the human-readable
-  listing and autocomplete (private commands no longer leak into the JSON help).
+This does not change how undeclared or mistyped flags are handled: aux4 still
+accepts undeclared parameters, and still suggests the intended name when a flag is
+a near-miss of a declared one (`--customer-id` for `customerId`). The change is
+strictly about never blocking on an un-answerable prompt.

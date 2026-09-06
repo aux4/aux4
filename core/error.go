@@ -43,6 +43,18 @@ func UnknownParameterError(given string, suggestion string) Aux4Error {
 	}
 }
 
+// MissingRequiredValueError is returned when a declared variable has no value
+// from any source (argument, environment, config or default) and aux4 cannot
+// prompt for it because stdin is not a terminal — a script, CI job or agent.
+// Prompting there would block forever, so aux4 fails fast and names the flag
+// that needs a value.
+func MissingRequiredValueError(variableName string) Aux4Error {
+  return Aux4Error{
+    Message: fmt.Sprintf("Missing required value for --%s: no value was provided and aux4 cannot prompt because stdin is not a terminal", variableName),
+    ExitCode: 1,
+  }
+}
+
 func UserAbortedError() Aux4Error {
   return Aux4Error{
     Message: "User aborted",

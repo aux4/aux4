@@ -276,6 +276,15 @@ func (l PromptLookup) Get(parameters *Parameters, command core.Command, action [
 		return nil, nil
 	}
 
+	// Never prompt when stdin is not a terminal (a script, CI job, agent or a
+	// command forwarded through the daemon by such a caller). promptui would read
+	// from a stream that never delivers a line and block forever, so fail fast and
+	// name the flag that still needs a value instead. Interactive callers are
+	// unaffected: they reach the prompts below exactly as before.
+	if !output.StdinIsInteractive() {
+		return nil, core.MissingRequiredValueError(variable.Name)
+	}
+
 	if variable.Multiple && len(variable.Options) > 0 {
 		return promptMultiSelect(*variable)
 	}
