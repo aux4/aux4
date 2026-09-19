@@ -143,6 +143,46 @@ func DefaultAux4() string {
 								"text": "Manage aux4 daemon for faster command execution",
 								"hasMan": true
 							}
+						},
+						{
+							"name": "jwt-verify",
+							"private": true,
+							"noHooks": true,
+							"help": {
+								"text": "Verify an RS256 JWT locally against a JWKS file already on disk (no network call) and print its claims as JSON. Fails (non-zero exit, nothing on stdout) on any malformed, unsigned, expired or mismatched token.",
+								"variables": [
+									{
+										"name": "token",
+										"text": "The JWT to verify",
+										"default": ""
+									},
+									{
+										"name": "jwksFile",
+										"text": "Path to a local JWKS JSON file ({\"keys\":[...]}); this command never fetches it itself",
+										"default": ""
+									},
+									{
+										"name": "issuer",
+										"text": "Expected iss claim; empty skips the check",
+										"default": ""
+									},
+									{
+										"name": "audience",
+										"text": "Expected aud claim (string or array membership); empty skips the check",
+										"default": ""
+									},
+									{
+										"name": "scope",
+										"text": "A value that must appear in the token's space-delimited scope claim; empty skips the check",
+										"default": ""
+									},
+									{
+										"name": "clockSkew",
+										"text": "Allowed clock-skew leeway in seconds for exp/nbf checks",
+										"default": "30"
+									}
+								]
+							}
 						}
           ]
         },
