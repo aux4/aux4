@@ -390,13 +390,24 @@ func isRoutingCommand(command core.Command) bool {
 func splitPackageRef(packageRef string) (string, string) {
 	ref := packageRef
 	if strings.Contains(ref, "@") {
-		ref = strings.Split(ref, "@")[0]
+		ref = strings.SplitN(ref, "@", 2)[0]
 	}
 	if strings.Contains(ref, "/") {
 		parts := strings.SplitN(ref, "/", 2)
 		return parts[0], parts[1]
 	}
 	return "", ref
+}
+
+// packageIdentity returns the stable scope/name identity for an installed
+// package, without its version. Local .aux4 commands retain their synthetic
+// identity so callees can distinguish them from registry packages.
+func packageIdentity(packageRef string) string {
+	scope, name := splitPackageRef(packageRef)
+	if scope == "" {
+		return name
+	}
+	return scope + "/" + name
 }
 
 func renderResponse(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
@@ -1141,6 +1152,11 @@ func (executor *Aux4CommandExecutor) Execute(env *engine.VirtualEnvironment, com
 	nestedArgs := param.ExtractArgs(instruction)
 	// Parse nested args into actions and parameters for the sub-invocation
 	_, nestedActions, nestedParams := param.ParseArgs(nestedArgs)
+	// Nested commands can consume the immediate caller package identity without
+	// requiring package authors to repeat or spoof their own scope/name. This is
+	// generic runtime context (not billing-specific), and Update deliberately
+	// wins over a user-supplied --__callerPackage value.
+	nestedParams.Update("__callerPackage", packageIdentity(command.Ref.Package))
 	// Execute the nested aux4 command in the same environment
 
 	currentProfile := env.CurrentProfile
