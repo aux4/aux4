@@ -173,3 +173,77 @@ aux4 read
 ```expect
 the a filethe b filethe d file
 ```
+
+## response was never set
+
+each: always iterates the `response` variable — it never takes a list from
+the text after `each:`. Calling it without first producing `${response}`
+(e.g. via `nout:`/`json:`) is wrong usage, and must produce a clear error
+instead of a crash (CORE-037).
+
+### when response is unset
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "body",
+          "execute": [
+            "set:request=json:{}",
+            "each:options:set:request.x=${item}"
+          ],
+          "help": {
+            "variables": [
+              {
+                "name": "options",
+                "default": "",
+                "multiple": true
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 body --options a --options b
+```
+
+```error:partial
+each: has no ${response} to iterate over
+```
+
+### when response is a non-iterable scalar
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "body",
+          "execute": [
+            "json:echo 42",
+            "each:echo ${item}"
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 body
+```
+
+```error:partial
+each: ${response} is not an array or string
+```

@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"os"
+	"runtime/debug"
 
 	"aux4.dev/aux4/aux4"
 	"aux4.dev/aux4/cmd"
@@ -16,6 +18,12 @@ import (
 	"aux4.dev/aux4/output"
 )
 
+// crashExitCode is returned when a panic escapes to the top-level recover()
+// backstop. It is a generic, non-zero "something went wrong internally" code,
+// distinct from the specific Aux4Error exit codes (1 for a normal internal
+// error, 127 for command not found, 130 for user-aborted, etc.).
+const crashExitCode = 1
+
 func main() {
 	cmd.OnAbort = coverage.Flush
 	cmd.AbortOnCtrlC()
@@ -27,7 +35,64 @@ func main() {
 	}
 }
 
-func run() int {
+// isDebugEnabled reports whether AUX4_DEBUG is set, matching the convention
+// already used by output.DebugOutput.
+func isDebugEnabled() bool {
+	return os.Getenv("AUX4_DEBUG") == "true"
+}
+
+// formatCrashReport turns a recovered panic value plus its stack trace into
+// the message shown to the user. It is a backstop for bugs that slipped past
+// every other guard — it must never look like the command's own output, so
+// the user reports it instead of assuming their command failed. The full Go
+// stack trace is only ever printed when AUX4_DEBUG=true, so diagnosability
+// isn't lost, but the default path stays clean for every other user.
+func formatCrashReport(recovered any, stack []byte, debugEnabled bool) string {
+	message := fmt.Sprintf(
+		"aux4 hit an internal error and could not continue: %v\n"+
+			"This is a bug in aux4 itself, not in your command — please report it at https://github.com/aux4/aux4/issues with what you ran.",
+		recovered,
+	)
+
+	if debugEnabled {
+		message += "\n\n" + string(stack)
+	} else {
+		message += "\nRe-run with AUX4_DEBUG=true for the full stack trace."
+	}
+
+	return message
+}
+
+// reportCrash prints a formatted crash report to stderr and returns the exit
+// code the process should use. Kept separate from the recover() call site so
+// it is unit-testable without needing to trigger a real panic.
+func reportCrash(recovered any, stack []byte) int {
+	output.Out(output.StdErr).Println(output.Red(formatCrashReport(recovered, stack, isDebugEnabled())))
+	return crashExitCode
+}
+
+func run() (exitCode int) {
+	// Top-level backstop: aux4 core must never crash out to a raw Go stack
+	// trace. Every known panic source is fixed at its root cause (see
+	// CORE-036/CORE-037), but this catches whatever is still missed, so the
+	// user always gets a clean, actionable message and a non-zero exit code
+	// instead of a stack trace. It is a backstop, not a substitute for fixing
+	// root causes — a caught panic here is still a bug worth reporting.
+	defer func() {
+		if r := recover(); r != nil {
+			exitCode = reportCrash(r, debug.Stack())
+		}
+	}()
+
+	return runCommandFn()
+}
+
+// runCommandFn is a package-level indirection over runCommand purely so tests
+// can substitute a panicking stand-in to exercise the recover() wiring in
+// run() without needing a real, hard-to-trigger internal panic.
+var runCommandFn = runCommand
+
+func runCommand() int {
 	// Handle daemon server mode (launched by `aux4 aux4 daemon start`)
 	if len(os.Args) >= 3 && os.Args[1] == "-daemon-server" {
 		socketPath := os.Args[2]
@@ -138,6 +203,23 @@ func isDaemonCommand(actions []string) bool {
 	return false
 }
 
+// runMainExecuteRecovered runs executor.MainExecute with its own recover, so a
+// panic inside a daemon-served command surfaces as a panicValue instead of
+// unwinding into the daemon's serving loop. Kept separate from the call site
+// so the surrounding pipe/stdio cleanup in executeFn always runs, whether the
+// command errored, panicked, or completed normally.
+func runMainExecuteRecovered(env *engine.VirtualEnvironment, actions []string, params *param.Parameters) (err error, panicValue any, stack []byte) {
+	defer func() {
+		if r := recover(); r != nil {
+			panicValue = r
+			stack = debug.Stack()
+		}
+	}()
+
+	err = executor.MainExecute(env, actions, params)
+	return
+}
+
 // startDaemonServer builds the environment and starts the daemon server process
 func startDaemonServer(socketPath string) {
 	library, registry := buildDaemonLibrary()
@@ -231,9 +313,17 @@ func startDaemonServer(socketPath string) {
 			}
 		}
 
+		// A panic here must never bring down the daemon process — it is shared
+		// by every connected client, not just the one that triggered it. This
+		// mirrors the top-level recover() in run(), but reports back over the
+		// client's own stderr pipe instead of the daemon process's stderr.
 		exitCode := 0
-		if err := executor.MainExecute(env, actions, &params); err != nil {
-			if aux4Err, ok := err.(core.Aux4Error); ok {
+		mainErr, panicValue, stack := runMainExecuteRecovered(env, actions, &params)
+		if panicValue != nil {
+			stderrW.WriteString(formatCrashReport(panicValue, stack, isDebugEnabled()) + "\n")
+			exitCode = crashExitCode
+		} else if mainErr != nil {
+			if aux4Err, ok := mainErr.(core.Aux4Error); ok {
 				if aux4Err.Message != "" {
 					stderrW.WriteString(aux4Err.Message + "\n")
 				}

@@ -433,3 +433,48 @@ say hello.
   --name <arg> <optional> <multiple>
     The name to say hello.
 ```
+
+## Long help text does not crash (CORE-036)
+
+`--help` word-wraps command and variable descriptions. A long, unbroken word
+that lands exactly on the wrap boundary used to panic with a
+"slice bounds out of range" error instead of wrapping cleanly. This is a long
+description with no spaces, so word-wrapping is forced to hard-break it —
+covering the class of input that triggered the crash, independent of the
+exact boundary length (which is covered precisely by the Go unit tests in
+`man/help_test.go`).
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "classify",
+          "execute": [
+            "echo classify"
+          ],
+          "help": {
+            "text": "classify",
+            "variables": [
+              {
+                "name": "category",
+                "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+```execute
+aux4 classify --help
+```
+
+```expect:partial
+classify
+```

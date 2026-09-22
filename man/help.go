@@ -256,7 +256,7 @@ func breakLines(text string, maxLineLength int, spacing string) string {
 			nextBreak += 1
 		} else {
 			end := maxLength + 1
-			if len(remaining) < maxLength {
+			if len(remaining) <= maxLength {
 				end = len(remaining)
 			}
 			nextLine = remaining[:end]

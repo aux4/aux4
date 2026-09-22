@@ -316,9 +316,11 @@ func resolveNvlVariables(command core.Command, instruction string, actions []str
 				continue
 			}
 
-			// Quoted string — strip quotes, use as literal
-			if (strings.HasPrefix(candidate, "'") && strings.HasSuffix(candidate, "'")) ||
-				(strings.HasPrefix(candidate, "\"") && strings.HasSuffix(candidate, "\"")) {
+			// Quoted string — strip quotes, use as literal. len(candidate) > 1
+			// guards a single quote/double-quote character (which matches both
+			// HasPrefix and HasSuffix against itself) from an invalid slice.
+			if len(candidate) > 1 && ((strings.HasPrefix(candidate, "'") && strings.HasSuffix(candidate, "'")) ||
+				(strings.HasPrefix(candidate, "\"") && strings.HasSuffix(candidate, "\""))) {
 				result = candidate[1 : len(candidate)-1]
 				break
 			}
@@ -363,9 +365,11 @@ func resolvePathVariables(command core.Command, instruction string, actions []st
 				continue
 			}
 
-			// Quoted string — strip quotes, use as a literal segment.
-			if (strings.HasPrefix(segment, "'") && strings.HasSuffix(segment, "'")) ||
-				(strings.HasPrefix(segment, "\"") && strings.HasSuffix(segment, "\"")) {
+			// Quoted string — strip quotes, use as a literal segment. len(segment)
+			// > 1 guards a single quote/double-quote character (which matches
+			// both HasPrefix and HasSuffix against itself) from an invalid slice.
+			if len(segment) > 1 && ((strings.HasPrefix(segment, "'") && strings.HasSuffix(segment, "'")) ||
+				(strings.HasPrefix(segment, "\"") && strings.HasSuffix(segment, "\""))) {
 				parts = append(parts, segment[1:len(segment)-1])
 				continue
 			}

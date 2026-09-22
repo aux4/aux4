@@ -203,7 +203,7 @@ func (p *Parameters) Set(name string, value any) {
 	}
 
 	typeOfValue := reflect.TypeOf(value)
-	if typeOfValue.Kind() == reflect.Slice || typeOfValue.Kind() == reflect.Array {
+	if typeOfValue != nil && (typeOfValue.Kind() == reflect.Slice || typeOfValue.Kind() == reflect.Array) {
 		p.params[name] = append(p.params[name], value.([]any)...)
 	} else {
 		p.params[name] = append(p.params[name], value)
@@ -363,12 +363,20 @@ func (p *Parameters) Expr(command core.Command, actions []string, originalExpres
 
 		if strings.Contains(name, "[") {
 			originalName := name
-			name = name[:strings.Index(name, "[")]
-			idx := originalName[strings.Index(originalName, "[")+1 : strings.Index(originalName, "]")]
-			if parsedIdx, err := strconv.Atoi(idx); err == nil {
-				index = parsedIdx
-			} else {
-				key = idx
+			openBracket := strings.Index(originalName, "[")
+			closeBracket := strings.Index(originalName, "]")
+			name = originalName[:openBracket]
+
+			// A malformed reference (no closing "]", e.g. "${items[3}") falls
+			// back to resolving the base name unindexed instead of panicking
+			// on an invalid slice range.
+			if closeBracket > openBracket {
+				idx := originalName[openBracket+1 : closeBracket]
+				if parsedIdx, err := strconv.Atoi(idx); err == nil {
+					index = parsedIdx
+				} else {
+					key = idx
+				}
 			}
 		}
 	}

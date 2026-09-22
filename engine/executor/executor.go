@@ -686,7 +686,9 @@ func (executor *EachCommandExecutor) Execute(env *engine.VirtualEnvironment, com
 	var list []any
 
 	typeOfResponse := reflect.TypeOf(response)
-	if typeOfResponse.Kind() == reflect.Slice || typeOfResponse.Kind() == reflect.Array {
+	if typeOfResponse == nil {
+		return core.InternalError("each: has no ${response} to iterate over. each: always consumes the 'response' variable (the output of a preceding nout:/json:/set: step), not an inline list. Produce ${response} before calling each:.", nil)
+	} else if typeOfResponse.Kind() == reflect.Slice || typeOfResponse.Kind() == reflect.Array {
 		list = response.([]any)
 	} else if typeOfResponse.Kind() == reflect.String {
 		lines := strings.Split(response.(string), "\n")
@@ -695,7 +697,7 @@ func (executor *EachCommandExecutor) Execute(env *engine.VirtualEnvironment, com
 			list[index] = line
 		}
 	} else {
-		return core.InternalError("response is not array", nil)
+		return core.InternalError("each: ${response} is not an array or string, so it cannot be iterated. each: always consumes the 'response' variable (the output of a preceding nout:/json:/set: step).", nil)
 	}
 
 	trackCoverage := coverage.IsEnabled()
