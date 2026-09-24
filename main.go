@@ -273,21 +273,26 @@ func startDaemonServer(socketPath string) {
 		output.ResolveColor()
 		output.SetPrettify(params.IsEnabled(output.PrettifyParameter))
 
-		// Stream pipe output to the writers
-		done := make(chan struct{}, 3)
+		// Stream pipe output to the writers. stdout and stderr each signal their
+		// OWN channel: the reply must not be finished until BOTH are fully
+		// drained. (A shared 3-slot channel that also counted the stdin copier let
+		// the request return as soon as stdin + either output finished, dropping
+		// the tail — often all — of the other stream; nested `nout:aux4 ...` calls
+		// then intermittently saw an empty ${response}. CBR-012.)
+		stdoutDone := make(chan struct{})
+		stderrDone := make(chan struct{})
 		go func() {
 			io.Copy(stdout, stdoutR)
-			done <- struct{}{}
+			close(stdoutDone)
 		}()
 		go func() {
 			io.Copy(stderr, stderrR)
-			done <- struct{}{}
+			close(stderrDone)
 		}()
 		// Pipe client stdin into the command's stdin
 		go func() {
 			io.Copy(stdinW, stdin)
 			stdinW.Close()
-			done <- struct{}{}
 		}()
 
 		// Resolve and enforce the exposure policy per request. AUX4_SECURITY-based
@@ -303,8 +308,7 @@ func startDaemonServer(socketPath string) {
 					}
 					stdoutW.Close()
 					stderrW.Close()
-					<-done
-					<-done
+					waitForOutputDrain(daemonOutputDrainGrace, stdoutDone, stderrDone)
 					os.Stdout = origStdout
 					os.Stderr = origStderr
 					os.Stdin = origStdin
@@ -333,11 +337,10 @@ func startDaemonServer(socketPath string) {
 			}
 		}
 
-		// Close write ends and wait for readers to finish
+		// Close write ends and wait for BOTH output readers to finish
 		stdoutW.Close()
 		stderrW.Close()
-		<-done
-		<-done
+		waitForOutputDrain(daemonOutputDrainGrace, stdoutDone, stderrDone)
 
 		// Restore
 		os.Stdout = origStdout
