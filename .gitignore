@@ -31,3 +31,4 @@ package/README.md
 package/dist
 package/out/
 **/*.zip
+.aux4.daemon.sock.log
