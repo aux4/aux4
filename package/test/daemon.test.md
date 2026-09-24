@@ -131,3 +131,84 @@ AUX4_NO_DAEMON=1 aux4 aux4 version --raw
 ```expect:partial
 *?
 ```
+
+## output drain
+
+```file:.aux4
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "big-output",
+          "execute": [
+            "head -c 300000 /dev/zero | tr '\\0' 'a'"
+          ],
+          "help": {
+            "text": "print 300000 bytes"
+          }
+        },
+        {
+          "name": "inner-output",
+          "execute": [
+            "echo hello-inner"
+          ],
+          "help": {
+            "text": "print one line"
+          }
+        },
+        {
+          "name": "outer-output",
+          "execute": [
+            "nout:aux4 inner-output",
+            "set:captured=${response}",
+            "echo \"captured=${captured}\""
+          ],
+          "help": {
+            "text": "capture a nested aux4 call"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+```beforeEach
+nohup aux4 aux4 daemon start >/dev/null 2>&1 &
+sleep 1
+```
+
+```afterEach
+aux4 aux4 daemon stop 2>/dev/null
+rm -f .aux4.daemon.sock .aux4.daemon.sock.pid .aux4.daemon.sock.log
+```
+
+### should never truncate a large stdout
+
+```timeout
+120000
+```
+
+```execute
+for i in $(seq 1 25); do aux4 big-output </dev/null | wc -c | tr -d ' '; done | sort -u
+```
+
+```expect
+300000
+```
+
+### should always deliver a nested call's output to the parent
+
+```timeout
+120000
+```
+
+```execute
+for i in $(seq 1 25); do aux4 outer-output </dev/null; done | sort -u
+```
+
+```expect
+captured=hello-inner
+```

@@ -1,5 +1,14 @@
 # Release notes
 
+## Daemon replies never lose command output
+
+A command forwarded to the aux4 daemon could reply before all of its output had been
+delivered, truncating stdout (or stderr) and sometimes dropping it entirely. The most visible
+effect was a nested `nout:aux4 ...` call intermittently yielding an empty `${response}` — for
+example an aux4.cloud VM losing the named parameters of a remote command. The daemon now waits
+for both output streams to finish before replying (bounded to a few seconds when a background
+process spawned by the command keeps the output open).
+
 ## aux4 core never panics
 
 Several code paths could crash the process with a raw Go stack trace instead of a clean error.
