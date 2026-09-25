@@ -1,5 +1,14 @@
 # Release notes
 
+## Two packages with the same short name in different scopes no longer collide
+
+The package `Library` keyed installed packages by their bare `name`, ignoring `scope`. Installing
+two packages that happen to share a short name under different scopes (for example
+`aux4/browser` and `agent/browser`) made any command that rebuilds `global.aux4` from every
+installed package's own `.aux4` file (install, uninstall, `verify`) fail with `Package browser
+already exists`, breaking the merge for every package, not just the colliding ones. Packages are
+now keyed by `scope/name`, so same-named packages in different scopes load and resolve normally.
+
 ## Daemon replies never lose command output
 
 A command forwarded to the aux4 daemon could reply before all of its output had been

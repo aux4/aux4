@@ -63,13 +63,15 @@ func (library *Library) Load(path string, name string, data []byte) error {
 }
 
 func (library *Library) load(pack core.Package) error {
-	_, ok := library.packages[pack.Name]
+	key := packageKey(pack)
+
+	_, ok := library.packages[key]
 	if ok {
-		return core.InternalError(fmt.Sprintf("Package %s already exists", pack.Name), nil)
+		return core.InternalError(fmt.Sprintf("Package %s already exists", key), nil)
 	}
 
-	library.orderedPackages = append(library.orderedPackages, pack.Name)
-	library.packages[pack.Name] = &pack
+	library.orderedPackages = append(library.orderedPackages, key)
+	library.packages[key] = &pack
 
 	return nil
 }
@@ -77,4 +79,22 @@ func (library *Library) load(pack core.Package) error {
 func (library *Library) GetPackage(name string) (*core.Package, bool) {
 	pack, ok := library.packages[name]
 	return pack, ok
+}
+
+// packageKey returns the identity a package is stored and looked up under in
+// the Library. Two packages published under different scopes (e.g.
+// aux4/browser and agent/browser) share the same bare Name, so keying by
+// Name alone collides ("Package browser already exists") the moment both
+// are loaded into one Library -- which happens whenever pkger rebuilds
+// global.aux4 from every installed package's own .aux4 file (install,
+// uninstall, verify). Keying by "scope/name" instead makes the two
+// distinct. Packages with no scope (the aux4 core builtins, and the merged
+// global.aux4 blob itself, which carries scope="" and is keyed by its file
+// path) keep using the bare Name/path, since those are already unique on
+// their own and scope-prefixing them would just be noise.
+func packageKey(pack core.Package) string {
+	if pack.Scope != "" {
+		return pack.Scope + "/" + pack.Name
+	}
+	return pack.Name
 }
