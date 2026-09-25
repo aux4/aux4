@@ -81,20 +81,38 @@ func (library *Library) GetPackage(name string) (*core.Package, bool) {
 	return pack, ok
 }
 
+// DefaultRepository is the hub repository a scoped package is assumed to come
+// from when its .aux4 does not declare one.
+const DefaultRepository = "public"
+
 // packageKey returns the identity a package is stored and looked up under in
-// the Library. Two packages published under different scopes (e.g.
-// aux4/browser and agent/browser) share the same bare Name, so keying by
-// Name alone collides ("Package browser already exists") the moment both
-// are loaded into one Library -- which happens whenever pkger rebuilds
-// global.aux4 from every installed package's own .aux4 file (install,
-// uninstall, verify). Keying by "scope/name" instead makes the two
-// distinct. Packages with no scope (the aux4 core builtins, and the merged
-// global.aux4 blob itself, which carries scope="" and is keyed by its file
-// path) keep using the bare Name/path, since those are already unique on
-// their own and scope-prefixing them would just be noise.
+// the Library: "<repository>:<scope>/<name>" (e.g. "public:aux4/browser").
+//
+//   - Different scopes are distinct: aux4/browser and agent/browser share the
+//     bare Name "browser" and both load (keying by Name alone made them collide
+//     with "Package browser already exists").
+//   - The same scope/name from different repositories is distinct
+//     (public:aux4/x vs system:aux4/x). A package with no "repository" field is
+//     treated as coming from the public repository.
+//   - The version is deliberately NOT part of the key: two versions of the same
+//     package from the same repository still collide, because only one version
+//     of a package can be installed.
+//   - Packages with no scope (the aux4 core builtins, a local .aux4 file, and the
+//     merged global.aux4 blob, which is keyed by its file path) keep their bare
+//     Name/path key, exactly as before.
+//
+// The key only identifies a package inside one in-memory Library. Load/merge
+// order is the insertion order kept in orderedPackages and never depends on the
+// key, and the key is never written to disk.
 func packageKey(pack core.Package) string {
-	if pack.Scope != "" {
-		return pack.Scope + "/" + pack.Name
+	if pack.Scope == "" {
+		return pack.Name
 	}
-	return pack.Name
+
+	repository := pack.Repository
+	if repository == "" {
+		repository = DefaultRepository
+	}
+
+	return repository + ":" + pack.Scope + "/" + pack.Name
 }
