@@ -184,6 +184,9 @@ type VirtualEnvironment struct {
 	OriginalActions []string
 	OriginalParams  *param.Parameters
 	profiles        map[string]*VirtualProfile
+	// profileOrder is the order profiles were first created in, so Save writes
+	// global.aux4 deterministically instead of in Go map-iteration order.
+	profileOrder []string
 }
 
 func (env *VirtualEnvironment) ListCommandsAvailable(profileName string) []string {
@@ -218,8 +221,8 @@ func (env *VirtualEnvironment) Save(path string) error {
 		Profiles: []core.Profile{},
 	}
 
-	for _, virtualProfile := range env.profiles {
-		profile := virtualProfile.GetProfile()
+	for _, profileName := range env.profileOrder {
+		profile := env.profiles[profileName].GetProfile()
 		aux4Package.Profiles = append(aux4Package.Profiles, profile)
 	}
 
@@ -280,6 +283,7 @@ func loadPackage(env *VirtualEnvironment, pack *core.Package) error {
 				Commands: make(map[string]core.Command),
 			}
 			env.profiles[profile.Name] = virtualProfile
+			env.profileOrder = append(env.profileOrder, profile.Name)
 		}
 
 		for _, command := range profile.Commands {
