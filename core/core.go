@@ -38,6 +38,7 @@ func WritePackage(path string, pack Package) error {
 
 type Package struct {
 	Path         string     `json:"-"`
+	Repository   string     `json:"repository,omitempty"`
 	Scope        string     `json:"scope"`
 	Name         string     `json:"name"`
 	Version      string     `json:"version"`

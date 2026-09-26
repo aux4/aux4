@@ -1,5 +1,29 @@
 # Release notes
 
+## Packages are identified by repository, scope and name
+
+Installed packages used to be identified by their bare `name`, ignoring `scope`. Installing two
+packages that share a short name under different scopes (for example `aux4/browser` and
+`agent/browser`) made any command that rebuilds `global.aux4` from every installed package's own
+`.aux4` file (install, uninstall, `verify`) fail with `Package browser already exists`, breaking
+the merge for every package, not just the colliding ones.
+
+A package is now identified by `repository:scope/name` (for example `public:aux4/browser`):
+
+- Packages that only share a short name in different scopes load side by side.
+- The same `scope/name` published to different repositories (for example `public` and `system`)
+  loads side by side. A package whose `.aux4` does not declare a `repository` is treated as
+  coming from `public`.
+- The version is not part of the identity: loading the same package twice from the same
+  repository is still an error, because only one version of a package can be installed.
+
+Nothing else changes. Packages are merged in exactly the order they are loaded, and when two
+packages define the same command the first one loaded still wins. The identity is only used in
+memory and is never written to disk, so an existing `global.aux4` keeps working as it is, with no
+migration. `global.aux4` is now also written with its profiles in a stable order (the order they
+were first defined in) instead of an arbitrary one, so rebuilding it from the same packages
+produces the same file every time.
+
 ## Daemon replies never lose command output
 
 A command forwarded to the aux4 daemon could reply before all of its output had been
