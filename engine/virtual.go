@@ -165,6 +165,18 @@ func (registry *SchemeRegistry) Get(scheme string) (core.SchemeProvider, bool) {
 	return provider, ok
 }
 
+// All returns every registered scheme -> provider mapping, so it can be
+// persisted back into a saved global.aux4 (see VirtualEnvironment.Save) —
+// otherwise a scheme a package declares would only resolve for the process
+// that first loaded that package's own .aux4, never for a command running
+// against the aggregated global environment pkger writes on install.
+func (registry *SchemeRegistry) All() map[string]core.SchemeProvider {
+	if registry == nil {
+		return nil
+	}
+	return registry.providers
+}
+
 type VirtualCommandExecutor interface {
 	Execute(env *VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error
 }
@@ -261,6 +273,12 @@ func (env *VirtualEnvironment) Save(path string) error {
 	if env.Hooks != nil {
 		for _, entry := range env.Hooks.All() {
 			aux4Package.Hooks = append(aux4Package.Hooks, entry.Hook)
+		}
+	}
+
+	if env.Schemes != nil {
+		if schemes := env.Schemes.All(); len(schemes) > 0 {
+			aux4Package.Schemes = schemes
 		}
 	}
 
