@@ -65,6 +65,16 @@ func CommandNotFoundError(message string) Aux4Error {
   }
 }
 
+// SchemeConflictError is returned when a scheme provider's put rejects a
+// write because the remote file changed since it was read (exit code 3, the
+// same convention aux4/cloud-file-sync uses for a single-object CAS put).
+func SchemeConflictError(uri string) Aux4Error {
+	return Aux4Error{
+		Message:  fmt.Sprintf("%s changed since it was read; retry", uri),
+		ExitCode: 3,
+	}
+}
+
 func PathNotFoundError() Aux4Error {
   return Aux4Error{
     Message: "Path not found",

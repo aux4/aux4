@@ -137,6 +137,34 @@ func IsHooksDisabled(params *param.Parameters) bool {
 	return false
 }
 
+// SchemeRegistry collects the <scheme>:// providers declared by installed
+// packages (package.Schemes), modeled on HookRegistry above. The first
+// package to declare a given scheme wins — later declarations of the same
+// scheme name are ignored, the same "first wins" rule RegisterExecutor uses.
+type SchemeRegistry struct {
+	providers map[string]core.SchemeProvider
+}
+
+func NewSchemeRegistry() *SchemeRegistry {
+	return &SchemeRegistry{providers: make(map[string]core.SchemeProvider)}
+}
+
+func (registry *SchemeRegistry) Register(scheme string, provider core.SchemeProvider) {
+	if _, exists := registry.providers[scheme]; exists {
+		return
+	}
+	registry.providers[scheme] = provider
+}
+
+// Get returns the provider registered for scheme, if any.
+func (registry *SchemeRegistry) Get(scheme string) (core.SchemeProvider, bool) {
+	if registry == nil {
+		return core.SchemeProvider{}, false
+	}
+	provider, ok := registry.providers[scheme]
+	return provider, ok
+}
+
 type VirtualCommandExecutor interface {
 	Execute(env *VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error
 }
@@ -173,6 +201,10 @@ type VirtualEnvironment struct {
 	// unchanged, through profile routing and nested in-process calls. nil means
 	// no policy — everything is callable and listed.
 	Security *security.Policy
+	// Schemes is the registry of <scheme>:// providers collected from installed
+	// packages at startup (see SchemeRegistry). Never nil after
+	// InitializeVirtualEnvironment.
+	Schemes *SchemeRegistry
 	// The invocation as the caller typed it, captured before aux4 injects anything.
 	// Profile routing consumes actions as it descends (MainExecute(env, actions[1:], ...)),
 	// so by the time a hook runs the original path is gone — it is kept here instead.
@@ -242,11 +274,13 @@ func (env *VirtualEnvironment) Save(path string) error {
 
 func InitializeVirtualEnvironment(library *Library, registry *VirtualExecutorRegisty) (*VirtualEnvironment, error) {
 	hookRegistry := &HookRegistry{}
+	schemeRegistry := NewSchemeRegistry()
 
 	env := VirtualEnvironment{
 		CurrentProfile: "main",
 		Registry:       registry,
 		Hooks:          hookRegistry,
+		Schemes:        schemeRegistry,
 		profiles:       make(map[string]*VirtualProfile),
 	}
 
@@ -264,6 +298,10 @@ func InitializeVirtualEnvironment(library *Library, registry *VirtualExecutorReg
 
 		for _, hook := range pack.Hooks {
 			hookRegistry.Register(hook, pkgFullName, i)
+		}
+
+		for scheme, provider := range pack.Schemes {
+			schemeRegistry.Register(scheme, provider)
 		}
 	}
 

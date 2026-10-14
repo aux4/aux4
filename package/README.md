@@ -565,6 +565,95 @@ aux4 other --security '{"allow":["*"]}'   # still Command not found
 > no shell metacharacters). A call piped or redirected (`aux4 other | jq`) shells
 > out to a fresh top-level process and is re-evaluated by the policy.
 
+## Remote File Paths (`<scheme>://`)
+
+A variable's value is normally a local file path. A package can additionally
+mark a variable as a **file variable** so that a value shaped like
+`<scheme>://...` (e.g. `cloud://my-package/path/to/file.txt`) is staged
+to/from a remote location around the command's execution, using whichever
+installed package registers that scheme. A value with no `://` is still a
+plain local path and is never touched — this is entirely opt-in and additive.
+
+```json
+{
+  "name": "process",
+  "execute": [
+    "nout:cat ${input}",
+    "file:${output}:${response}"
+  ],
+  "help": {
+    "variables": [
+      { "name": "input", "text": "input file", "file": "read" },
+      { "name": "output", "text": "output file", "file": "write" }
+    ]
+  }
+}
+```
+
+```bash
+aux4 process --input cloud://my-app/in.txt --output cloud://my-app/out.txt
+aux4 process --input local-in.txt --output local-out.txt   # unchanged, no scheme involved
+```
+
+* `help.variables[].file` is `"read"`, `"write"` or `"readwrite"`. It declares
+  the variable as a file slot; it does not by itself require a remote value.
+* For `read`/`readwrite`, a `<scheme>://` value is fetched to a local temp
+  file before the command runs, and the variable is given that local path —
+  the command's own execute steps never see the URI.
+* For `write`/`readwrite`, if the command succeeds (exit 0) and the file's
+  content changed (or it was newly created), the temp file is written back to
+  the remote URI. A failing command never writes back.
+* The `file:` executor (`file:<path>:<content>`) also understands a
+  `<scheme>://` path, whether it is written literally or comes from a `${var}`
+  that resolves to one — `file:cloud://my-app/out.txt:${content}` works with
+  no variable declaration at all.
+* Writing back uses optimistic concurrency: the remote file's version (read
+  alongside its content) is sent back as `If-Match`, or `If-None-Match` for a
+  file that did not exist yet. If the remote changed in between, the write is
+  rejected as a conflict (exit code 3) instead of silently overwriting it.
+
+### Registering a scheme (for package authors)
+
+A package registers the scheme(s) it serves in its `.aux4` metadata, next to
+`profiles`:
+
+```json
+{
+  "schemes": {
+    "cloud": {
+      "get": "cloud files get",
+      "put": "cloud files upload"
+    }
+  }
+}
+```
+
+`get` and `put` are plain aux4 command lines (no `aux4 ` prefix) that aux4
+core invokes itself:
+
+* **get** — `aux4 <get> --uri <uri> --to <localFile>` must fetch the remote
+  file to `<localFile>` and print `{"exists":true|false,"version":"<etag>"}`
+  on stdout. A missing remote file is `exists:false` with exit code `0` — not
+  an error.
+* **put** — `aux4 <put> --uri <uri> --file <localFile> --ifMatch <etag|none>`
+  must write `<localFile>` back to the remote path. `--ifMatch none` means
+  "create only if absent" (`If-None-Match: *`); any other value is the version
+  read by a prior `get` (`If-Match`). Exit code `3` means the remote changed
+  since it was read (conflict); any other non-zero exit is a regular error.
+
+See `aux4/cloud` for the reference implementation of `cloud://`.
+
+If no installed package registers a scheme, aux4 fails with:
+
+```text
+no package provides <scheme>://; install aux4/<scheme>
+```
+
+The command-exposure [security policy](#security-policy) applies to `get` and
+`put` exactly as it does to any other aux4 command: since both are invoked as
+subprocesses, a policy set via `AUX4_SECURITY` governs them like it would any
+shell-out, with no extra configuration needed.
+
 ## Docs
 
 Full [documentation](https://aux4.io/docs).

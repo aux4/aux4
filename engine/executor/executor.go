@@ -205,6 +205,18 @@ func MainExecute(env *engine.VirtualEnvironment, actions []string, params *param
 		return err
 	}
 
+	// Stage any declared file:// variable (help.variables[].file) whose value
+	// is a <scheme>:// URI to a local temp file, substituting the temp path
+	// into params. Variables with no declared "file" mode, or whose value has
+	// no "://", are left untouched. Temp files are always cleaned up; a
+	// successful write/readwrite variable is put back to its remote URI once
+	// the command's execute steps finish (see below).
+	schemeFiles, err := resolveSchemeFileVariables(env, command, actions, params)
+	if err != nil {
+		return err
+	}
+	defer cleanupSchemeFiles(schemeFiles)
+
 	// Determine if hooks should run
 	shouldRunHooks := !command.NoHooks && !env.InHook && !engine.IsHooksDisabled(params)
 
@@ -320,6 +332,12 @@ func MainExecute(env *engine.VirtualEnvironment, actions []string, params *param
 			}
 		}
 
+	}
+
+	// A failed command never writes its staged file back -- only a successful
+	// run (exit 0) pushes "write"/"readwrite" variables to their remote URI.
+	if execErr == nil {
+		execErr = finalizeSchemeFileVariables(env, schemeFiles)
 	}
 
 	// Run after or error hooks
@@ -1074,14 +1092,10 @@ type FileCommandExecutor struct {
 func (executor *FileCommandExecutor) Execute(env *engine.VirtualEnvironment, command core.Command, actions []string, params *param.Parameters) error {
 	expression := strings.TrimPrefix(executor.Command, "file:")
 
-	// Split into path and content at the first ":"
-	parts := strings.SplitN(expression, ":", 2)
-	if len(parts) != 2 {
-		return core.InternalError("file: requires format file:<path>:<content>", nil)
+	pathExpr, contentExpr, err := splitFileExpression(expression)
+	if err != nil {
+		return err
 	}
-
-	pathExpr := parts[0]
-	contentExpr := parts[1]
 
 	filePath, err := param.InjectParameters(command, pathExpr, actions, params)
 	if err != nil {
@@ -1097,6 +1111,14 @@ func (executor *FileCommandExecutor) Execute(env *engine.VirtualEnvironment, com
 	content, err := param.InjectParameters(command, contentExpr, actions, params)
 	if err != nil {
 		return err
+	}
+
+	// filePath may be a literal "<scheme>://..." URI (resolved straight out of
+	// pathExpr) or a ${var} that resolved to one -- either way it is handled
+	// the same: write to a local temp file, then CAS-put it back remotely.
+	// A plain local path (no "://") is completely unaffected.
+	if scheme, ok := param.ParseSchemeURI(filePath); ok {
+		return writeSchemeFile(env, scheme, filePath, content, append)
 	}
 
 	if append {
