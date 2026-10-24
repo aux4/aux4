@@ -31,7 +31,7 @@ func promptMultiSelect(variable core.CommandHelpVariable) ([]any, error) {
 	fd := int(os.Stdin.Fd())
 	oldState, err := term.MakeRaw(fd)
 	if err != nil {
-		return nil, core.InternalError("Error initializing terminal for multi-select", err)
+		return nil, core.InternalError(missingParameterMessage(variable), err)
 	}
 	defer term.Restore(fd, oldState)
 

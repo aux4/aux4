@@ -1,5 +1,15 @@
 # Release notes
 
+## A missing required parameter now names the flag to pass
+
+When a required variable had no value and there was no TTY to prompt against (scripts, CI, AI
+agents), aux4 reported `Error to enter the value of <name>` — a message that describes the failed
+interactive prompt, not what the caller should do about it. The error is now `Missing required
+parameter --<name>: <help text>` (the `: <help text>` part is omitted when the variable has no
+help text), so a non-interactive caller can tell exactly which flag to pass. `Ctrl+C` during an
+actual interactive prompt still aborts cleanly with the same exit behavior as before — only the
+non-interactive error text changed.
+
 ## Packages are identified by repository, scope and name
 
 Installed packages used to be identified by their bare `name`, ignoring `scope`. Installing two

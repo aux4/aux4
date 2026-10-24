@@ -312,7 +312,7 @@ func promptText(variable core.CommandHelpVariable) (string, error) {
 		if err.Error() == "^C" {
 			return "", core.UserAbortedError()
 		}
-		return "", core.InternalError("Error to enter the value of "+variable.Name, err)
+		return "", core.InternalError(missingParameterMessage(variable), err)
 	}
 
 	return text, nil
@@ -328,8 +328,23 @@ func promptSelect(variable core.CommandHelpVariable) (string, error) {
 		if err.Error() == "^C" {
 			return "", core.UserAbortedError()
 		}
-		return "", core.InternalError("Error to select the value of "+variable.Name, err)
+		return "", core.InternalError(missingParameterMessage(variable), err)
 	}
 
 	return text, nil
+}
+
+// missingParameterMessage builds the error text shown when a required
+// variable has no value and the prompt could not be completed (typically
+// because there is no TTY to prompt against, e.g. CI, pipes, AI agents).
+// It tells the caller exactly which flag to pass instead of describing the
+// failed prompt attempt.
+func missingParameterMessage(variable core.CommandHelpVariable) string {
+	message := "Missing required parameter --" + variable.Name
+
+	if variable.Text != "" {
+		message += ": " + variable.Text
+	}
+
+	return message
 }
