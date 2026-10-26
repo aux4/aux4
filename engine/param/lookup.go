@@ -276,17 +276,22 @@ func (l PromptLookup) Get(parameters *Parameters, command core.Command, action [
 		return nil, nil
 	}
 
+	// Collect flags the caller passed that this command doesn't declare. If the prompt
+	// can't complete (no TTY), the error can then point at one of them as a likely
+	// wrong-name guess instead of just naming the flag that was never passed at all.
+	unexpected := UnexpectedParameters(command, parameters)
+
 	if variable.Multiple && len(variable.Options) > 0 {
-		return promptMultiSelect(*variable)
+		return promptMultiSelect(*variable, unexpected)
 	}
 
 	var text string
 	var err error
 
 	if variable.Options != nil && len(variable.Options) > 0 {
-		text, err = promptSelect(*variable)
+		text, err = promptSelect(*variable, unexpected)
 	} else {
-		text, err = promptText(*variable)
+		text, err = promptText(*variable, unexpected)
 	}
 
 	if err != nil {
@@ -296,7 +301,7 @@ func (l PromptLookup) Get(parameters *Parameters, command core.Command, action [
 	return strings.TrimSpace(text), nil
 }
 
-func promptText(variable core.CommandHelpVariable) (string, error) {
+func promptText(variable core.CommandHelpVariable, unexpected []string) (string, error) {
 	var prompt promptui.Prompt
 
 	var text = fmt.Sprintf("%s %s", variable.Name, output.Gray(variable.Text))
@@ -312,13 +317,13 @@ func promptText(variable core.CommandHelpVariable) (string, error) {
 		if err.Error() == "^C" {
 			return "", core.UserAbortedError()
 		}
-		return "", core.InternalError(missingParameterMessage(variable), err)
+		return "", core.InternalError(missingParameterMessage(variable, unexpected), err)
 	}
 
 	return text, nil
 }
 
-func promptSelect(variable core.CommandHelpVariable) (string, error) {
+func promptSelect(variable core.CommandHelpVariable, unexpected []string) (string, error) {
 	var text = fmt.Sprintf("%s %s", variable.Name, output.Gray(variable.Text))
 
 	prompt := promptui.Select{Label: text, HideSelected: true, Items: variable.Options}
@@ -328,7 +333,7 @@ func promptSelect(variable core.CommandHelpVariable) (string, error) {
 		if err.Error() == "^C" {
 			return "", core.UserAbortedError()
 		}
-		return "", core.InternalError(missingParameterMessage(variable), err)
+		return "", core.InternalError(missingParameterMessage(variable, unexpected), err)
 	}
 
 	return text, nil
@@ -339,11 +344,21 @@ func promptSelect(variable core.CommandHelpVariable) (string, error) {
 // because there is no TTY to prompt against, e.g. CI, pipes, AI agents).
 // It tells the caller exactly which flag to pass instead of describing the
 // failed prompt attempt.
-func missingParameterMessage(variable core.CommandHelpVariable) string {
+//
+// unexpected is the set of flags the caller passed that this command does not
+// declare. When one of them looks like it was meant for the missing variable
+// (e.g. --id passed where the command declares --messageId), it is named and
+// suggested, since a caller that passed the wrong flag name needs to know
+// that -- not just that the right one is still missing.
+func missingParameterMessage(variable core.CommandHelpVariable, unexpected []string) string {
 	message := "Missing required parameter --" + variable.Name
 
 	if variable.Text != "" {
 		message += ": " + variable.Text
+	}
+
+	if suggestion := suggestUnexpectedParameter(variable.Name, unexpected); suggestion != "" {
+		message += fmt.Sprintf(" (you passed --%s, which this command does not have — did you mean --%s?)", suggestion, variable.Name)
 	}
 
 	return message

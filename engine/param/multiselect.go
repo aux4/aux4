@@ -18,7 +18,7 @@ type multiSelect struct {
 	rendered bool
 }
 
-func promptMultiSelect(variable core.CommandHelpVariable) ([]any, error) {
+func promptMultiSelect(variable core.CommandHelpVariable, unexpected []string) ([]any, error) {
 	label := fmt.Sprintf("%s %s", variable.Name, output.Gray(variable.Text))
 
 	ms := &multiSelect{
@@ -31,7 +31,7 @@ func promptMultiSelect(variable core.CommandHelpVariable) ([]any, error) {
 	fd := int(os.Stdin.Fd())
 	oldState, err := term.MakeRaw(fd)
 	if err != nil {
-		return nil, core.InternalError(missingParameterMessage(variable), err)
+		return nil, core.InternalError(missingParameterMessage(variable, unexpected), err)
 	}
 	defer term.Restore(fd, oldState)
 

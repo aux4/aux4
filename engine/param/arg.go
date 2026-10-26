@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode"
@@ -605,6 +606,135 @@ func ValidateParameterNames(command core.Command, params *Parameters) error {
 // IsReservedParameter reports whether a parameter belongs to aux4 core.
 func IsReservedParameter(name string) bool {
 	return reservedParameters[name]
+}
+
+// UnexpectedParameters returns the names of parameters passed on the command line
+// that this command does not declare, skipping core-reserved and core-injected names.
+// It is the raw material for suggesting "you passed --x, did you mean --y?" when a
+// required parameter turns out missing -- the flag wasn't silently dropped, it just
+// didn't match anything declared, so it's worth naming back to the caller.
+//
+// Order is alphabetical so callers (and their error messages) are deterministic
+// regardless of map iteration order or argv order.
+func UnexpectedParameters(command core.Command, params *Parameters) []string {
+	declared := make(map[string]bool)
+	if command.Help != nil {
+		for _, variable := range command.Help.Variables {
+			if variable != nil && variable.Name != "" {
+				declared[variable.Name] = true
+			}
+		}
+	}
+
+	seen := make(map[string]bool)
+	unexpected := make([]string, 0)
+	for name := range params.params {
+		base := name
+		if i := strings.Index(base, "."); i >= 0 {
+			base = base[:i]
+		}
+
+		if declared[base] || reservedParameters[base] || injectedParameters[base] || strings.HasPrefix(base, "__") {
+			continue
+		}
+
+		if !seen[base] {
+			seen[base] = true
+			unexpected = append(unexpected, base)
+		}
+	}
+
+	sort.Strings(unexpected)
+	return unexpected
+}
+
+// suggestUnexpectedParameter picks, among the flags the caller passed that aren't
+// declared, the one most likely meant to be the missing parameter -- so the error can
+// say "did you mean --messageId?" even for a name that doesn't look like a typo of it
+// (e.g. --id vs --messageId), which ValidateParameterNames' near-miss check does not
+// catch.
+//
+// Preference order:
+//  1. A name that contains the other, case-insensitive (id ⊂ messageId) -- the
+//     strongest signal that one is a shorthand for the other.
+//  2. Otherwise, the candidate with the smallest edit distance to the missing name.
+//  3. If there is exactly one unexpected flag, it is always the suggestion: a lone
+//     extra flag next to a lone missing parameter is this call's only guess, even
+//     when the names share nothing in common.
+//
+// Returns "" when there is nothing to suggest.
+func suggestUnexpectedParameter(missingName string, unexpected []string) string {
+	if len(unexpected) == 0 {
+		return ""
+	}
+
+	if len(unexpected) == 1 {
+		return unexpected[0]
+	}
+
+	lowerMissing := strings.ToLower(missingName)
+	for _, candidate := range unexpected {
+		lowerCandidate := strings.ToLower(candidate)
+		if strings.Contains(lowerMissing, lowerCandidate) || strings.Contains(lowerCandidate, lowerMissing) {
+			return candidate
+		}
+	}
+
+	best := unexpected[0]
+	bestDistance := levenshteinDistance(lowerMissing, strings.ToLower(best))
+	for _, candidate := range unexpected[1:] {
+		distance := levenshteinDistance(lowerMissing, strings.ToLower(candidate))
+		if distance < bestDistance {
+			bestDistance = distance
+			best = candidate
+		}
+	}
+
+	return best
+}
+
+// levenshteinDistance returns the classic edit distance between two strings: the
+// minimum number of single-character insertions, deletions or substitutions needed
+// to turn a into b. Used to rank unexpected-flag suggestions when no substring
+// relationship exists between the candidate and the missing parameter name.
+func levenshteinDistance(a, b string) int {
+	ar := []rune(a)
+	br := []rune(b)
+	rows := len(ar) + 1
+	cols := len(br) + 1
+
+	dist := make([][]int, rows)
+	for i := 0; i < rows; i++ {
+		dist[i] = make([]int, cols)
+		dist[i][0] = i
+	}
+	for j := 0; j < cols; j++ {
+		dist[0][j] = j
+	}
+
+	for i := 1; i < rows; i++ {
+		for j := 1; j < cols; j++ {
+			cost := 1
+			if ar[i-1] == br[j-1] {
+				cost = 0
+			}
+
+			deletion := dist[i-1][j] + 1
+			insertion := dist[i][j-1] + 1
+			substitution := dist[i-1][j-1] + cost
+
+			min := deletion
+			if insertion < min {
+				min = insertion
+			}
+			if substitution < min {
+				min = substitution
+			}
+			dist[i][j] = min
+		}
+	}
+
+	return dist[rows-1][cols-1]
 }
 
 func (p *Parameters) String() string {

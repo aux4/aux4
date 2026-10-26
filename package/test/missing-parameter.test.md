@@ -56,6 +56,36 @@ instead of describing the failed prompt attempt.
               }
             ]
           }
+        },
+        {
+          "name": "get-message",
+          "execute": [
+            "log:message ${messageId}"
+          ],
+          "help": {
+            "text": "get a message by id",
+            "variables": [
+              {
+                "name": "messageId",
+                "text": "The message ID to retrieve"
+              }
+            ]
+          }
+        },
+        {
+          "name": "delete-event",
+          "execute": [
+            "log:deleted ${eventId}"
+          ],
+          "help": {
+            "text": "delete a calendar event",
+            "variables": [
+              {
+                "name": "eventId",
+                "text": "The event ID to delete"
+              }
+            ]
+          }
         }
       ]
     }
@@ -105,4 +135,46 @@ aux4 greet --name Joe
 
 ```expect
 hello Joe
+```
+
+## with an unexpected flag that explains the missing parameter
+
+### it names the unexpected flag and suggests the declared one
+
+```execute
+aux4 get-message --id msg-ship-9f21 </dev/null
+```
+
+```error
+Missing required parameter --messageId: The message ID to retrieve (you passed --id, which this command does not have — did you mean --messageId?)
+```
+
+### it picks the best of two unexpected flags
+
+```execute
+aux4 get-message --format json --id msg-ship-9f21 </dev/null
+```
+
+```error
+Missing required parameter --messageId: The message ID to retrieve (you passed --id, which this command does not have — did you mean --messageId?)
+```
+
+### a close-name typo is still caught before any prompt, unchanged
+
+```execute
+aux4 delete-event --event-id evt-42 </dev/null
+```
+
+```error
+Unknown parameter --event-id, did you mean --eventId?
+```
+
+### with no unexpected flags, the message is unchanged
+
+```execute
+aux4 get-message </dev/null
+```
+
+```error
+Missing required parameter --messageId: The message ID to retrieve
 ```
