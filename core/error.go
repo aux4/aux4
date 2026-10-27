@@ -2,6 +2,7 @@ package core
 
 import (
   "fmt"
+  "strings"
 )
 
 type Aux4Error struct {
@@ -63,6 +64,35 @@ func CommandNotFoundError(message string) Aux4Error {
     Message: fmt.Sprintf("Command not found: %s", message),
     ExitCode: 127,
   }
+}
+
+// CommandNotFoundDetailedError builds an actionable "command not found" message for
+// a profile-tree lookup: it names the command that wasn't found and the path typed
+// to reach the level that failed, lists the sibling commands that level actually
+// has, and -- when the caller supplies one -- suggests the command they probably
+// meant. The first line always starts with "Command not found:" so any existing
+// caller or test matching on that prefix keeps working.
+func CommandNotFoundDetailedError(name string, prefix string, available []string, suggestion string) Aux4Error {
+	var b strings.Builder
+
+	if prefix != "" {
+		fmt.Fprintf(&b, "Command not found: `%s` under `aux4 %s`.", name, prefix)
+	} else {
+		fmt.Fprintf(&b, "Command not found: `%s`.", name)
+	}
+
+	if len(available) > 0 {
+		fmt.Fprintf(&b, "\nAvailable commands here: %s", strings.Join(available, ", "))
+	}
+
+	if suggestion != "" {
+		fmt.Fprintf(&b, "\nDid you mean: %s", suggestion)
+	}
+
+	return Aux4Error{
+		Message:  b.String(),
+		ExitCode: 127,
+	}
 }
 
 func PathNotFoundError() Aux4Error {

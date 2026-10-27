@@ -111,7 +111,7 @@ func MainExecute(env *engine.VirtualEnvironment, actions []string, params *param
 	commandName := actions[0]
 	command, exists := virtualProfile.Commands[commandName]
 	if !exists {
-		return core.CommandNotFoundError(commandName)
+		return commandNotFoundError(env, virtualProfile, actions)
 	}
 
 	if params.Has("help") && len(actions) == 1 {

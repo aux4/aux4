@@ -1,5 +1,31 @@
 # Release notes
 
+## "Command not found" names where it failed and suggests a fix
+
+A command typed under the wrong parent (for example `aux4 ai agent browser find` instead of
+`aux4 agent browser find`) used to fail with just `Command not found: browser` — no indication of
+where the lookup stopped or what to try instead, so a retry of the exact same call was the only
+move left.
+
+The message now names the level where resolution failed, lists the sibling commands actually
+available there (capped at 15, private commands excluded), and — when one can be found — suggests
+the command that was probably meant:
+
+- If the missing word (together with whatever follows it) matches a path elsewhere in the
+  installed command tree, that full path is suggested, e.g.
+  `Did you mean: aux4 agent browser find`.
+- Otherwise, a sibling at the same level whose spelling is within an edit distance of 2 is
+  suggested instead (a likely typo).
+
+```text
+Command not found: `browser` under `aux4 ai agent`.
+Available commands here: ask, chat
+Did you mean: aux4 agent browser find
+```
+
+The first line still always starts with `Command not found:`, and the exit code is unchanged
+(127), so anything already matching on that prefix keeps working.
+
 ## A missing required parameter now names the flag to pass
 
 When a required variable had no value and there was no TTY to prompt against (scripts, CI, AI

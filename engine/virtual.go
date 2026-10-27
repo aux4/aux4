@@ -30,6 +30,19 @@ func (profile *VirtualProfile) GetProfile() core.Profile {
 	}
 }
 
+// VisibleCommandNames returns the non-private command names declared on this
+// profile, in load order. It is the list shown next to a "command not found"
+// error, so a caller sees what actually is callable at the level that failed.
+func (profile *VirtualProfile) VisibleCommandNames() []string {
+	names := make([]string, 0, len(profile.CommandsOrdered))
+	for _, name := range profile.CommandsOrdered {
+		if !profile.Commands[name].Private {
+			names = append(names, name)
+		}
+	}
+	return names
+}
+
 type HookEntry struct {
 	Hook         core.Hook
 	PackageName  string
@@ -205,6 +218,98 @@ func (env *VirtualEnvironment) ListCommandsAvailable(profileName string) []strin
 
 func (env *VirtualEnvironment) GetProfile(name string) *VirtualProfile {
 	return env.profiles[name]
+}
+
+// FindCommandPath searches the installed command tree, breadth-first from "main",
+// for a sequence of command names whose last segments are exactly `name` followed
+// by `remaining`, in order. It is the lookup behind "Did you mean: aux4 <path>" when
+// a command is typed under the wrong parent (e.g. "ai agent browser find" instead of
+// "agent browser find") -- it doesn't know anything about which packages contributed
+// what, it just walks the profile graph that is already loaded in memory.
+//
+// Returns nil when no such path exists. Private commands are never matched or
+// walked into. BFS visits each profile at most once, so a diamond in the routing
+// graph (two different commands landing on the same profile) only ever yields the
+// first, shortest path reaching it -- cheap and deterministic over exhaustive.
+func (env *VirtualEnvironment) FindCommandPath(name string, remaining []string) []string {
+	target := make([]string, 0, len(remaining)+1)
+	target = append(target, name)
+	target = append(target, remaining...)
+
+	type node struct {
+		profile string
+		path    []string
+	}
+
+	visited := map[string]bool{"main": true}
+	queue := []node{{profile: "main", path: nil}}
+
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+
+		profile := env.profiles[current.profile]
+		if profile == nil {
+			continue
+		}
+
+		for _, commandName := range profile.CommandsOrdered {
+			command := profile.Commands[commandName]
+			if command.Private {
+				continue
+			}
+
+			newPath := make([]string, len(current.path)+1)
+			copy(newPath, current.path)
+			newPath[len(current.path)] = command.Name
+
+			if pathEndsWith(newPath, target) {
+				return newPath
+			}
+
+			if targetProfile, ok := routingTarget(command); ok && !visited[targetProfile] {
+				visited[targetProfile] = true
+				queue = append(queue, node{profile: targetProfile, path: newPath})
+			}
+		}
+	}
+
+	return nil
+}
+
+// pathEndsWith reports whether the last len(suffix) elements of path equal suffix,
+// in order.
+func pathEndsWith(path []string, suffix []string) bool {
+	if len(path) < len(suffix) {
+		return false
+	}
+	offset := len(path) - len(suffix)
+	for i, part := range suffix {
+		if path[offset+i] != part {
+			return false
+		}
+	}
+	return true
+}
+
+// routingTarget returns the profile a command statically routes to via a single
+// `profile:name` execute step, and whether one could be determined. A command with
+// more than one execute step, one that isn't a profile: step, or a profile name that
+// still contains an unresolved "${...}" expression has no statically known target
+// and is treated as a leaf for search purposes.
+func routingTarget(command core.Command) (string, bool) {
+	if len(command.Execute) != 1 {
+		return "", false
+	}
+	step := command.Execute[0]
+	if !strings.HasPrefix(step, "profile:") {
+		return "", false
+	}
+	target := strings.TrimPrefix(step, "profile:")
+	if strings.Contains(target, "${") {
+		return "", false
+	}
+	return target, true
 }
 
 func (env *VirtualEnvironment) SetProfile(profile string) error {
