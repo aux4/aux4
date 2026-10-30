@@ -576,7 +576,12 @@ func parseParam(command core.Command, actions []string, params *Parameters, vari
 					if expressionValue != "" {
 						expressionValue += " "
 					}
-					expressionValue += fmt.Sprintf("--%s '%s'", paramName, item)
+					// Each item is raw (straight from params.Expr, bypassing
+					// getVariableValueAsString's escape=true path below), so it must
+					// be shell-escaped here exactly like the single-value fallback —
+					// otherwise a value containing a single quote breaks out of the
+					// '...' wrapper and injects shell commands (CORE-044).
+					expressionValue += fmt.Sprintf("--%s '%s'", paramName, valueToString(item, true))
 				}
 			}
 		}
