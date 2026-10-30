@@ -196,3 +196,136 @@ func TestConfigLookupEscapesVariousPayloads(t *testing.T) {
 		t.Fatalf("command injection via ConfigLookup.Get: marker file was created from one of the payloads")
 	}
 }
+
+// --- CORE-046 sweep: EncryptedParameterLookup.Get / DefaultLookup.Get also
+// shell out to "aux4 encrypter decrypt --iv <iv> --secret <secret> <value>"
+// via a bare fmt.Sprintf with no quoting at all -- the same class of bug as
+// configSecurityValue and the original ConfigLookup.Get, just one hop
+// further down. --iv/--secret are ordinary params an attacker fully
+// controls, and <value> is either the raw CLI value of an Encrypt:true
+// variable or the variable's own Default string -- both potentially
+// attacker/config-authored.
+
+// encryptVariable returns a core.Command with a single Encrypt:true variable.
+func encryptVariable(name string, deflt *string) core.Command {
+	return core.Command{
+		Help: &core.CommandHelp{
+			Variables: []*core.CommandHelpVariable{
+				{Name: name, Encrypt: true, Default: deflt},
+				{Name: "iv"},
+				{Name: "secret"},
+			},
+		},
+	}
+}
+
+func TestEncryptedParameterLookupEscapesInjectionViaIvSecretAndValue(t *testing.T) {
+	marker := filepath.Join(t.TempDir(), "pwned")
+	payload := "$(touch " + marker + ")"
+
+	// fake "aux4 encrypter decrypt ..." that would run the injected command
+	// if the shell ever re-parsed an unescaped payload as a substitution.
+	fakeAux4 := withFakeDecrypt(t)
+	_ = fakeAux4
+
+	command := encryptVariable("foo", nil)
+
+	cases := []struct {
+		name   string
+		args   []string
+	}{
+		{"payload in iv", []string{"--foo", "secretvalue", "--iv", payload, "--secret", "s3"}},
+		{"payload in secret", []string{"--foo", "secretvalue", "--iv", "iv1", "--secret", payload}},
+		{"payload in value", []string{"--foo", payload, "--iv", "iv1", "--secret", "s3"}},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			_, _, params := ParseArgs(c.args)
+			lookup := EncryptedParameterLookup{}
+			_, _ = lookup.Get(&params, command, []string{}, "foo")
+		})
+	}
+
+	if _, err := exec.Command("test", "-e", marker).CombinedOutput(); err == nil {
+		t.Fatalf("command injection via EncryptedParameterLookup.Get: marker file was created")
+	}
+}
+
+func TestDefaultLookupEscapesInjectionViaIvSecretAndDefaultValue(t *testing.T) {
+	marker := filepath.Join(t.TempDir(), "pwned")
+	payload := "$(touch " + marker + ")"
+
+	withFakeDecrypt(t)
+
+	cases := []struct {
+		name string
+		args []string
+		dflt string
+	}{
+		{"payload in iv", []string{"--iv", payload, "--secret", "s3"}, "encryptedvalue"},
+		{"payload in secret", []string{"--iv", "iv1", "--secret", payload}, "encryptedvalue"},
+		{"payload in default", []string{"--iv", "iv1", "--secret", "s3"}, payload},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			dflt := c.dflt
+			command := encryptVariable("foo", &dflt)
+			_, _, params := ParseArgs(c.args)
+			lookup := DefaultLookup{}
+			_, _ = lookup.Get(&params, command, []string{}, "foo")
+		})
+	}
+
+	if _, err := exec.Command("test", "-e", marker).CombinedOutput(); err == nil {
+		t.Fatalf("command injection via DefaultLookup.Get: marker file was created")
+	}
+}
+
+// withFakeDecrypt puts a fake "aux4" on PATH that understands
+// "encrypter decrypt" (prints a literal decrypted value) so the lookups
+// under test complete their round trip instead of failing on a missing
+// binary -- a real exploit would succeed the same way a real decrypt call
+// would, this just proves it never does.
+func withFakeDecrypt(t *testing.T) (captureFile string) {
+	t.Helper()
+	dir := t.TempDir()
+	captureFile = filepath.Join(dir, "capture.txt")
+
+	script := "#!/bin/sh\n" +
+		"for a in \"$@\"; do printf '%s\\n' \"$a\" >> \"" + captureFile + "\"; done\n" +
+		"echo 'decrypted'\n"
+
+	fakeAux4 := filepath.Join(dir, "aux4")
+	if err := os.WriteFile(fakeAux4, []byte(script), 0755); err != nil {
+		t.Fatalf("failed to write fake aux4: %v", err)
+	}
+
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	return captureFile
+}
+
+// TestEncryptedParameterLookupNormalValuesStillWork proves ordinary
+// iv/secret/value round-trip byte-identically through the now-escaped
+// command (no behavior change for the common case).
+func TestEncryptedParameterLookupNormalValuesStillWork(t *testing.T) {
+	captureFile := withFakeDecrypt(t)
+	command := encryptVariable("foo", nil)
+	_, _, params := ParseArgs([]string{"--foo", "cGxhaW4=", "--iv", "abc123", "--secret", "topsecret"})
+
+	lookup := EncryptedParameterLookup{}
+	value, err := lookup.Get(&params, command, []string{}, "foo")
+	if err != nil {
+		t.Fatalf("Get returned error: %v", err)
+	}
+	if value != "decrypted" {
+		t.Errorf("got %q, want %q", value, "decrypted")
+	}
+
+	args := readCaptured(t, captureFile)
+	want := []string{"encrypter", "decrypt", "--iv", "abc123", "--secret", "topsecret", "cGxhaW4="}
+	if fmt.Sprint(args) != fmt.Sprint(want) {
+		t.Errorf("got args %q, want %q", args, want)
+	}
+}

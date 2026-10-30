@@ -1,4 +1,4 @@
-# ConfigLookup --configFile/--config (CORE-044)
+# ConfigLookup --configFile/--config (CORE-044 / CORE-046)
 
 `ConfigLookup.Get` (`engine/param/lookup.go`) resolves a command variable from a
 config file by shelling out to `aux4 config get --file <configFile> --name
@@ -7,6 +7,12 @@ into that command line with no quoting at all — not even unquoted-but-safe;
 a plain space already broke it. CORE-044 (5.2.14) wraps both in the same
 single-quote + escape treatment `value()`/`param()` already use. These tests
 cover the real end-to-end variable-resolution path: a `config` var.
+
+`security.go`'s `configSecurityValue` (checked first, on every invocation
+that sets `--configFile`/`--config`) had the identical unescaped-shell-out
+bug one layer up (CORE-046) — fixed the same way. The "shell injection via
+--configFile" section below exercises that sink end-to-end now that both
+layers are safe.
 
 ```file:.aux4
 {
@@ -106,24 +112,20 @@ config:
     port: 3000
 ```
 
-A malicious `--configFile` end-to-end is deliberately NOT exercised here: on
-current `main` (5.2.14), any `--configFile` whose value is not a real,
-readable, "security"-free file — which is exactly what an injection payload
-looks like — makes `resolveSecurityPolicy`/`configSecurityValue`
-(`security.go`, unrelated to this file) build an UNQUOTED `aux4 config get
---file <configFile> ...` and run it through `sh -c`, on *every* invocation
-that sets `--configFile`, independent of this command's own variables. That
-is a separate, still-open shell-injection bug (not fixed by CORE-044;
-tracked separately) that would make a `--configFile` e2e test here pass or
-fail for the wrong reason. `ConfigLookup.Get`'s own `--configFile` escaping
-is covered in isolation instead, by the Go unit tests in
-`engine/param/lookup_test.go` (which call it directly, bypassing
-`security.go` entirely). `--config` (the `--name` flag) is not affected by
-that other bug — the fast-path skip in `configSecurityValue` only inspects
-`configFile`'s content, not `config` — so it is safe to exercise end-to-end
-here.
+Until CORE-046 shipped, a malicious `--configFile` end-to-end was
+deliberately NOT exercised here: on `main` through 5.2.14, any
+`--configFile` whose value was not a real, readable, "security"-free file —
+which is exactly what an injection payload looks like — made
+`resolveSecurityPolicy`/`configSecurityValue` (`security.go`, unrelated to
+this file) build an UNQUOTED `aux4 config get --file <configFile> ...` and
+run it through `sh -c`, on *every* invocation that sets `--configFile`,
+independent of this command's own variables. That intercepted the payload
+first and would have made a `--configFile` e2e test here pass or fail for
+the wrong reason. CORE-046 fixed `configSecurityValue` to single-quote +
+escape the same way `ConfigLookup.Get` already does, so a `--configFile`
+injection can now be exercised end-to-end here too, alongside `--config`.
 
-### should not create the injected marker file
+### should not create the injected marker file (via --config)
 
 ```execute
 aux4 connect --configFile config.yaml --config "'; touch injected.marker; '"
@@ -134,10 +136,54 @@ aux4 connect --configFile config.yaml --config "'; touch injected.marker; '"
 NOT_INJECTED
 ```
 
-### should not run a backtick substitution
+### should not run a backtick substitution (via --config)
 
 ```execute
 aux4 connect --configFile config.yaml --config '`touch injected.marker`'
+```
+
+```expect:partial
+**
+NOT_INJECTED
+```
+
+## shell injection via --configFile (CORE-046)
+
+A malicious `--configFile` value is not a real, readable file, so it both
+(a) falls into `configSecurityValue`'s shell-out (the CORE-046 sink) and
+(b) never resolves `host`/`port` from config — the command still runs, it
+just keeps the `"none"` defaults. The only thing under test here is that
+the marker file is never created.
+
+### should not create the injected marker file (via --configFile)
+
+```execute
+aux4 connect --configFile "'; touch injected.marker; '" --config dev
+```
+
+```expect:partial
+**
+NOT_INJECTED
+```
+
+### should not run a command substitution (via --configFile)
+
+Single-quoted so the *authoring* shell running this test does not itself
+expand `$(...)` before aux4 ever sees the value.
+
+```execute
+aux4 connect --configFile '$(touch injected.marker)' --config dev
+```
+
+```expect:partial
+**
+NOT_INJECTED
+```
+
+### should not run a backtick substitution (via --configFile)
+
+```execute
+aux4 connect --configFile '`touch injected.marker`' --config dev
 ```
 
 ```expect:partial

@@ -154,15 +154,20 @@ func fetchSecrets(provider, ref string, fields []string) (map[string]string, err
 
 	fieldsArg := ""
 	if len(regularFields) > 0 {
-		fieldsArg = fmt.Sprintf(" --fields '%s'", strings.Join(regularFields, ","))
+		fieldsArg = fmt.Sprintf(" --fields '%s'", escapeValue(strings.Join(regularFields, ",")))
 	} else if needsOTP {
 		// When only OTP is requested, we still need --fields to avoid interactive prompt.
 		// Use "username" as a placeholder; it won't be used.
 		fieldsArg = " --fields 'username'"
 	}
 
-	instruction := fmt.Sprintf("aux4 secret %s get --ref '%s'%s%s",
-		provider, ref, fieldsArg, otpFlag)
+	// provider/ref/fields all come from parsing a secret:// URI, which can be
+	// package- or config-authored and is not guaranteed to be a safe literal
+	// (e.g. a default value like "secret://$(cmd)/vault/item/field" splits into
+	// a provider with no slash in it) -- quote and escape each segment the same
+	// way every other param-derived shell command is built.
+	instruction := fmt.Sprintf("aux4 secret '%s' get --ref '%s'%s%s",
+		escapeValue(provider), escapeValue(ref), fieldsArg, otpFlag)
 
 	stdout, stderr, err := cmd.ExecuteCommandLineNoOutput(instruction)
 	if err != nil {
