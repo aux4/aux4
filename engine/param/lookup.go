@@ -102,12 +102,12 @@ func (l *ConfigLookup) Get(parameters *Parameters, command core.Command, actions
 	args := []string{}
 
 	if configFile != "" {
-		args = append(args, "--file "+configFile)
+		args = append(args, "--file '"+escapeValue(configFile)+"'")
 	}
 
 	if config != "" {
 		if config != "true" {
-			args = append(args, fmt.Sprintf("--name %s", config))
+			args = append(args, "--name '"+escapeValue(config)+"'")
 		}
 	}
 

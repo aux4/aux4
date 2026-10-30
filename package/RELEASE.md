@@ -1,5 +1,19 @@
 # Release notes
 
+## param(name**) no longer lets a value escape its shell quoting (CORE-044)
+
+`param(name**)` — the repeatable-flag helper used for `multiple: true`
+variables, e.g. `param(state**)`, `param(options**)`, `param(tag**)` — built
+each `--flag 'value'` with no escaping, unlike every other parameter function
+(`value()`, `param(name)` without `**`, `values()`, `params()`), which all
+shell-escape their output. A value containing a single quote could break out
+of the `'...'` wrapper and run arbitrary shell commands when the call sat
+inside a larger shell statement (confirmed exploitable via `aux4/decision
+ask --state "'; touch /tmp/pwned; '"`). Each item is now escaped the same
+way the other parameter functions already are. Ordinary values (spaces, `=`,
+JSON-looking text) are unaffected — only a value containing `'` now resolves
+differently (and safely).
+
 ## Packages are identified by repository, scope and name
 
 Installed packages used to be identified by their bare `name`, ignoring `scope`. Installing two
