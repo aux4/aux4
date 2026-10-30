@@ -622,7 +622,12 @@ func (p *Parameters) String() string {
 			builder.WriteString("--")
 			builder.WriteString(name)
 			builder.WriteString(" '")
-			builder.WriteString(valueToString(value, false))
+			// escape=true: this string is reused verbatim as literal shell text
+			// (alias: executor forwarding, the ${__params} hook variable) and
+			// manually wrapped in single quotes above, so the value itself must
+			// be single-quote-escaped the same way value()/param() already are —
+			// otherwise a value containing a quote breaks out of the wrapper.
+			builder.WriteString(valueToString(value, true))
 			builder.WriteString("'")
 		}
 	}

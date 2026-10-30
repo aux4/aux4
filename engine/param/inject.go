@@ -905,6 +905,17 @@ func marshalWithOrderPreservation(value interface{}) ([]byte, error) {
 }
 
 func escapeValue(value any) string {
+	return EscapeValue(value)
+}
+
+// EscapeValue single-quote-escapes value for safe interpolation inside a
+// shell command's single-quoted argument (`'...'`). It is the exported form
+// of the helper every value()/param()/values()/params()/ConfigLookup escape
+// path already routes through, so any other package-main code that must
+// build a shell command string from a param/config/env value (e.g.
+// security.go's configSecurityValue) can reuse the exact same escaping
+// instead of growing its own copy.
+func EscapeValue(value any) string {
 	if value == nil {
 		return ""
 	}

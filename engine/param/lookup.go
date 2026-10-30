@@ -174,7 +174,12 @@ func (l EncryptedParameterLookup) Get(parameters *Parameters, command core.Comma
 		return nil, nil
 	}
 
-	stdout, _, err := cmd.ExecuteCommandLineNoOutput(fmt.Sprintf("aux4 encrypter decrypt --iv %s --secret %s %s", iv, secret, encryptedParameter.(string)))
+	stdout, _, err := cmd.ExecuteCommandLineNoOutput(fmt.Sprintf(
+		"aux4 encrypter decrypt --iv '%s' --secret '%s' '%s'",
+		escapeValue(fmt.Sprintf("%v", iv)),
+		escapeValue(fmt.Sprintf("%v", secret)),
+		escapeValue(encryptedParameter.(string)),
+	))
 	if err != nil {
 		return nil, core.InternalError("Error decrypting the value of '"+name+"' (it may not be encrypted)", nil)
 	}
@@ -223,7 +228,12 @@ func (l DefaultLookup) Get(parameters *Parameters, command core.Command, actions
 	secret, _ := parameters.Get(command, actions, "secret")
 
 	if variable.Encrypt && iv != nil && secret != nil {
-		stdout, _, err := cmd.ExecuteCommandLineNoOutput(fmt.Sprintf("aux4 encrypter decrypt --iv %s --secret %s %s", iv, secret, value))
+		stdout, _, err := cmd.ExecuteCommandLineNoOutput(fmt.Sprintf(
+			"aux4 encrypter decrypt --iv '%s' --secret '%s' '%s'",
+			escapeValue(fmt.Sprintf("%v", iv)),
+			escapeValue(fmt.Sprintf("%v", secret)),
+			escapeValue(value),
+		))
 		if err != nil {
 			return nil, core.InternalError("Error decrypting the value of '"+name+"' (it may not be encrypted)", nil)
 		}

@@ -1,5 +1,36 @@
 # Release notes
 
+## Every remaining unescaped shell-out built from a param/config/env value is now escaped (CORE-046)
+
+`security.go`'s `configSecurityValue` — consulted on every invocation that sets `--configFile`/
+`--config` (or `AUX4_CONFIG_FILE`/`AUX4_CONFIG`), independent of whether the command declares any
+config-bound variable at all — built its internal `aux4 config get --file <configFile> --name
+<config>` call with zero quoting or escaping. Any `--configFile` value that was not a real,
+readable file (which is what virtually every injection payload looks like) ran arbitrary shell
+commands, confirmed via `aux4 aux4 version --configFile '$(touch /tmp/pwned)'` on a plain command
+with no variables and no config usage. This is the same class of bug CORE-044 fixed in
+`ConfigLookup.Get`, one layer up — fixed the same way (single-quote + escape).
+
+A full sweep of every other place that builds a shell command string from a param/config/env value
+found and fixed three more of the same class, previously missed:
+
+- `EncryptedParameterLookup.Get`/`DefaultLookup.Get` (`engine/param/lookup.go`) shelled out to
+  `aux4 encrypter decrypt --iv <iv> --secret <secret> <value>` with no quoting at all — `--iv`,
+  `--secret`, and an `Encrypt: true` variable's value (or its config/package-authored default) all
+  reached the shell unescaped.
+- `fetchSecrets` (`engine/param/secret.go`), used by every `secret://provider/ref/.../field`
+  reference, spliced `provider` into `aux4 secret <provider> get ...` completely unquoted, and
+  wrapped `ref`/`fields` in single quotes without escaping them — all three come straight out of
+  splitting a `secret://` URI, which is not guaranteed to be a safe literal.
+- `Parameters.String()` (`engine/param/arg.go`), used by the `alias:` executor to forward every CLI
+  parameter into another shell command and to populate the `${__params}` hook variable, built each
+  `--flag 'value'` with the value unescaped before manually wrapping it in single quotes.
+
+All four now go through the same single-quote-escape helper `value()`/`param()`/`values()`/
+`params()`/`ConfigLookup.Get` already use (now exported as `param.EscapeValue`). Ordinary values
+are unaffected — only a value containing a single quote (or, for `configSecurityValue`, any value
+that isn't a plain filename) now resolves differently, and safely.
+
 ## param(name**) no longer lets a value escape its shell quoting (CORE-044)
 
 `param(name**)` — the repeatable-flag helper used for `multiple: true`

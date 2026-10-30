@@ -72,10 +72,10 @@ func configSecurityValue(params *param.Parameters) any {
 
 	args := []string{}
 	if configFile != "" {
-		args = append(args, "--file "+configFile)
+		args = append(args, "--file '"+param.EscapeValue(configFile)+"'")
 	}
 	if config != "" && config != "true" {
-		args = append(args, "--name "+config)
+		args = append(args, "--name '"+param.EscapeValue(config)+"'")
 	}
 
 	stdout, _, err := cmd.ExecuteCommandLineNoOutput(fmt.Sprintf("aux4 config get %s", strings.Join(args, " ")))
