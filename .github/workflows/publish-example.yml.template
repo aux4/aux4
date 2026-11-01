@@ -1,0 +1,44 @@
+# Example: How to use the reusable publish-package workflow
+# Copy this file to your package repository as .github/workflows/publish.yml
+
+name: Publish Package
+
+on:
+  # Automatic trigger: Push to main branch
+  push:
+    branches:
+      - main
+    paths:
+      - '**'
+      - '!.github/**'
+      - '!README.md'
+      - '!LICENSE'
+      - '!.gitignore'
+
+  # Manual trigger: Allow custom version bumps
+  workflow_dispatch:
+    inputs:
+      release_level:
+        description: 'Release level (patch, minor, major)'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+# Prevent concurrent releases
+concurrency:
+  group: publish-package
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    uses: aux4/aux4/.github/workflows/publish-package.yml@main
+    with:
+      package_name: YOUR_PACKAGE_NAME  # e.g., config, db, etc.
+      package_scope: aux4
+      release_level: ${{ github.event_name == 'workflow_dispatch' && inputs.release_level || 'patch' }}
+    secrets:
+      AUX4_ACCESS_TOKEN: ${{ secrets.AUX4_ACCESS_TOKEN }}
