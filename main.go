@@ -268,9 +268,13 @@ func startDaemonServer(socketPath string) {
 		os.Stdin = stdinR
 
 		// The daemon serves each request with the client's environment, so the
-		// color decision has to be taken again per request instead of using the
-		// one cached when the daemon started.
+		// color decision — and the shell / bash it runs command lines with,
+		// which also comes from the environment ($SHELL) — has to be taken
+		// again per request instead of using the one cached when the daemon
+		// (or an earlier request) started.
 		output.ResolveColor()
+		cmd.ResolveShell()
+		cmd.ResolveBash()
 		output.SetPrettify(params.IsEnabled(output.PrettifyParameter))
 
 		// Stream pipe output to the writers. stdout and stderr each signal their
