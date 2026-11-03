@@ -188,17 +188,20 @@ func MainExecute(env *engine.VirtualEnvironment, actions []string, params *param
 		}
 	}
 
-	params.Set("aux4HomeDir", config.GetAux4HomeDirectory())
-	params.Set("packageDir", command.Ref.Dir)
+	// Paths are injected with forward slashes: command lines run in a POSIX shell, and on Windows
+	// (bash) an unquoted C:\Users\... would lose its backslashes. Windows programs accept C:/Users/...
+	// and on macOS/Linux this changes nothing.
+	params.Set("aux4HomeDir", filepath.ToSlash(config.GetAux4HomeDirectory()))
+	params.Set("packageDir", filepath.ToSlash(command.Ref.Dir))
 
 	if strings.Contains(command.Ref.Package, "/") && strings.Contains(command.Ref.Package, "@") {
 		packageParts := strings.Split(command.Ref.Package, "@")
 		packageNameParts := strings.Split(packageParts[0], "/")
 		scope := packageNameParts[0]
 		name := packageNameParts[1]
-		params.Set("configDir", filepath.Join(config.GetAux4HomeDirectory(), "config", scope, name))
+		params.Set("configDir", filepath.ToSlash(filepath.Join(config.GetAux4HomeDirectory(), "config", scope, name)))
 	} else {
-		params.Set("configDir", filepath.Join(config.GetAux4HomeDirectory(), "config"))
+		params.Set("configDir", filepath.ToSlash(filepath.Join(config.GetAux4HomeDirectory(), "config")))
 	}
 
 	if err := param.ResolveSecrets(params); err != nil {
@@ -927,7 +930,12 @@ func (executor *AliasCommandExecutor) Execute(env *engine.VirtualEnvironment, co
 		return err
 	}
 
-	cmd := exec.Command("bash", "-c", instruction)
+	bash, err := cmd.Bash()
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command(bash, "-c", instruction)
 	cmd.Env = output.ChildEnv()
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr

@@ -1,0 +1,83 @@
+name: CI
+
+# Unit tests on Linux, macOS and Windows (amd64 + arm64), and a Windows smoke test of the built aux4.exe:
+# command lines run without SHELL set (aux4 finds Git Bash) and with Git Bash's SHELL=/usr/bin/bash,
+# and ${packageDir} is injected so an unquoted reference survives bash.
+on:
+  pull_request:
+  push:
+    branches-ignore:
+      - main
+      - dev
+  workflow_call:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest, windows-11-arm]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.25'
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Unit tests
+        run: go test ./...
+
+      - name: Build
+        if: runner.os == 'Windows'
+        shell: bash
+        run: go build -o "$RUNNER_TEMP/bin/aux4.exe" . && cygpath -w "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - name: Smoke test without SHELL (bash)
+        if: runner.os == 'Windows'
+        shell: bash
+        working-directory: misc/windows-smoke
+        run: |
+          unset SHELL
+          test "$(aux4 read-file)" = "smoke ok"
+          test "$(aux4 alias-echo)" = "alias ok"
+          test "$(aux4 nested)" = "nested smoke ok"
+          aux4 package-dir | grep -v '\\'
+
+      - name: Smoke test with Git Bash's SHELL
+        if: runner.os == 'Windows'
+        shell: bash
+        working-directory: misc/windows-smoke
+        env:
+          SHELL: /usr/bin/bash
+        run: test "$(aux4 read-file)" = "smoke ok"
+
+      - name: Smoke test from PowerShell
+        if: runner.os == 'Windows'
+        shell: pwsh
+        working-directory: misc/windows-smoke
+        run: |
+          Remove-Item Env:SHELL -ErrorAction SilentlyContinue
+          $out = aux4 read-file
+          if ($out -ne "smoke ok") { throw "read-file printed '$out'" }
+          $out = aux4 nested
+          if ($out -ne "nested smoke ok") { throw "nested printed '$out'" }
+
+      - name: Clear error when there is no bash
+        if: runner.os == 'Windows'
+        shell: pwsh
+        working-directory: misc/windows-smoke
+        run: |
+          Remove-Item Env:SHELL -ErrorAction SilentlyContinue
+          $env:ProgramFiles = "C:\none"; $env:ProgramW6432 = "C:\none"; ${env:ProgramFiles(x86)} = "C:\none"; $env:LOCALAPPDATA = "C:\none"
+          $aux4 = (Get-Command aux4).Source
+          $env:PATH = "C:\Windows\System32"
+          $out = & $aux4 read-file 2>&1 | Out-String
+          Write-Output $out
+          if ($LASTEXITCODE -eq 0) { throw "aux4 should fail without bash" }
+          if (-not $out.Contains("Git for Windows")) { throw "missing the Git for Windows hint" }
