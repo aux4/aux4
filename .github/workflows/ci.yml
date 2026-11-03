@@ -67,6 +67,11 @@ jobs:
           if ($out -ne "smoke ok") { throw "read-file printed '$out'" }
           $out = aux4 nested
           if ($out -ne "nested smoke ok") { throw "nested printed '$out'" }
+          # no HOME in PowerShell: the aux4 home is the user profile, not the current directory
+          Remove-Item Env:HOME -ErrorAction SilentlyContinue
+          aux4 aux4 autoinstall
+          if (-not (Test-Path "$env:USERPROFILE\.aux4.config\packages\all.json")) { throw "aux4 home is not under USERPROFILE" }
+          if (Test-Path ".aux4.config") { throw "aux4 home was created in the current directory" }
 
       - name: Clear error when there is no bash
         if: runner.os == 'Windows'
