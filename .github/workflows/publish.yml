@@ -1,9 +1,13 @@
 name: Publish Package
 
+# main -> prod hub + GitHub release (what aux4.sh installs) + docker image
+# dev  -> dev hub only (token minted from AUX4_DEV_PUBLISHER_* against dev SSO): no tag, no GitHub
+#         release, no docker rebuild, so nothing reaches prod users. The version bump is committed to dev.
 on:
   push:
     branches:
       - main
+      - dev
     paths:
       - '**'
       - '!.github/**'
@@ -24,14 +28,18 @@ on:
           - major
 
 concurrency:
-  group: publish-package
+  group: publish-package-${{ github.ref_name }}
   cancel-in-progress: false
 
 permissions:
   contents: write
 
 jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+
   publish:
+    needs: [test]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -120,6 +128,7 @@ jobs:
 
       - name: Mint hub publish token
         id: mint
+        if: github.ref_name == 'main'
         env:
           CLIENT_ID: ${{ secrets.AUX4_PUBLISHER_CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.AUX4_PUBLISHER_CLIENT_SECRET }}
@@ -128,9 +137,22 @@ jobs:
           TOK=$(curl -sf -u "$CLIENT_ID:$CLIENT_SECRET" -d grant_type=client_credentials https://sso.aux4.io/token | jq -r '.access_token // empty')
           if [ -z "$TOK" ]; then echo "::error::client_credentials mint returned no access_token"; exit 1; fi
           echo "::add-mask::$TOK"; echo "token=$TOK" >> "$GITHUB_OUTPUT"
+      - name: Mint dev hub publish token
+        id: devmint
+        if: github.ref_name == 'dev'
+        env:
+          CLIENT_ID: ${{ secrets.AUX4_DEV_PUBLISHER_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.AUX4_DEV_PUBLISHER_CLIENT_SECRET }}
+        run: |
+          if [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ]; then echo "::error::dev publisher client id/secret not set"; exit 1; fi
+          TOK=$(curl -sf -u "$CLIENT_ID:$CLIENT_SECRET" -d grant_type=client_credentials https://dev.sso.aux4.io/token | jq -r '.access_token // empty')
+          if [ -z "$TOK" ]; then echo "::error::client_credentials mint returned no access_token from dev SSO"; exit 1; fi
+          echo "::add-mask::$TOK"; echo "token=$TOK" >> "$GITHUB_OUTPUT"
+
       - name: Publish to hub.aux4.io
         env:
-          AUX4_ACCESS_TOKEN: ${{ steps.mint.outputs.token }}
+          AUX4_ACCESS_TOKEN: ${{ github.ref_name == 'dev' && steps.devmint.outputs.token || steps.mint.outputs.token }}
+          AUX4_REGISTRY_URL: ${{ github.ref_name == 'dev' && 'https://dev.api.hub.aux4.io/v1/packages' || 'https://api.hub.aux4.io/v1/packages' }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           AUX4_ACCESS_TOKEN=$(echo -n "$AUX4_ACCESS_TOKEN" | tr -d '[:space:]')
@@ -139,6 +161,7 @@ jobs:
             -v $(pwd):/workspace \
             -w /workspace/package \
             -e AUX4_ACCESS_TOKEN="${AUX4_ACCESS_TOKEN}" \
+            -e AUX4_REGISTRY_URL="${AUX4_REGISTRY_URL}" \
             --entrypoint sh \
             aux4/aux4:latest \
             -c "aux4 aux4 pkger publish aux4_aux4_${VERSION}.zip"
@@ -146,7 +169,15 @@ jobs:
       - name: Cleanup generated files
         run: rm -f package/.aux4 package/LICENSE package/README.md
 
+      - name: Commit the dev version
+        if: github.ref_name == 'dev'
+        run: |
+          git add aux4/version.go
+          git commit -m "release: ${{ steps.version.outputs.version }} (dev hub) [skip ci]"
+          git push origin dev
+
       - name: Commit and tag
+        if: github.ref_name == 'main'
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           git add aux4/version.go
@@ -154,11 +185,13 @@ jobs:
           git tag -a "v${VERSION}" -m "release: v${VERSION}"
 
       - name: Push changes and tags
+        if: github.ref_name == 'main'
         run: |
           git push origin ${{ github.ref_name }}
           git push origin --tags
 
       - name: Create GitHub Release
+        if: github.ref_name == 'main'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -173,6 +206,7 @@ jobs:
         run: rm -f package/aux4_aux4_*.zip package/*_aux4_aux4_*.zip
 
       - name: Trigger Docker image rebuild
+        if: github.ref_name == 'main'
         env:
           GITHUB_TOKEN: ${{ secrets.GH_DISPATCH_TOKEN }}
         run: |

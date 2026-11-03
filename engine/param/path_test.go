@@ -2,6 +2,7 @@ package param
 
 import (
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"aux4.dev/aux4/core"
@@ -27,7 +28,7 @@ func abs(t *testing.T, parts ...string) string {
 	if err != nil {
 		t.Fatalf("filepath.Abs: %v", err)
 	}
-	return a
+	return filepath.ToSlash(a)
 }
 
 func TestPathResolvesRelativeToAbsolute(t *testing.T) {
@@ -39,8 +40,13 @@ func TestPathResolvesRelativeToAbsolute(t *testing.T) {
 
 func TestPathKeepsAbsoluteUnchanged(t *testing.T) {
 	got := injectPath(t, "path(db)", map[string]string{"db": "/var/data/x.db"})
-	if got != "/var/data/x.db" {
-		t.Errorf("path(db) = %q, want /var/data/x.db", got)
+	want := "/var/data/x.db"
+	if runtime.GOOS == "windows" {
+		// a rooted path without a drive is on the current drive
+		want = abs(t, "/var/data/x.db")
+	}
+	if got != want {
+		t.Errorf("path(db) = %q, want %q", got, want)
 	}
 }
 

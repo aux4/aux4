@@ -76,9 +76,9 @@ func ExecuteCommandLineNoOutputWithStdIn(instruction string) (string, string, er
 }
 
 func ExecuteCommandWithPipedStdin(instruction string, stdinData string) error {
-	var shell = os.Getenv("SHELL")
-	if shell == "" {
-		shell = "/bin/sh"
+	shell, err := Shell()
+	if err != nil {
+		return err
 	}
 
 	instruction = expandRedirects(instruction)
@@ -99,7 +99,7 @@ func ExecuteCommandWithPipedStdin(instruction string, stdinData string) error {
 		cmd.Stdout = os.Stdout
 	}
 
-	err := cmd.Run()
+	err = cmd.Run()
 
 	if prettify {
 		output.WriteOutput(os.Stdout, buffer.Bytes())
@@ -122,9 +122,9 @@ func ExecuteCommandWithPipedStdin(instruction string, stdinData string) error {
 func executeCommand(instruction string, withStdOut bool, withStdIn bool) (string, string, error) {
 	var cmd *exec.Cmd
 
-	var shell = os.Getenv("SHELL")
-	if shell == "" {
-		shell = "/bin/sh"
+	shell, err := Shell()
+	if err != nil {
+		return "", "", err
 	}
 
 	instruction = expandRedirects(instruction)
@@ -154,7 +154,7 @@ func executeCommand(instruction string, withStdOut bool, withStdIn bool) (string
 		cmd.Stdin = os.Stdin
 	}
 
-	err := cmd.Run()
+	err = cmd.Run()
 
 	if prettify {
 		output.WriteOutput(os.Stdout, stdout.Bytes())

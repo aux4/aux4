@@ -7,7 +7,20 @@ import (
 )
 
 func GetAux4HomeDirectory() string {
-	return filepath.Join(os.Getenv("HOME"), ".aux4.config")
+	return filepath.Join(homeDirectory(), ".aux4.config")
+}
+
+// homeDirectory is $HOME. When it is not set — the normal case in PowerShell and cmd on Windows — it
+// falls back to the user's home from the OS (USERPROFILE on Windows), instead of a path relative to
+// the current directory. On macOS/Linux an unset $HOME behaves as before.
+func homeDirectory() string {
+	if home := os.Getenv("HOME"); home != "" {
+		return home
+	}
+	if home, err := os.UserHomeDir(); err == nil {
+		return home
+	}
+	return ""
 }
 
 func GetConfigPath(path string) string {

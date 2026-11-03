@@ -8,6 +8,18 @@ aux4 is a CLI (Command-line Interface) generator, used to create high-level scri
 curl https://aux4.sh | sh
 ```
 
+### Windows
+
+aux4 command lines are shell commands, so on Windows aux4 runs them with bash. Install
+[Git for Windows](https://git-scm.com/download/win), which includes Git Bash: aux4 finds its `bash.exe`
+(next to `git.exe` on `PATH`, or in the default install location) when `SHELL` is not set, and also when
+`SHELL` is Git Bash's own `/usr/bin/bash`. To use a different bash, set `SHELL` to the full path of its
+`bash.exe`. Without one, aux4 stops with an error that says so.
+
+Paths aux4 puts on the command line — `${packageDir}`, `${aux4HomeDir}`, `${configDir}` and `path()` —
+use forward slashes on Windows (`C:/Users/me/.aux4.config/...`), which both bash and Windows programs
+accept.
+
 ## Getting Started
 
 Check out the [Getting Started](https://aux4.io/getting-started) on our website.
@@ -165,6 +177,7 @@ inherited by child processes.
 
 - `AUX4_NO_DAEMON` — set to `1` to bypass the daemon and run commands directly (see [Daemon](#daemon)).
 - `NO_COLOR` — set to any value to disable colored output (see [Color Output](#color-output)).
+- `SHELL` — the shell command lines run with (default `/bin/sh`; on Windows, Git Bash — see [Windows](#windows)).
 
 ## Docs
 

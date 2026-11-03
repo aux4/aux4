@@ -1,0 +1,46 @@
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "read-file",
+          "execute": [
+            "cat ${packageDir}/data.txt"
+          ],
+          "help": {
+            "text": "Read a file next to this .aux4 through an unquoted packageDir"
+          }
+        },
+        {
+          "name": "package-dir",
+          "execute": [
+            "echo ${packageDir}"
+          ],
+          "help": {
+            "text": "Print packageDir"
+          }
+        },
+        {
+          "name": "alias-echo",
+          "execute": [
+            "alias:echo alias ok"
+          ],
+          "help": {
+            "text": "Run a command through the alias executor"
+          }
+        },
+        {
+          "name": "nested",
+          "execute": [
+            "set:inner=!aux4 read-file",
+            "echo nested ${inner}"
+          ],
+          "help": {
+            "text": "Run aux4 from an aux4 command line"
+          }
+        }
+      ]
+    }
+  ]
+}

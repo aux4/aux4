@@ -395,7 +395,9 @@ func resolvePathVariables(command core.Command, instruction string, actions []st
 		if err != nil {
 			return "", err
 		}
-		return absolute, nil
+		// Forward slashes, like packageDir: the path lands on a POSIX shell command line, where an
+		// unquoted Windows backslash would be eaten. A no-op on macOS/Linux.
+		return filepath.ToSlash(absolute), nil
 	})
 }
 
