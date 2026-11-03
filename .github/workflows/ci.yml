@@ -81,3 +81,4 @@ jobs:
           Write-Output $out
           if ($LASTEXITCODE -eq 0) { throw "aux4 should fail without bash" }
           if (-not $out.Contains("Git for Windows")) { throw "missing the Git for Windows hint" }
+          exit 0
