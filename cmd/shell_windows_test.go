@@ -79,6 +79,66 @@ func TestResolveShellNoBash(t *testing.T) {
 	}
 }
 
+// TestShellResolvesPerRequestNotJustOncePerProcess reproduces the daemon scenario: the daemon
+// serves every client request in the same process and sets $SHELL fresh before each one (see
+// daemon.Server.handleConnection + main.go's executeFn), so Shell() must reflect whichever
+// request is running, not whichever one happened to run first. Before the fix, the shell was
+// cached with sync.Once for the lifetime of the process, so the first request's $SHELL stuck for
+// every later one.
+func TestShellResolvesPerRequestNotJustOncePerProcess(t *testing.T) {
+	dir := isolate(t)
+	bashShell := filepath.Join(dir, "msys64", "usr", "bin", "bash.exe")
+	zshShell := filepath.Join(dir, "msys64", "usr", "bin", "zsh.exe")
+	fakeExe(t, bashShell)
+	fakeExe(t, zshShell)
+
+	t.Setenv("SHELL", bashShell)
+	first, err := ResolveShell()
+	if err != nil || first != bashShell {
+		t.Fatalf("request 1: ResolveShell() = %q, %v; want %q", first, err, bashShell)
+	}
+	// Plain Shell() within the same "request" returns the value just resolved.
+	if got, err := Shell(); err != nil || got != bashShell {
+		t.Fatalf("request 1: Shell() = %q, %v; want %q", got, err, bashShell)
+	}
+
+	// A second daemon request comes in with a different client environment. zsh.exe isn't named
+	// bash/sh, but it's given as a full path, so resolveShell accepts it as given (same as a real
+	// bash.exe at a non-default location would be).
+	t.Setenv("SHELL", zshShell)
+	second, err := ResolveShell()
+	if err != nil || second != zshShell {
+		t.Fatalf("request 2: ResolveShell() = %q, %v; want %q (got the request 1 value cached instead)", second, err, zshShell)
+	}
+	if got, err := Shell(); err != nil || got != zshShell {
+		t.Fatalf("request 2: Shell() = %q, %v; want %q", got, err, zshShell)
+	}
+}
+
+// TestBashResolvesPerRequest is the Bash() equivalent of the above. resolveBash on Windows reads
+// $SHELL directly (unlike macOS/Linux, where it always returns "bash"), so it is subject to the
+// exact same daemon staleness bug.
+func TestBashResolvesPerRequest(t *testing.T) {
+	dir := isolate(t)
+	bash1 := filepath.Join(dir, "first", "bash.exe")
+	bash2 := filepath.Join(dir, "second", "bash.exe")
+	fakeExe(t, bash1)
+	fakeExe(t, bash2)
+
+	t.Setenv("SHELL", bash1)
+	if got, err := ResolveBash(); err != nil || got != bash1 {
+		t.Fatalf("request 1: ResolveBash() = %q, %v; want %q", got, err, bash1)
+	}
+
+	t.Setenv("SHELL", bash2)
+	if got, err := ResolveBash(); err != nil || got != bash2 {
+		t.Fatalf("request 2: ResolveBash() = %q, %v; want %q (got the request 1 value cached instead)", got, err, bash2)
+	}
+	if got, err := Bash(); err != nil || got != bash2 {
+		t.Fatalf("request 2: Bash() = %q, %v; want %q", got, err, bash2)
+	}
+}
+
 func TestIsWslLauncher(t *testing.T) {
 	t.Setenv("SystemRoot", `C:\Windows`)
 	if !isWslLauncher(`C:\Windows\System32\bash.exe`) {
