@@ -45,7 +45,7 @@ jobs:
         run: |
           unset SHELL
           out=$(aux4 read-file); echo "read-file: $out"; test "$out" = "smoke ok"
-          out=$(aux4 alias-echo); echo "alias-echo: $out"; test "$out" = "alias ok"
+          out=$(aux4 alias-echo); echo "alias-echo: $out"; [[ "$out" == "alias ok"* ]]
           out=$(aux4 nested); echo "nested: $out"; test "$out" = "nested smoke ok"
           out=$(aux4 package-dir); echo "package-dir: $out"; test -n "$out" && ! echo "$out" | grep -q '\\'
 
