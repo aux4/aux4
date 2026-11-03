@@ -179,7 +179,7 @@ func TestEachCommandExecutor_NormalListStillWorks(t *testing.T) {
 	outFile := filepath.Join(dir, "out.txt")
 
 	executor := &EachCommandExecutor{
-		Command: "each:echo ${item} >> " + outFile,
+		Command: "each:echo ${item} >> " + filepath.ToSlash(outFile),
 	}
 
 	params := newParams()
@@ -208,7 +208,7 @@ func TestEachCommandExecutor_NormalStringResponseStillWorks(t *testing.T) {
 	outFile := filepath.Join(dir, "out.txt")
 
 	executor := &EachCommandExecutor{
-		Command: "each:echo ${item} >> " + outFile,
+		Command: "each:echo ${item} >> " + filepath.ToSlash(outFile),
 	}
 
 	params := newParams()
