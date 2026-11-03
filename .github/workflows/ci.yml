@@ -44,10 +44,10 @@ jobs:
         working-directory: misc/windows-smoke
         run: |
           unset SHELL
-          test "$(aux4 read-file)" = "smoke ok"
-          test "$(aux4 alias-echo)" = "alias ok"
-          test "$(aux4 nested)" = "nested smoke ok"
-          aux4 package-dir | grep -v '\\'
+          out=$(aux4 read-file); echo "read-file: $out"; test "$out" = "smoke ok"
+          out=$(aux4 alias-echo); echo "alias-echo: $out"; test "$out" = "alias ok"
+          out=$(aux4 nested); echo "nested: $out"; test "$out" = "nested smoke ok"
+          out=$(aux4 package-dir); echo "package-dir: $out"; test -n "$out" && ! echo "$out" | grep -q '\\'
 
       - name: Smoke test with Git Bash's SHELL
         if: runner.os == 'Windows'
